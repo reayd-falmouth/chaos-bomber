@@ -24,8 +24,15 @@ jobs:
 
       - name: Create .love File
         run: |
-          powershell Compress-Archive -Path src/chaos_bomber/* -CompressionLevel Optimal -DestinationPath chaosbomber.zip
+          cd src/chaos_bomber
+          powershell Compress-Archive -Path * -CompressionLevel Optimal -DestinationPath ../../chaosbomber.zip
+          cd ../..
           Rename-Item -Path chaosbomber.zip -NewName chaosbomber.love
+
+#      - name: Create .love File
+#        run: |
+#          powershell Compress-Archive -Path src/chaos_bomber/* -CompressionLevel Optimal -DestinationPath chaosbomber.zip
+#          Rename-Item -Path chaosbomber.zip -NewName chaosbomber.love
 
       - name: Create Windows Executable
         run: |

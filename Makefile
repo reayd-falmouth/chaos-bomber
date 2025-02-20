@@ -16,4 +16,12 @@ checkin: ## Perform a check-in after formatting the code
 
 love:
 	@echo "Running love2d game..."
-	@cd src; love .
+	@cd $(GAME_DIR); love .
+
+zip: clean
+	@echo "Making zip file..."
+	@zip -9 -r $(ITCH_GAME).love -j src/chaos_bomber/*
+
+clean:
+	@echo "Removing zip archive..."
+	-@rm -rf $(ITCH_GAME).love

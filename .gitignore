@@ -41,3 +41,4 @@ luac.out
 
 # Customer folders.
 .screenshots
+*.love
