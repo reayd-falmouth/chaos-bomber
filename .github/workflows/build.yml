@@ -28,7 +28,7 @@ jobs:
 
       - name: Create Windows Executable
         run: |
-          copy /b love/love.exe+chaosbomber.love chaosbomber.exe
+          Get-Content love/love.exe,chaosbomber.love -Encoding Byte | Set-Content chaosbomber.exe -Encoding Byte
 
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
