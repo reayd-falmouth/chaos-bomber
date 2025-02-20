@@ -14,7 +14,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install LÖVE
         run: choco install love
@@ -28,7 +28,7 @@ jobs:
           copy /b "C:\Program Files\LOVE\love.exe"+chaosbomber.love chaosbomber.exe
 
       - name: Upload Windows Executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chaosbomber-windows
           path: chaosbomber.exe
@@ -38,7 +38,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install LÖVE
         run: brew install --cask love
@@ -62,7 +62,7 @@ jobs:
         run: zip -9 -r chaosbomber-mac.zip ChaosBomber.app
 
       - name: Upload macOS Application
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: chaosbomber-mac
           path: chaosbomber-mac.zip
