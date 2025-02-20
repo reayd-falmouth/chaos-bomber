@@ -29,7 +29,7 @@ jobs:
 
       - name: Create Windows Executable
         run: |
-          [System.IO.File]::WriteAllBytes('chaosbomber.exe', (Get-Content 'love/love.exe' -Raw) + (Get-Content 'chaosbomber.love' -Raw))
+          cmd /c copy /b love/love.exe+chaosbomber.love chaosbomber.exe
 
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
