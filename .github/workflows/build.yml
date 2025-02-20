@@ -16,8 +16,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install LÖVE
-        run: choco install love
+      - name: Install LÖVE Manually
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip" -OutFile love.zip
+          Expand-Archive -Path love.zip -DestinationPath love
 
       - name: Create .love File
         run: |
@@ -25,7 +27,7 @@ jobs:
 
       - name: Create Windows Executable
         run: |
-          copy /b "C:\Program Files\LOVE\love.exe"+chaosbomber.love chaosbomber.exe
+          copy /b love/love.exe+chaosbomber.love chaosbomber.exe
 
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
@@ -33,7 +35,7 @@ jobs:
           name: chaosbomber-windows
           path: chaosbomber.exe
 
-  build-macos:
+  build-mac:
     name: Build macOS Application
     runs-on: macos-latest
     steps:
