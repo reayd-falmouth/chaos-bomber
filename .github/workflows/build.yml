@@ -20,6 +20,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip" -OutFile love.zip
           Expand-Archive -Path love.zip -DestinationPath love
+          Move-Item -Path love/*/* -Destination love -Force
 
       - name: Create .love File
         run: |
@@ -28,7 +29,7 @@ jobs:
 
       - name: Create Windows Executable
         run: |
-          [System.IO.File]::WriteAllBytes('chaosbomber.exe', (Get-Content 'love/love.exe' -Raw) + (Get-Content 'chaosbomber.love' -Raw))
+          [System.IO.File]::WriteAllBytes('chaosbomber.exe', (Get-Content 'love/love-11.5-win64/love.exe' -Raw) + (Get-Content 'chaosbomber.love' -Raw))
 
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
