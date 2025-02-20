@@ -1,4 +1,4 @@
-name: Build Pygame Executable
+name: Build ChaosBomber Executable
 
 on:
   push:
@@ -10,15 +10,59 @@ on:
 
 jobs:
   build-windows:
-    name: Windows
+    name: Build Windows Executable
     runs-on: windows-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-  build-mac:
-    name: macOS
+      - name: Install LÖVE
+        run: choco install love
+
+      - name: Create .love File
+        run: |
+          powershell Compress-Archive -Path src/chaos_bomber/* -CompressionLevel Optimal -DestinationPath chaosbomber.love
+
+      - name: Create Windows Executable
+        run: |
+          copy /b "C:\Program Files\LOVE\love.exe"+chaosbomber.love chaosbomber.exe
+
+      - name: Upload Windows Executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: chaosbomber-windows
+          path: chaosbomber.exe
+
+  build-macos:
+    name: Build macOS Application
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+
+      - name: Install LÖVE
+        run: brew install --cask love
+
+      - name: Create .love File
+        run: |
+          cd src/chaos_bomber
+          zip -9 -r ../../chaosbomber.love .
+          cd ../..
+
+      - name: Create macOS Application Bundle
+        run: |
+          mkdir ChaosBomber.app
+          cp -R /Applications/love.app/Contents ChaosBomber.app/
+          cp chaosbomber.love ChaosBomber.app/Contents/Resources/
+          plutil -replace CFBundleName -string "ChaosBomber" ChaosBomber.app/Contents/Info.plist
+          plutil -replace CFBundleIdentifier -string "com.yourdomain.chaosbomber" ChaosBomber.app/Contents/Info.plist
+          plutil -replace CFBundleExecutable -string "love" ChaosBomber.app/Contents/Info.plist
+
+      - name: Compress macOS Application
+        run: zip -9 -r chaosbomber-mac.zip ChaosBomber.app
+
+      - name: Upload macOS Application
+        uses: actions/upload-artifact@v3
+        with:
+          name: chaosbomber-mac
+          path: chaosbomber-mac.zip
