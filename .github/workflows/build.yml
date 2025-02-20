@@ -52,11 +52,19 @@ jobs:
         run: |
           cmd /c copy /b love/love.exe+chaosbomber.love chaosbomber.exe
 
+      - name: Prepare Windows Distribution Folder
+        run: |
+          mkdir chaosbomber-windows
+          Move-Item chaosbomber.exe chaosbomber-windows/
+          Copy-Item love/license.txt chaosbomber-windows/
+          Copy-Item love/*.dll chaosbomber-windows/
+
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
         with:
           name: chaosbomber-windows
-          path: chaosbomber.exe
+          path: chaosbomber-windows/
+
 
   build-mac:
     name: Build macOS Application
