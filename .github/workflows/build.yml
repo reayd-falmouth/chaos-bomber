@@ -9,30 +9,44 @@ on:
       - main
 
 jobs:
-  build-windows:
-    name: Build Windows Executable
-    runs-on: windows-latest
+  build-zip:
+    name: Build .love File
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Create .love File
+        run: |
+          cd src/chaos_bomber
+          zip -9 -r ../../chaosbomber.love .
+          cd ../..
+
+      - name: Upload .love Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaosbomber-love
+          path: chaosbomber.love
+
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    needs: build-zip
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download .love Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chaosbomber-love
+          path: .
 
       - name: Install LÖVE Manually
         run: |
           Invoke-WebRequest -Uri "https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip" -OutFile love.zip
           Expand-Archive -Path love.zip -DestinationPath love
           Move-Item -Path love/love-11.5-win64/* -Destination love -Force
-
-      - name: Create .love File
-        run: |
-          cd src/chaos_bomber
-          powershell Compress-Archive -Path * -CompressionLevel Optimal -DestinationPath ../../chaosbomber.zip
-          cd ../..
-          Rename-Item -Path chaosbomber.zip -NewName chaosbomber.love
-
-#      - name: Create .love File
-#        run: |
-#          powershell Compress-Archive -Path src/chaos_bomber/* -CompressionLevel Optimal -DestinationPath chaosbomber.zip
-#          Rename-Item -Path chaosbomber.zip -NewName chaosbomber.love
 
       - name: Create Windows Executable
         run: |
@@ -47,18 +61,19 @@ jobs:
   build-mac:
     name: Build macOS Application
     runs-on: macos-latest
+    needs: build-zip
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Download .love Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chaosbomber-love
+          path: .
+
       - name: Install LÖVE
         run: brew install --cask love
-
-      - name: Create .love File
-        run: |
-          cd src/chaos_bomber
-          zip -9 -r ../../chaosbomber.love .
-          cd ../..
 
       - name: Create macOS Application Bundle
         run: |

@@ -20,7 +20,7 @@ love:
 
 zip: clean
 	@echo "Making zip file..."
-	@zip -9 -r $(ITCH_GAME).love -j src/chaos_bomber/*
+	@cd $(GAME_DIR) && zip -9 -r ../../$(ITCH_GAME).love .
 
 clean:
 	@echo "Removing zip archive..."
