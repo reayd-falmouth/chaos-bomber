@@ -52,7 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: chaosbomber-windows
-          path: build/chaosbomber-11.5-win64.zip
+          path: chaosbomber-11.5-win64.zip
 
   build-mac:
     name: Build macOS Application
