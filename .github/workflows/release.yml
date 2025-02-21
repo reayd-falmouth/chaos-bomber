@@ -27,6 +27,7 @@ jobs:
           path: chaosbomber.love
 
   build:
+    needs: build-zip
     name: Build LÖVE Executable
     runs-on: ${{ matrix.os }}
     strategy:
