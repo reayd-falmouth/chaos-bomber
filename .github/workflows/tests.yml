@@ -22,14 +22,8 @@ jobs:
 
       - name: Install Lua and Busted
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lua5.4 luarocks
-          if [ ! -d "$HOME/.luarocks/bin" ]; then
-            luarocks --local install busted
-          fi
-          echo "export PATH=\$HOME/.luarocks/bin:\$PATH" >> ~/.bashrc
-          source ~/.bashrc
+          make install
 
       - name: Run Unit Tests
         run: |
-          LUA_PATH="./src/chaos_bomber/?.lua;./src/chaos_bomber/?/init.lua;" $HOME/.luarocks/bin/busted tests/
+          make test
