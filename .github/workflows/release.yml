@@ -8,49 +8,80 @@ on:
 
 jobs:
   build:
-    name: Build Pygame Executable
+    name: Build LÖVE Executable
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         include:
-          - os: windows-latest
-            artifact_name: oblique_games-windows
-            output_file: oblique-games.exe
+          - os: ubuntu-latest
+            artifact_name: chaosbomber-windows
+            output_file: chaosbomber-11.5-win64.zip
             channel: windows
           - os: macos-latest
-            artifact_name: oblique_games-mac
-            output_file: oblique-games
+            artifact_name: chaosbomber-mac
+            output_file: chaosbomber-mac.zip
             channel: mac
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install Dependencies
+      - name: Create .love File
         run: |
-          pip install -r src/oblique_games/requirements.txt
-          pip install pyinstaller pillow
+          cd src/chaosbomber
+          zip -9 -r ../../chaosbomber.love .
+          cd ../..
 
-      - name: Build Executable
-        run: |
-          cd src/oblique_games
-          pyinstaller --onefile --windowed --name oblique-games --icon=assets/img/icon/icon_64x64.png --add-data "assets${{ runner.os == 'Windows' && ';' || ':' }}assets" main.py
-
-      - name: Upload Artifact
+      - name: Upload .love Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: src/oblique_games/dist/${{ matrix.output_file }}
+          name: chaosbomber-love
+          path: chaosbomber.love
+
+      - name: Install Dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zip unzip wget
+
+      - name: Build Windows Executable
+        if: runner.os == 'Linux'
+        run: bash src/script/build_windows.sh 11.5 win64
+
+      - name: Upload Windows Artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaosbomber-windows
+          path: build/chaosbomber-11.5-win64.zip
+
+      - name: Install LÖVE (macOS)
+        if: runner.os == 'macOS'
+        run: brew install --cask love
+
+      - name: Build macOS Application Bundle
+        if: runner.os == 'macOS'
+        run: |
+          mkdir ChaosBomber.app
+          cp -R /Applications/love.app/Contents ChaosBomber.app/
+          cp chaosbomber.love ChaosBomber.app/Contents/Resources/
+          plutil -replace CFBundleName -string "ChaosBomber" ChaosBomber.app/Contents/Info.plist
+          plutil -replace CFBundleIdentifier -string "com.yourdomain.chaosbomber" ChaosBomber.app/Contents/Info.plist
+          plutil -replace CFBundleExecutable -string "love" ChaosBomber.app/Contents/Info.plist
+
+      - name: Compress macOS Application
+        if: runner.os == 'macOS'
+        run: zip -9 -r chaosbomber-mac.zip ChaosBomber.app
+
+      - name: Upload macOS Artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaosbomber-mac
+          path: chaosbomber-mac.zip
 
   release:
     name: Release to Itch.io
-    needs: build  # Ensure build completes before releasing
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -60,19 +91,19 @@ jobs:
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
         with:
-          name: oblique_games-windows
+          name: chaosbomber-windows
           path: build/windows
 
       - name: Download macOS Artifact
         uses: actions/download-artifact@v4
         with:
-          name: oblique_games-mac
+          name: chaosbomber-mac
           path: build/mac
 
       - name: Deploy Windows Build to Itch.io
         uses: robpc/itchio-upload-action@v1
         with:
-          path: build/windows/oblique-games.exe
+          path: build/windows/chaosbomber-11.5-win64.zip
           project: ${{ secrets.ITCHIO_PROJECT }}
           channel: windows
           version: ${{ github.ref_name }}
@@ -81,7 +112,7 @@ jobs:
       - name: Deploy macOS Build to Itch.io
         uses: robpc/itchio-upload-action@v1
         with:
-          path: build/mac/oblique-games
+          path: build/mac/chaosbomber-mac.zip
           project: ${{ secrets.ITCHIO_PROJECT }}
           channel: mac
           version: ${{ github.ref_name }}
