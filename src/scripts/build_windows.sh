@@ -27,7 +27,7 @@ mv "$BUILD_DIR/love-${LOVE_VERSION}-${ARCH}" "$BUILD_DIR/love"
 
 # Create .love archive
 echo "Creating ${GAME_NAME}.love..."
-cd src/chaos_bomber || exit
+cd src/chaosbomber || exit
 zip -9 -r "../../${BUILD_DIR}/${GAME_NAME}.love" .
 cd - > /dev/null
 
