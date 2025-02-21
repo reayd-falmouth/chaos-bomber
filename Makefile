@@ -1,5 +1,5 @@
 SRC_DIR := src/
-GAME_DIR := $(SRC_DIR)/chaos_bomber
+GAME_DIR := $(SRC_DIR)/chaosbomber
 ITCH_USER := reayd-falmouth
 ITCH_GAME := chaos-bomber
 BUILD_DIR=$(GAME_DIR)/build
