@@ -7,6 +7,25 @@ on:
       - '*'  # Runs on any tag push
 
 jobs:
+  build-zip:
+    name: Build .love File
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create .love File
+        run: |
+          cd src/chaosbomber
+          zip -9 -r ../../chaosbomber.love .
+          cd ../..
+
+      - name: Upload .love Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaosbomber-love
+          path: chaosbomber.love
+
   build:
     name: Build LÖVE Executable
     runs-on: ${{ matrix.os }}
@@ -27,17 +46,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Create .love File
-        run: |
-          cd src/chaosbomber
-          zip -9 -r ../../chaosbomber.love .
-          cd ../..
-
-      - name: Upload .love Artifact
-        uses: actions/upload-artifact@v4
+      - name: Download .love Artifact
+        uses: actions/download-artifact@v4
         with:
           name: chaosbomber-love
-          path: chaosbomber.love
+          path: .
 
       - name: Install Dependencies (Ubuntu)
         if: runner.os == 'Linux'
