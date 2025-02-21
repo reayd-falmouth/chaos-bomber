@@ -25,8 +25,9 @@ jobs:
       - name: Upload .love Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chaosbomber-love
+          name: chaosbomber-love-${{ github.run_id }}
           path: chaosbomber.love
+          if-no-files-found: ignore
 
   build-windows:
     name: Build Windows Executable
@@ -39,7 +40,7 @@ jobs:
       - name: Download .love Artifact
         uses: actions/download-artifact@v4
         with:
-          name: chaosbomber-love
+          name: chaosbomber-love-${{ github.run_id }}
           path: .
 
       - name: Install Dependencies
@@ -51,8 +52,9 @@ jobs:
       - name: Upload Windows Executable
         uses: actions/upload-artifact@v4
         with:
-          name: chaosbomber-windows
-          path: chaosbomber-11.5-win64.zip
+          name: chaosbomber-windows-${{ github.run_id }}
+          path: build/chaosbomber-11.5-win64.zip
+          if-no-files-found: ignore
 
   build-mac:
     name: Build macOS Application
@@ -65,7 +67,7 @@ jobs:
       - name: Download .love Artifact
         uses: actions/download-artifact@v4
         with:
-          name: chaosbomber-love
+          name: chaosbomber-love-${{ github.run_id }}
           path: .
 
       - name: Install LÖVE
@@ -86,5 +88,6 @@ jobs:
       - name: Upload macOS Application
         uses: actions/upload-artifact@v4
         with:
-          name: chaosbomber-mac
+          name: chaosbomber-mac-${{ github.run_id }}
           path: chaosbomber-mac.zip
+          if-no-files-found: ignore
