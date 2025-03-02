@@ -4,7 +4,7 @@ local cols = 19  -- Map width
 local density = 0.7
 
 -- Define tile types
-local TILE = {
+local tileSheet = {
     EMPTY = 43,
     WALL = 38,
     DESTRUCTIBLE = 39,
@@ -24,13 +24,13 @@ for r = 1, rows do
     for c = 1, cols do
         -- Outer Walls (Always WALL)
         if r == 1 or r == rows or c == 1 or c == cols then
-            tileMap[r][c] = TILE.WALL
+            tileMap[r][c] = tileSheet.WALL
         -- Fixed Non-Destructible Blocks (Every Other Tile in a Grid)
         elseif r % 2 == 1 and c % 2 == 1 then
-            tileMap[r][c] = TILE.WALL
+            tileMap[r][c] = tileSheet.WALL
         -- Default to Empty Space
         else
-            tileMap[r][c] = TILE.EMPTY
+            tileMap[r][c] = tileSheet.EMPTY
         end
     end
 end
@@ -67,10 +67,10 @@ end
 local function placeDestructibles()
     for r = 2, rows - 1 do
         for c = 2, cols - 1 do
-            if tileMap[r][c] == TILE.EMPTY and
+            if tileMap[r][c] == tileSheet.EMPTY and
                not isTileInList(r, c, safeZones) then
                 if math.random() < density then  -- 50% chance to place a destructible tile
-                    tileMap[r][c] = TILE.DESTRUCTIBLE
+                    tileMap[r][c] = tileSheet.DESTRUCTIBLE
                 end
             end
         end
@@ -81,11 +81,11 @@ end
 local function placePowerUps()
     for r = 2, rows - 1 do
         for c = 2, cols - 1 do
-            if tileMap[r][c] == TILE.EMPTY and math.random() < 0.02 then -- 2% chance
+            if tileMap[r][c] == tileSheet.EMPTY and math.random() < 0.02 then -- 2% chance
                 local powerUpType = math.random(1, 3)
-                if powerUpType == 1 then tileMap[r][c] = TILE.ITEM_SPEED
-                elseif powerUpType == 2 then tileMap[r][c] = TILE.ITEM_RANGE
-                else tileMap[r][c] = TILE.ITEM_EXTRA_BOMB end
+                if powerUpType == 1 then tileMap[r][c] = tileSheet.ITEM_SPEED
+                elseif powerUpType == 2 then tileMap[r][c] = tileSheet.ITEM_RANGE
+                else tileMap[r][c] = tileSheet.ITEM_EXTRA_BOMB end
             end
         end
     end
@@ -96,4 +96,4 @@ math.randomseed(os.time())
 placeDestructibles()
 --placePowerUps() -- Uncomment if you want power-ups to be generated
 
-return tileMap, TILE  -- Return TILE so other scripts can use it
+return tileMap, tileSheet  -- Return TILE so other scripts can use it

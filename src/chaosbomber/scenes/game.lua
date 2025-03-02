@@ -18,7 +18,61 @@ local tileQuads = {}  -- Initialize empty table
 local tileSize = 16  -- Each tile is 32x32 pixels
 local tilesPerRow = 20  -- Number of tiles per row
 local tilesPerCol = 3    -- Number of tiles per column
-local tileMap = require("tile_map")  -- Load external arena map
+local tileMap -- The tile map and TILE constants
+local rows -- Total rows from the map
+local cols  -- Total columns from the first row
+
+local shrinkStep = 0 -- Tracks how many layers have been converted
+local shrinkTimer = 0 -- Timer to control shrinking speed
+local shrinkDelay = 2 -- Time (in seconds) between each shrink step
+
+-- Function to shrink the map clockwise
+local function shrinkMapStep()
+    if tileSheet.WALL == nil then
+        error("ERROR: TILE.WALL is nil! Check tile_map.lua.")
+    end
+
+    if shrinkStep >= math.min(math.floor(rows / 2), math.floor(cols / 2)) then
+        return -- Stop shrinking once the center is reached
+    end
+
+    local startRow = shrinkStep + 1
+    local startCol = shrinkStep + 1
+    local endRow = rows - shrinkStep
+    local endCol = cols - shrinkStep
+
+    -- **Top row (left to right)**
+    for c = startCol, endCol do
+        if tileMap[startRow][c] ~= tileSheet.WALL then
+            tileMap[startRow][c] = tileSheet.WALL
+        end
+    end
+
+    -- **Right column (top to bottom)**
+    for r = startRow, endRow do
+        if tileMap[r][endCol] ~= tileSheet.WALL then
+            tileMap[r][endCol] = tileSheet.WALL
+        end
+    end
+
+    -- **Bottom row (right to left)**
+    for c = endCol, startCol, -1 do
+        if tileMap[endRow][c] ~= tileSheet.WALL then
+            tileMap[endRow][c] = tileSheet.WALL
+        end
+    end
+
+    -- **Left column (bottom to top)**
+    for r = endRow, startRow, -1 do
+        if tileMap[r][startCol] ~= tileSheet.WALL then
+            tileMap[r][startCol] = tileSheet.WALL
+        end
+    end
+
+    -- Move to the next layer
+    shrinkStep = shrinkStep + 1
+end
+
 
 -- Function to reset game state
 function Game.reset()
@@ -32,14 +86,25 @@ function Game.reset()
 end
 
 function Game.load(players)
-    print("Game starting... Countdown initiated!")
-    print("Starting game with settings:")
-    print("Wins Needed:", GameSettings.winsNeeded)
-    print("Players:", GameSettings.players)
-    print("Shop:", GameSettings.shop)
+    -- Load tileMap and TILE definitions dynamically
+    local tempMap, tempTILE = require("tile_map")
+    print("DEBUG: tempMap = ", tempMap)
+    print("DEBUG: tempTILE = ", tempTILE)
 
-    -- Load tilemap image
-    tileSheet = love.graphics.newImage("assets/sprites/icons.png")
+    tileMap = tempMap
+    tileSheet = tempTILE
+
+    -- Get map dimensions
+    rows = #tileMap
+    cols = #tileMap[1]
+
+    -- Use the tileSheet from TILE if it exists
+    if tileSheet.tileSheet then
+        tileSheet = tileSheet.tileSheet
+    else
+        -- Fallback: Load the tileSheet if not included in TILE
+        tileSheet = love.graphics.newImage("assets/sprites/icons.png")
+    end
 
     -- Reinitialize tileQuads to avoid stale data
     tileQuads = {}
@@ -54,7 +119,7 @@ function Game.load(players)
         end
     end
 
-    -- Load game music
+    -- Load game music (only if not already loaded)
     if not gameMusic then
         gameMusic = love.audio.newSource("assets/music/game_music.ogg", "stream")
         gameMusic:setLooping(true)
@@ -62,11 +127,11 @@ function Game.load(players)
 
     -- Load alarm sound (single-play sound effect)
     if not alarmSound then
-        alarmSound = love.audio.newSource("assets/sfx/alarm.ogg", "static") -- Static for short sound effects
-        alarmSound:setLooping(true)  -- Fix: Alarm should not loop
+        alarmSound = love.audio.newSource("assets/sfx/alarm.ogg", "static")
+        alarmSound:setLooping(true)
     end
 
-    gameMusic:setPitch(1.5)  -- Initial music speed (optional)
+    gameMusic:setPitch(1.5)  -- Initial music speed
 
     -- Store player data for standings screen
     if type(players) == "table" then
@@ -84,6 +149,7 @@ function Game.load(players)
     -- Reset the game state variables when loading
     Game.reset()
 end
+
 
 function Game.update(dt)
     if not gameStarted then
@@ -110,6 +176,15 @@ function Game.update(dt)
         -- Game logic and gradual music speed increase
         local newPitch = gameMusic:getPitch() + (dt * tension)  -- Slowly increase speed
         gameMusic:setPitch(math.min(newPitch, 2.0))  -- Cap at 2x speed
+
+        -- Handle shrinking effect
+        if alarmTriggered and GameSettings.shrinking then
+            shrinkTimer = shrinkTimer + dt
+            if shrinkTimer >= shrinkDelay then
+                shrinkTimer = 0 -- Reset timer
+                shrinkMapStep() -- Shrink the map
+            end
+        end
     else
         -- Game Over (time runs out)
         Game.exitToStandings()
