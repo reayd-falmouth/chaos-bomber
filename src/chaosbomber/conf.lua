@@ -1,7 +1,7 @@
 -- conf.lua
 function love.conf(t)
-    t.window.title = "ChaosBomber"
-    t.window.width = 800
-    t.window.height = 600
+    t.window.title = "Master Blaster"
+    t.window.width = 600
+    t.window.height = 400
     t.window.resizable = true
 end

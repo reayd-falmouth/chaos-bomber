@@ -42,3 +42,6 @@ luac.out
 # Customer folders.
 .screenshots
 *.love
+build
+.ideas
+masterblaster-1.0
