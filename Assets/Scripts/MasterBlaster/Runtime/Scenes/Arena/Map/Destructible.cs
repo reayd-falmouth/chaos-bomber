@@ -1,4 +1,5 @@
 using HybridGame.MasterBlaster.Scripts.Player;
+using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player.Abilities;
 using MoreMountains.Feedbacks;
 using UnityEngine;
@@ -121,7 +122,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
                 Instantiate(
                     spawnableItems[randomIndex],
-                    transform.position,
+                    new Vector3(transform.position.x, WallBlock3D.GetItemDropSpawnY(), transform.position.z),
                     Quaternion.identity,
                     parent
                 );

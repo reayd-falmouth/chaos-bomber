@@ -17,6 +17,10 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public float destructionAnimTime = 0.5f;
         public AnimatedSpriteRenderer destroyFX;
 
+        [Header("Health")]
+        [Min(1f)]
+        public float maxHealth = 30f;
+
         [Header("Item Drop")]
         [Range(0f, 1f)]
         public float itemSpawnChance = 0.2f;
@@ -24,12 +28,17 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                  "Add or remove entries here to control which items can drop.")]
         public GameObject[] itemPrefabs;
 
-        [Tooltip("Meters above ArenaGrid3D.GridOrigin.y for the pickup pivot. 0 = floor plane. " +
-                 "Use ~0.5 × CellSize for a unit cube centered on the cell (e.g. 0.5 when CellSize is 1).")]
+        [Tooltip("Additional meters above the default drop height. Default drop height is GridOrigin.y + (0.5 × CellSize) " +
+                 "so a unit cube pickup (center pivot) rests on the floor when CellSize is 1.")]
         public float itemSpawnYOffset = 0f;
 
         private NetworkVariable<bool> _isDestroyed = new NetworkVariable<bool>(
             false,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
+
+        private NetworkVariable<float> _health = new NetworkVariable<float>(
+            0f,
             NetworkVariableReadPermission.Everyone,
             NetworkVariableWritePermission.Server);
 
@@ -54,6 +63,11 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public override void OnNetworkSpawn()
         {
             _isDestroyed.OnValueChanged += OnDestroyedChanged;
+
+            if (IsServer && !_isDestroyed.Value)
+            {
+                _health.Value = Mathf.Max(1f, maxHealth);
+            }
 
             // Apply initial state for late-joining clients
             if (_isDestroyed.Value)
@@ -150,6 +164,11 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         {
             if (!IsAuthority) return;
 
+            if (IsSpawned)
+            {
+                _health.Value = 0f;
+            }
+
             _pendingItemIdx = RollItemDrop();
 
             if (IsSpawned)
@@ -170,11 +189,65 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             DestroyBlockAuthoritative();
         }
 
+        /// <summary>
+        /// Server-authoritative damage entrypoint for FPS projectiles.
+        /// Clients route to server; server applies damage and destroys at 0 health.
+        /// </summary>
+        public void ApplyProjectileDamage(float amount, GameObject damageSource = null)
+        {
+            if (_destroyStarted) return;
+            if (amount <= 0f) return;
+
+            if (IsSpawned && !IsServer)
+            {
+                ApplyProjectileDamageServerRpc(amount);
+                return;
+            }
+
+            ApplyProjectileDamageAuthoritative(amount);
+        }
+
+        private void ApplyProjectileDamageAuthoritative(float amount)
+        {
+            if (!IsAuthority) return;
+            if (_destroyStarted) return;
+
+            if (IsSpawned)
+            {
+                if (_health.Value <= 0f)
+                    _health.Value = Mathf.Max(1f, maxHealth);
+
+                _health.Value = Mathf.Max(0f, _health.Value - amount);
+
+                if (_health.Value <= 0f)
+                    DestroyBlockAuthoritative();
+            }
+            else
+            {
+                // Fallback for unspawned/singleplayer use (kept for completeness)
+                maxHealth = Mathf.Max(1f, maxHealth);
+                _health.Value = Mathf.Max(0f, _health.Value - amount);
+                if (_health.Value <= 0f)
+                    DestroyBlockAuthoritative();
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void ApplyProjectileDamageServerRpc(float amount)
+        {
+            ApplyProjectileDamageAuthoritative(amount);
+        }
+
         private int RollItemDrop()
         {
             if (itemPrefabs == null || itemPrefabs.Length == 0) return -1;
             if (Random.value >= itemSpawnChance) return -1;
             return Random.Range(0, itemPrefabs.Length);
+        }
+
+        public static float GetItemDropSpawnY(float extraYOffset = 0f)
+        {
+            return ArenaGrid3D.GridOrigin.y + (0.5f * ArenaGrid3D.CellSize) + extraYOffset;
         }
 
         private void SpawnPendingItem()
@@ -184,7 +257,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             if (prefab == null) return;
 
             Vector3 pos = ArenaGrid3D.SnapToCell(transform.position);
-            pos.y = ArenaGrid3D.GridOrigin.y + itemSpawnYOffset;
+            pos.y = GetItemDropSpawnY(itemSpawnYOffset);
 
             Transform parent = null;
             if (HybridArenaGrid.Instance != null)

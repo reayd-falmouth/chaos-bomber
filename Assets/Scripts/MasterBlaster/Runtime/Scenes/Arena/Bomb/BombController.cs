@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
 using Unity.Netcode;
@@ -427,6 +428,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Bomb
             EnsureArenaRootCached();
             int idx = Random.Range(0, template.spawnableItems.Length);
             Vector3 world = destructibleTiles.GetCellCenterWorld(cell);
+            world.y = WallBlock3D.GetItemDropSpawnY();
             Instantiate(template.spawnableItems[idx], world, Quaternion.identity, _arenaRoot);
         }
 
