@@ -1,0 +1,7 @@
+{
+    "name": "Scenes.Tests",
+    "references": [
+        "HybridGame"
+    ],
+    "optionalUnityReferences": ["TestAssemblies"]
+}
