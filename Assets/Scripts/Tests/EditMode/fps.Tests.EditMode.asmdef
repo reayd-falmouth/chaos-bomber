@@ -1,7 +1,9 @@
 {
   "name": "fps.Tests.EditMode",
   "references": [
-    "GUID:9c5543eabb73a6249ac07b2c065ee8b4"
+    "GUID:9c5543eabb73a6249ac07b2c065ee8b4",
+    "GUID:51dcbfc9b53847f4f87a2d6716e0204f",
+    "Unity.Netcode.Runtime"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"
