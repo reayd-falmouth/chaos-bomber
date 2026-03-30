@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/MasterBlaster/Scenes/MasterBlaster_FPS.unity
+    path: Assets/Scenes/MasterBlaster/MasterBlaster_FPS.unity
     guid: 90ec7616199a6fc4393132efca039db9
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f,
