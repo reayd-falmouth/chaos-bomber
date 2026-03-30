@@ -74,6 +74,9 @@ crashlytics-build.properties
 # Directory junction → ../MasterBlaster (local reference; recreate with mklink /J if missing)
 /MasterBlaster/
 
+# Third-party vendor assets (local-only; keep out of repo)
+/Assets/3rdParty/
+
 # Local-only tooling/config files
 /.idea/
 /.claude/
