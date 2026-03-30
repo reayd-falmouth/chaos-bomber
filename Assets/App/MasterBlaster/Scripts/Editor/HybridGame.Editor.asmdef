@@ -1,0 +1,20 @@
+{
+    "name": "HybridGame.Editor",
+    "rootNamespace": "HybridGame.Editor",
+    "references": [
+        "HybridGame",
+        "fps.Game",
+        "fps.Gameplay"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,30 @@
+{
+    "name": "HybridGame",
+    "rootNamespace": "HybridGame",
+    "references": [
+        "GUID:9c5543eabb73a6249ac07b2c065ee8b4",
+        "GUID:27b7e9efd224f064990a97ed99e4456f",
+        "GUID:e9dc24b3d0971d64a9e95b6986d97af5",
+        "GUID:1491147abca9d7d4bb7105af628b223e",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:fe25561d224ed4743af4c60938a59d0b",
+        "GUID:5540e30183c82e84b954c033c388e06c",
+        "GUID:37e17ffe38d86ae48bc3207e83ffef88",
+        "GUID:4307f53044263cf4b835bd812fc161a4",
+        "GUID:15fc0a57446b3144c949da3e2b9737a9",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:85e0054f8e64b47309646d35f8851f81",
+        "GUID:4a1cb1490dc4df8409b2580d6b44e75e",
+        "GUID:dc4014d4779276744964fcb5a4a453d9",
+        "GUID:0da6d172d18a54e4389d0dce1e1ffdf2"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3991971012234385874
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 996071289924319029}
+  - component: {fileID: 8427585834842989643}
+  - component: {fileID: 839665286745141774}
+  m_Layer: 0
+  m_Name: AudioController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &996071289924319029
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3991971012234385874}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.8421091, y: -1.7628177, z: -0.081860036}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!81 &8427585834842989643
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3991971012234385874}
+  m_Enabled: 1
+--- !u!114 &839665286745141774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3991971012234385874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e776b197b9639ea4c83ca3c6830efabb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  introClip: {fileID: 8300000, guid: d11b5aa79e5471b438aa226921374c89, type: 3}
+  sceneMusicMap:
+  - sceneName: Title
+    clips: []
+    pitch: 1
+    volume: 0
+    crossfadeSeconds: 0
+    playImmediately: 0
+    playOnce: 0
+    pitchEscalation: 0
+    pitchBase: 0
+    pitchStep: 0
+    pitchStepEvery: 0
+    pitchMax: 0
+  - sceneName: Menu
+    clips: []
+    pitch: 1
+    volume: 0
+    crossfadeSeconds: 0
+    playImmediately: 0
+    playOnce: 0
+    pitchEscalation: 0
+    pitchBase: 0
+    pitchStep: 0
+    pitchStepEvery: 0
+    pitchMax: 0
+  - sceneName: Countdown
+    clips: []
+    pitch: 1
+    volume: 0
+    crossfadeSeconds: 0
+    playImmediately: 0
+    playOnce: 0
+    pitchEscalation: 0
+    pitchBase: 0
+    pitchStep: 0
+    pitchStepEvery: 0
+    pitchMax: 0
+  - sceneName: Arena
+    clips: []
+    pitch: 1
+    volume: 0
+    crossfadeSeconds: 0
+    playImmediately: 0
+    playOnce: 0
+    pitchEscalation: 0
+    pitchBase: 0
+    pitchStep: 0
+    pitchStepEvery: 0
+    pitchMax: 0
+  scheduleAheadSeconds: 0.5
+  defaultCrossfadeSeconds: 0
+  loopCrossfadeSeconds: 0
+  musicMixerGroup: {fileID: 3193342755853607120, guid: 22d0b2db119ada74781373b6d32b5beb, type: 2}
+  musicSource: {fileID: 0}
+  musicSourceB: {fileID: 0}

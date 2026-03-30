@@ -1,0 +1,4 @@
+{
+    "name": "Scenes.Tests",
+    "optionalUnityReferences": ["TestAssemblies"]
+}

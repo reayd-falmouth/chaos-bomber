@@ -2,8 +2,10 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!78 &1
 TagManager:
-  serializedVersion: 2
-  tags: []
+  serializedVersion: 3
+  tags:
+  - PicaVoxelVolume
+  - Player
   layers:
   - Default
   - TransparentFX
@@ -11,12 +13,12 @@ TagManager:
   - 
   - Water
   - UI
-  - 
-  - 
+  - DestructibleWall
+  - IndestructibleWall
   - PostProcessing
-  - 
-  - FirstPersonWeapon
-  - PhysicalAmmo
+  - Explosion3D
+  - Bomb3D
+  - Player
   - 
   - 
   - 
@@ -38,12 +40,8 @@ TagManager:
   - 
   - 
   m_SortingLayers:
-  - name: Background
-    uniqueID: 788040023
-    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: Foreground
-    uniqueID: 3922283465
-    locked: 0
+  m_RenderingLayers:
+  - Default

@@ -70,3 +70,14 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Directory junction → ../MasterBlaster (local reference; recreate with mklink /J if missing)
+/MasterBlaster/
+
+# Local-only tooling/config files
+/.idea/
+/.claude/
+/.cursor/skills/
+
+*.log
+/[Aa]ssets/[Vv]endor/
