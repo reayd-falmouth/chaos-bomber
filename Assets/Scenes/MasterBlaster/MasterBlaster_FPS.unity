@@ -15377,12 +15377,8 @@ MonoBehaviour:
   rows: 15
   destructibleWallsParent: {fileID: 1721334038}
   indestructibleWallsParent: {fileID: 1029117648}
-  destructibleWallPrefab: {fileID: 929385142751814526, guid: 148b39623b6e313409689bdf983ae0b9,
+  destructibleWallsLayoutPrefab: {fileID: 5587835923372368333, guid: ce8928b372a84614383044f494f8aedc,
     type: 3}
-  destructibleWallsLayoutPrefab: {fileID: 6735583692238279431, guid: ce8928b372a84614383044f494f8aedc,
-    type: 3}
-  generateOnStart: 0
-  fillRate: 0.7
   safeZoneArmLength: 2
   gridOriginLocal: {x: -8, y: 0, z: -6}
   thinSceneDestructibles: 1

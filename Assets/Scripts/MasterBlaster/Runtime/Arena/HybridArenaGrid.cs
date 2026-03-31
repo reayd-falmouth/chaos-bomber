@@ -17,20 +17,17 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public Transform destructibleWallsParent;
         public Transform indestructibleWallsParent;
 
-        [Header("Runtime Generation")]
-        public GameObject destructibleWallPrefab;
-        [Tooltip("Optional: prefab containing the authored destructible wall layout (e.g. 'DestructibleWalls' root with children). " +
-                 "When assigned and generateOnStart is false, resets restore from this prefab baseline instead of cloning the live scene.")]
+        [Header("Destructible Layout (assign in Inspector)")]
+        [Tooltip("Prefab containing the authored destructible wall layout (e.g. 'DestructibleWalls' root with children). " +
+                 "Resets restore from this prefab baseline (recommended). If unset, the initial scene children are captured as the baseline instead.")]
         public GameObject destructibleWallsLayoutPrefab;
-        public bool generateOnStart = true;
-        [Range(0f, 1f)] public float fillRate = 0.7f;
         public int safeZoneArmLength = 2;
         [Tooltip("Local-space XZ origin of cell (0,0) relative to destructibleWallsParent. " +
                  "Match this to the arena's top-left corner. Default: (-8, 0, 0).")]
         public Vector3 gridOriginLocal = new Vector3(-8f, 0f, 0f);
 
-        [Header("Scene map thinning (when generateOnStart is off)")]
-        [Tooltip("Randomly remove scene-placed destructible walls before BuildGrid. Ignored if generateOnStart is on.")]
+        [Header("Scene map thinning")]
+        [Tooltip("Randomly remove destructible walls from the populated layout before BuildGrid.")]
         public bool thinSceneDestructibles;
         [Range(0f, 1f)]
         [Tooltip("Per-wall probability to KEEP ( Bernoulli ). Expected remaining ≈ keepChance × N.")]
@@ -59,20 +56,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
         private void Start()
         {
-            GenerateWalls();
             CaptureBaselineDestructiblesIfNeeded();
-            // Optional: if the scene starts with an empty destructible parent (or we want prefab-driven layout),
-            // restore once from the captured baseline before thinning/build.
-            if (!generateOnStart && destructibleWallsParent != null && destructibleWallsParent.childCount == 0
-                && _baselineCaptured && _baselineDestructiblesRoot != null)
-            {
-                RestoreDestructiblesFromBaselineThenRethinAndRebuild();
-                return; // Restore already ran thinning/build when applicable
-            }
-            if (thinSceneDestructibles && !generateOnStart && !thinOnlyWhenInvokedExplicitly &&
-                ShouldRunThinningAuthority())
-                ThinSceneDestructibles();
-            BuildGrid();
+            RestoreDestructiblesFromBaselineThenRethinAndRebuild();
         }
 
         private static void CloneChildPreserveLocal(Transform src, Transform dstParent)
@@ -91,7 +76,6 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         private void CaptureBaselineDestructiblesIfNeeded()
         {
             if (_baselineCaptured) return;
-            if (generateOnStart) return; // runtime-generated layouts can be regenerated
             if (destructibleWallsParent == null) return;
 
             var holder = new GameObject($"{name}_BaselineDestructibles");
@@ -124,13 +108,6 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
         public void RestoreDestructiblesFromBaselineThenRethinAndRebuild()
         {
-            if (generateOnStart)
-            {
-                GenerateWalls();
-                BuildGrid();
-                return;
-            }
-
             if (!_baselineCaptured || _baselineDestructiblesRoot == null || destructibleWallsParent == null)
                 return;
 
@@ -179,7 +156,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         /// </summary>
         public void ApplySceneDestructibleThinning()
         {
-            if (!thinSceneDestructibles || generateOnStart) return;
+            if (!thinSceneDestructibles) return;
             if (!ShouldRunThinningAuthority()) return;
             if (proceduralSeed != 0)
                 Random.InitState(proceduralSeed);
@@ -235,34 +212,6 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             // Keep GridOrigin.y at 0 so SnapToCell / movement do not lift characters vertically.
             ArenaGrid3D.GridOrigin = new Vector3(worldOrigin.x, 0f, worldOrigin.z);
             UnityEngine.Debug.Log($"[HybridArenaGrid] GridOrigin set to {ArenaGrid3D.GridOrigin}");
-        }
-
-        private void GenerateWalls()
-        {
-            if (!generateOnStart || destructibleWallPrefab == null || destructibleWallsParent == null) return;
-
-            for (int i = destructibleWallsParent.childCount - 1; i >= 0; i--)
-                Destroy(destructibleWallsParent.GetChild(i).gameObject);
-
-            for (int c = 0; c < columns; c++)
-                for (int r = 0; r < rows; r++)
-                {
-                    if (!IsCellDestructible(c, r)) continue;
-                    var localPos = gridOriginLocal + new Vector3(c * ArenaGrid3D.CellSize, 0f, r * ArenaGrid3D.CellSize);
-                    var worldPos = destructibleWallsParent.TransformPoint(localPos);
-                    var go = Instantiate(destructibleWallPrefab, worldPos, Quaternion.identity, destructibleWallsParent);
-                    go.name = $"DWall_{c}_{r}";
-                }
-        }
-
-        private bool IsCellDestructible(int c, int r)
-        {
-            // Border cells — always indestructible
-            if (c == 0 || r == 0 || c == columns - 1 || r == rows - 1) return false;
-            // Pillar grid — every even column+row intersection
-            if (c % 2 == 0 && r % 2 == 0) return false;
-            if (IsInSpawnSafeZone(c, r)) return false;
-            return Random.value < fillRate;
         }
 
         private void BuildGrid()

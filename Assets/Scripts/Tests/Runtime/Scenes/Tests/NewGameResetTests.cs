@@ -66,7 +66,6 @@ namespace HybridGame.MasterBlaster.Tests
             }
 
             var grid = arenaGo.AddComponent<HybridArenaGrid>();
-            grid.generateOnStart = false;
             grid.thinSceneDestructibles = false;
             grid.destructibleWallsParent = parent;
             grid.indestructibleWallsParent = null;
@@ -75,8 +74,6 @@ namespace HybridGame.MasterBlaster.Tests
             // Let Start() capture baseline
             yield return null;
 
-            // Populate the scene from baseline once (some scenes may start empty).
-            grid.RestoreDestructiblesFromBaselineThenRethinAndRebuild();
             Assert.That(parent.childCount, Is.EqualTo(3));
 
             // Simulate destruction: clear all
