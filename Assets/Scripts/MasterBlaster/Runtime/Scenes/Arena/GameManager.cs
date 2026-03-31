@@ -312,11 +312,27 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             if (players == null || players.Length != count)
                 players = DiscoverPlayersForCount(count);
 
-            // Disable all slots we discovered (they may still be active from previous rounds).
-            if (players != null)
+            // Disable *all* player candidates in the scene first.
+            // In single-scene mode, the arena root is toggled on/off without reloading the scene.
+            // If the player count decreases between runs (e.g. 5 → 2), any slots we *don't* rediscover
+            // would otherwise remain active from the previous session.
+            var allDualModes = FindObjectsByType<PlayerDualModeController>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+            if (allDualModes != null && allDualModes.Length > 0)
             {
-                for (int i = 0; i < players.Length; i++)
-                    players[i]?.SetActive(false);
+                for (int i = 0; i < allDualModes.Length; i++)
+                    allDualModes[i]?.gameObject.SetActive(false);
+            }
+            else
+            {
+                var allControllers = FindObjectsByType<PlayerController>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None
+                );
+                for (int i = 0; i < allControllers.Length; i++)
+                    allControllers[i]?.gameObject.SetActive(false);
             }
 
             int nullCount = 0;

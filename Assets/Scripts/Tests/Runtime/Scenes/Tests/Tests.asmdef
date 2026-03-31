@@ -1,7 +1,8 @@
 {
     "name": "Scenes.Tests",
     "references": [
-        "HybridGame"
+        "HybridGame",
+        "Unity.Netcode.Runtime"
     ],
     "optionalUnityReferences": ["TestAssemblies"]
 }
