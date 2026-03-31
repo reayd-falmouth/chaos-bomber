@@ -32,10 +32,17 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private int _shopControllerOverridePlayerId;
         private int _shopControllerOverrideDeviceIndex;
 
+        // ── New game marker ───────────────────────────────────────────────────
+        // In single-scene flow we toggle roots instead of reloading the scene, so
+        // GameManager needs an explicit signal when we are starting a brand new game
+        // (Menu → Start) versus continuing between rounds (Standings/Wheel/Shop → Countdown → Game).
+        private bool _newGamePending;
+
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
             ResetSession();
+            _newGamePending = true;
             for (int id = 1; id <= playerCount; id++)
             {
                 // Initialize each player with a dictionary to store their upgrades
@@ -62,6 +69,15 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             _playerDeviceIndex.Clear();
             ClearShopControllerOverride();
             _networkClientToPlayer.Clear();
+            _newGamePending = false;
+        }
+
+        public bool ConsumeNewGamePending()
+        {
+            if (!_newGamePending)
+                return false;
+            _newGamePending = false;
+            return true;
         }
 
         public int GetCoins(int playerId)

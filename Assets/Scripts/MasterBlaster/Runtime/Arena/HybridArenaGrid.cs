@@ -42,6 +42,9 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         private WallBlock3D[,] _destructibles;
         private bool[,] _indestructibleMask; // true = blocked by permanent wall
 
+        private Transform _baselineDestructiblesRoot;
+        private bool _baselineCaptured;
+
         public static HybridArenaGrid Instance { get; private set; }
 
         private void Awake()
@@ -54,9 +57,68 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         private void Start()
         {
             GenerateWalls();
+            CaptureBaselineDestructiblesIfNeeded();
             if (thinSceneDestructibles && !generateOnStart && !thinOnlyWhenInvokedExplicitly &&
                 ShouldRunThinningAuthority())
                 ThinSceneDestructibles();
+            BuildGrid();
+        }
+
+        private void CaptureBaselineDestructiblesIfNeeded()
+        {
+            if (_baselineCaptured) return;
+            if (generateOnStart) return; // runtime-generated layouts can be regenerated
+            if (destructibleWallsParent == null) return;
+
+            var holder = new GameObject($"{name}_BaselineDestructibles");
+            holder.SetActive(false);
+            holder.hideFlags = HideFlags.HideAndDontSave;
+            _baselineDestructiblesRoot = holder.transform;
+            _baselineDestructiblesRoot.SetParent(transform, false);
+
+            for (int i = 0; i < destructibleWallsParent.childCount; i++)
+            {
+                var child = destructibleWallsParent.GetChild(i);
+                if (child == null) continue;
+                var clone = Instantiate(child.gameObject, _baselineDestructiblesRoot);
+                clone.name = child.gameObject.name;
+            }
+
+            _baselineCaptured = true;
+        }
+
+        public void RestoreDestructiblesFromBaselineThenRethinAndRebuild()
+        {
+            if (generateOnStart)
+            {
+                GenerateWalls();
+                BuildGrid();
+                return;
+            }
+
+            if (!_baselineCaptured || _baselineDestructiblesRoot == null || destructibleWallsParent == null)
+                return;
+
+            // Clear current
+            for (int i = destructibleWallsParent.childCount - 1; i >= 0; i--)
+                Destroy(destructibleWallsParent.GetChild(i).gameObject);
+
+            // Restore clones
+            for (int i = 0; i < _baselineDestructiblesRoot.childCount; i++)
+            {
+                var src = _baselineDestructiblesRoot.GetChild(i);
+                if (src == null) continue;
+                var go = Instantiate(src.gameObject, destructibleWallsParent);
+                go.name = src.gameObject.name;
+                go.SetActive(true);
+
+                if (go.TryGetComponent<NetworkObject>(out var no) && ShouldRunThinningAuthority() && !no.IsSpawned)
+                    no.Spawn();
+            }
+
+            if (thinSceneDestructibles && ShouldRunThinningAuthority())
+                ThinSceneDestructibles();
+
             BuildGrid();
         }
 

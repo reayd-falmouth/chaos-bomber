@@ -22,6 +22,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
     [DefaultExecutionOrder(-1)]
     public class GameManager : NetworkBehaviour
     {
+        private struct SpawnPose
+        {
+            public Vector3 localPos;
+            public Quaternion localRot;
+        }
+
         private static Vector3 AdjustSpawnToFloor(GameObject player, Vector3 desiredWorldOnGridPlane)
         {
             // We define spawn positions by their XZ cell center on the arena plane.
@@ -117,8 +123,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         private Tilemap _destructibleTilemap;
         private Tilemap _indestructibleTilemap;
         private readonly Dictionary<Vector3Int, TileBase> _initialDestructibleTiles = new Dictionary<Vector3Int, TileBase>();
-        private readonly Dictionary<GameObject, Vector3> _initialPlayerLocalPositionsForTraining = new Dictionary<GameObject, Vector3>();
-        private readonly Dictionary<GameObject, Vector3> _initialPlayerLocalPositionsForNonTraining = new Dictionary<GameObject, Vector3>();
+        private readonly Dictionary<GameObject, SpawnPose> _initialPlayerSpawnPosesForTraining = new Dictionary<GameObject, SpawnPose>();
+        private readonly Dictionary<GameObject, SpawnPose> _initialPlayerSpawnPosesForNonTraining = new Dictionary<GameObject, SpawnPose>();
 
         private bool _initialArenaCaptured;
         private bool _initialArenaCapturedForTraining;
@@ -126,6 +132,39 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
         public void SetRandomizeSpawnPositions(bool value) => _randomizeSpawnPositions = value;
         private bool _lastCapturedNormalLevel;
+
+        [Header("Spawn points (optional overrides)")]
+        [Tooltip("Optional explicit spawn points for player slots 1..5. If assigned, these override captured scene poses for New Game resets.")]
+        [SerializeField] private Transform[] playerSpawnPoints = new Transform[5];
+
+        private bool TryGetSpawnPoseForPlayerId(int playerId, GameObject playerObj, out SpawnPose pose)
+        {
+            pose = default;
+            if (playerId < 1 || playerId > 5)
+                return false;
+
+            // 1) Explicit spawn points win (scene-authored reference points).
+            if (playerSpawnPoints != null && playerId - 1 < playerSpawnPoints.Length)
+            {
+                var t = playerSpawnPoints[playerId - 1];
+                if (t != null)
+                {
+                    pose = new SpawnPose { localPos = t.localPosition, localRot = t.localRotation };
+                    pose.localPos.y = ArenaGrid3D.GridOrigin.y;
+                    return true;
+                }
+            }
+
+            // 2) Fall back to the captured initial pose for this specific player object.
+            if (playerObj != null && _initialPlayerSpawnPosesForNonTraining.TryGetValue(playerObj, out var captured))
+            {
+                pose = captured;
+                pose.localPos.y = ArenaGrid3D.GridOrigin.y;
+                return true;
+            }
+
+            return false;
+        }
 
         // ── Arena object registries ──────────────────────────────────────────────────
         // BombInfo, Explosion, and ItemPickup self-register here so agents can do an
@@ -225,6 +264,22 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             }
 
             SetupPlayers(playerCount);
+
+            // Menu → Start: this is a brand new game session. In single-scene flow the scene is not reloaded,
+            // so we must restore players to fresh spawn poses and alive/full-health state.
+            bool newGamePending =
+                !TrainingMode.IsActive
+                && (
+                    (SessionManager.Instance != null && SessionManager.Instance.ConsumeNewGamePending())
+                    || PlayerPrefs.GetInt("NewGamePending", 0) == 1
+                );
+            if (newGamePending)
+            {
+                PlayerPrefs.SetInt("NewGamePending", 0);
+                PlayerPrefs.Save();
+                ResetPlayersForNewGame(playerCount);
+                HybridArenaGrid.Instance?.RestoreDestructiblesFromBaselineThenRethinAndRebuild();
+            }
 
             // 🔹 Force upgrades and wins to be reapplied every new game round (only for players in this game)
             foreach (var p in players)
@@ -364,6 +419,42 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                     EnablePlayer(playerObj, playerId);
                 else
                     UnityEngine.Debug.LogWarning($"[GameManager] Missing player GameObject for playerId={playerId} (count={count}).");
+            }
+        }
+
+        private void ResetPlayersForNewGame(int playerCount)
+        {
+            for (int playerId = 1; playerId <= playerCount; playerId++)
+            {
+                var playerObj = (players != null && playerId - 1 < players.Length) ? players[playerId - 1] : null;
+                if (playerObj == null) continue;
+
+                if (!playerObj.activeInHierarchy)
+                    playerObj.SetActive(true);
+
+                if (TryGetSpawnPoseForPlayerId(playerId, playerObj, out var pose))
+                {
+                    playerObj.transform.localPosition = pose.localPos;
+                    playerObj.transform.localRotation = pose.localRot;
+                    StartCoroutine(ClampPlayerFeetToFloorNextFrame(playerObj));
+                }
+
+                // 2D reset
+                var pc = playerObj.GetComponent<PlayerController>();
+                if (pc != null)
+                {
+                    pc.ResetForEpisode();
+                    pc.enabled = true;
+                }
+
+                // Hybrid/FPS reset
+                var dual = playerObj.GetComponent<PlayerDualModeController>();
+                if (dual != null)
+                    dual.ResetForNewGame();
+
+                // Health reset (in case there is no PlayerDualModeController on some player variants)
+                var health = playerObj.GetComponent<Unity.FPS.Game.Health>();
+                health?.ResetToFullHealth();
             }
         }
 
@@ -872,8 +963,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             // Save spawn positions:
             // - training: only for players active at capture time (avoid enabling extra slots later)
             // - non-training: for all player slots (we only reset the active subset later)
-            _initialPlayerLocalPositionsForTraining.Clear();
-            _initialPlayerLocalPositionsForNonTraining.Clear();
+            _initialPlayerSpawnPosesForTraining.Clear();
+            _initialPlayerSpawnPosesForNonTraining.Clear();
 
             foreach (var p in players)
             {
@@ -882,10 +973,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 // clamp initial spawn positions to the arena floor plane.
                 var lp = p.transform.localPosition;
                 lp.y = ArenaGrid3D.GridOrigin.y;
-                _initialPlayerLocalPositionsForNonTraining[p] = lp;
+                var pose = new SpawnPose { localPos = lp, localRot = p.transform.localRotation };
+                _initialPlayerSpawnPosesForNonTraining[p] = pose;
 
                 if (TrainingMode.IsActive && p.activeInHierarchy)
-                    _initialPlayerLocalPositionsForTraining[p] = lp;
+                    _initialPlayerSpawnPosesForTraining[p] = pose;
             }
 
             // Save every tile in the destructible tilemap.
@@ -1032,8 +1124,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             }
 
             // Re-enable players, optionally placing them at fully random grid cells.
-            var spawnPlayers   = new List<GameObject>(_initialPlayerLocalPositionsForTraining.Keys);
-            var spawnPositions = new List<Vector3>(_initialPlayerLocalPositionsForTraining.Values);
+            var spawnPlayers = new List<GameObject>(_initialPlayerSpawnPosesForTraining.Keys);
+            var spawnPoses = new List<SpawnPose>(_initialPlayerSpawnPosesForTraining.Values);
 
             List<Vector3> worldPositions = _randomizeSpawnPositions
                 ? GetRandomSpawnWorldPositions(spawnPlayers)
@@ -1056,7 +1148,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 else
                 {
                     // Fixed slot shuffle — stored as local positions; convert to world and align to plane.
-                    var lp = spawnPositions[i];
+                    var lp = spawnPoses[i].localPos;
                     if (p.transform.parent != null)
                         p.transform.position = AdjustSpawnToFloor(p, p.transform.parent.TransformPoint(lp));
                     else
@@ -1154,7 +1246,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             }
 
             // Reset only the currently active player subset for this round.
-            foreach (var kvp in _initialPlayerLocalPositionsForNonTraining)
+            foreach (var kvp in _initialPlayerSpawnPosesForNonTraining)
             {
                 var p = kvp.Key;
                 if (p == null) continue;
@@ -1163,7 +1255,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 var pc = p.GetComponent<PlayerController>();
                 if (pc != null) pc.ResetForEpisode();
 
-                p.transform.localPosition = kvp.Value;
+                p.transform.localPosition = kvp.Value.localPos;
+                p.transform.localRotation = kvp.Value.localRot;
 
                 if (pc != null) pc.enabled = true;
 
@@ -1347,12 +1440,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         public void ResetSinglePlayerForTraining(GameObject player)
         {
             if (
-                !_initialPlayerLocalPositionsForTraining.TryGetValue(player, out var spawnPos)
+                !_initialPlayerSpawnPosesForTraining.TryGetValue(player, out var spawnPose)
             )
                 return;
 
-            spawnPos.y = ArenaGrid3D.GridOrigin.y;
-            player.transform.localPosition = spawnPos;
+            var lp = spawnPose.localPos;
+            lp.y = ArenaGrid3D.GridOrigin.y;
+            player.transform.localPosition = lp;
+            player.transform.localRotation = spawnPose.localRot;
 
             var pc = player.GetComponent<PlayerController>();
             if (pc != null) { pc.ResetForEpisode(); pc.enabled = true; }

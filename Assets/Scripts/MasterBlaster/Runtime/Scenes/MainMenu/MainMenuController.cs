@@ -193,6 +193,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
             // Always reset session (wins, coins, upgrades) when starting a new game from the menu
             SessionManager.Instance.Initialize(players);
 
+            // Single-scene mode: mark that the next time we enter Game, we should fully reinitialize player state and arena.
+            PlayerPrefs.SetInt("NewGamePending", 1);
+
             PlayerPrefs.SetInt("GiveStartMoneyNextArena", 1);
             PlayerPrefs.Save();
         }

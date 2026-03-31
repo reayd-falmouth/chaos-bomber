@@ -101,5 +101,12 @@ namespace Unity.FPS.Game
                 OnDie?.Invoke();
             }
         }
+
+        public void ResetToFullHealth()
+        {
+            m_IsDead = false;
+            Invincible = false;
+            CurrentHealth = MaxHealth;
+        }
     }
 }

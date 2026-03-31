@@ -176,6 +176,26 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             GameManager.Instance?.CheckWinState();
         }
 
+        public void ResetForNewGame()
+        {
+            m_IsDead = false;
+            stop = false;
+
+            if (m_Health != null)
+                m_Health.ResetToFullHealth();
+
+            // Clear Bomberman death visual if it was shown
+            if (spriteDeath != null)
+            {
+                spriteDeath.StopAnimation();
+                spriteDeath.gameObject.SetActive(false);
+            }
+
+            // Ensure the normal directional sprites are visible again in Bomberman mode
+            if (m_CurrentMode == GameModeManager.GameMode.Bomberman)
+                SetSpriteDirection(m_LastDir, moving: false);
+        }
+
         private void ShowBombermanDeathVisual()
         {
             GetComponentInChildren<Ghost>(true)?.DeactivateNow();

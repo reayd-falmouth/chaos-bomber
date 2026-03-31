@@ -2,7 +2,8 @@
     "name": "Scenes.Tests",
     "references": [
         "HybridGame",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "fps.Game"
     ],
     "optionalUnityReferences": ["TestAssemblies"]
 }
