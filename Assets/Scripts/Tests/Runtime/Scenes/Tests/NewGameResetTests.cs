@@ -52,12 +52,16 @@ namespace HybridGame.MasterBlaster.Tests
             var parent = new GameObject("DestructibleParent").transform;
             parent.SetParent(arenaGo.transform);
 
-            // Create baseline walls in scene (generateOnStart=false path)
+            // Create an authored "layout prefab" in-memory (no AssetDatabase dependency).
+            var layoutPrefab = new GameObject("DestructibleWalls");
+            var expectedLocalPositions = new Vector3[3];
             for (int i = 0; i < 3; i++)
             {
                 var w = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 w.name = $"Wall_{i}";
-                w.transform.SetParent(parent);
+                w.transform.SetParent(layoutPrefab.transform, false);
+                w.transform.localPosition = new Vector3(i * 2f, 0f, i * -1f);
+                expectedLocalPositions[i] = w.transform.localPosition;
                 w.AddComponent<WallBlock3D>();
             }
 
@@ -66,9 +70,14 @@ namespace HybridGame.MasterBlaster.Tests
             grid.thinSceneDestructibles = false;
             grid.destructibleWallsParent = parent;
             grid.indestructibleWallsParent = null;
+            grid.destructibleWallsLayoutPrefab = layoutPrefab;
 
             // Let Start() capture baseline
             yield return null;
+
+            // Populate the scene from baseline once (some scenes may start empty).
+            grid.RestoreDestructiblesFromBaselineThenRethinAndRebuild();
+            Assert.That(parent.childCount, Is.EqualTo(3));
 
             // Simulate destruction: clear all
             for (int i = parent.childCount - 1; i >= 0; i--)
@@ -79,7 +88,14 @@ namespace HybridGame.MasterBlaster.Tests
 
             // Restored
             Assert.That(parent.childCount, Is.EqualTo(3));
+            for (int i = 0; i < 3; i++)
+            {
+                var child = parent.GetChild(i);
+                Assert.That(child.name, Is.EqualTo($"Wall_{i}"));
+                Assert.That(child.localPosition, Is.EqualTo(expectedLocalPositions[i]));
+            }
 
+            Object.DestroyImmediate(layoutPrefab);
             Object.DestroyImmediate(arenaGo);
         }
     }

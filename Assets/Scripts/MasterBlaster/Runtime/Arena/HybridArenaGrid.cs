@@ -19,6 +19,9 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
         [Header("Runtime Generation")]
         public GameObject destructibleWallPrefab;
+        [Tooltip("Optional: prefab containing the authored destructible wall layout (e.g. 'DestructibleWalls' root with children). " +
+                 "When assigned and generateOnStart is false, resets restore from this prefab baseline instead of cloning the live scene.")]
+        public GameObject destructibleWallsLayoutPrefab;
         public bool generateOnStart = true;
         [Range(0f, 1f)] public float fillRate = 0.7f;
         public int safeZoneArmLength = 2;
@@ -58,10 +61,31 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         {
             GenerateWalls();
             CaptureBaselineDestructiblesIfNeeded();
+            // Optional: if the scene starts with an empty destructible parent (or we want prefab-driven layout),
+            // restore once from the captured baseline before thinning/build.
+            if (!generateOnStart && destructibleWallsParent != null && destructibleWallsParent.childCount == 0
+                && _baselineCaptured && _baselineDestructiblesRoot != null)
+            {
+                RestoreDestructiblesFromBaselineThenRethinAndRebuild();
+                return; // Restore already ran thinning/build when applicable
+            }
             if (thinSceneDestructibles && !generateOnStart && !thinOnlyWhenInvokedExplicitly &&
                 ShouldRunThinningAuthority())
                 ThinSceneDestructibles();
             BuildGrid();
+        }
+
+        private static void CloneChildPreserveLocal(Transform src, Transform dstParent)
+        {
+            if (src == null || dstParent == null) return;
+            var go = Instantiate(src.gameObject);
+            go.name = src.gameObject.name;
+            var t = go.transform;
+            t.SetParent(dstParent, false);
+            t.localPosition = src.localPosition;
+            t.localRotation = src.localRotation;
+            t.localScale = src.localScale;
+            go.SetActive(true);
         }
 
         private void CaptureBaselineDestructiblesIfNeeded()
@@ -76,12 +100,23 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             _baselineDestructiblesRoot = holder.transform;
             _baselineDestructiblesRoot.SetParent(transform, false);
 
-            for (int i = 0; i < destructibleWallsParent.childCount; i++)
+            if (destructibleWallsLayoutPrefab != null)
             {
-                var child = destructibleWallsParent.GetChild(i);
-                if (child == null) continue;
-                var clone = Instantiate(child.gameObject, _baselineDestructiblesRoot);
-                clone.name = child.gameObject.name;
+                // Instantiate the authored layout prefab under the hidden baseline root,
+                // then treat its children as the baseline set.
+                var layout = Instantiate(destructibleWallsLayoutPrefab, _baselineDestructiblesRoot);
+                layout.name = destructibleWallsLayoutPrefab.name;
+                layout.SetActive(true);
+            }
+            else
+            {
+                // Back-compat fallback: capture whatever is currently in the scene.
+                for (int i = 0; i < destructibleWallsParent.childCount; i++)
+                {
+                    var child = destructibleWallsParent.GetChild(i);
+                    if (child == null) continue;
+                    CloneChildPreserveLocal(child, _baselineDestructiblesRoot);
+                }
             }
 
             _baselineCaptured = true;
@@ -101,18 +136,34 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
             // Clear current
             for (int i = destructibleWallsParent.childCount - 1; i >= 0; i--)
-                Destroy(destructibleWallsParent.GetChild(i).gameObject);
-
-            // Restore clones
-            for (int i = 0; i < _baselineDestructiblesRoot.childCount; i++)
             {
-                var src = _baselineDestructiblesRoot.GetChild(i);
-                if (src == null) continue;
-                var go = Instantiate(src.gameObject, destructibleWallsParent);
-                go.name = src.gameObject.name;
-                go.SetActive(true);
+                var child = destructibleWallsParent.GetChild(i);
+                if (child == null) continue;
+                // Detach first so the hierarchy updates immediately (Destroy is end-of-frame).
+                child.SetParent(null, false);
+                Destroy(child.gameObject);
+            }
 
-                if (go.TryGetComponent<NetworkObject>(out var no) && ShouldRunThinningAuthority() && !no.IsSpawned)
+            // Restore from baseline:
+            // - If we captured from a prefab, the baseline root has one child (the instantiated prefab root),
+            //   and we want that root's children.
+            // - If we captured from the scene, the baseline root contains wall objects directly.
+            Transform baselineChildrenRoot = _baselineDestructiblesRoot;
+            if (_baselineDestructiblesRoot.childCount == 1
+                && destructibleWallsLayoutPrefab != null
+                && _baselineDestructiblesRoot.GetChild(0).name == destructibleWallsLayoutPrefab.name)
+            {
+                baselineChildrenRoot = _baselineDestructiblesRoot.GetChild(0);
+            }
+
+            for (int i = 0; i < baselineChildrenRoot.childCount; i++)
+            {
+                var src = baselineChildrenRoot.GetChild(i);
+                if (src == null) continue;
+
+                CloneChildPreserveLocal(src, destructibleWallsParent);
+                var restored = destructibleWallsParent.GetChild(destructibleWallsParent.childCount - 1).gameObject;
+                if (restored.TryGetComponent<NetworkObject>(out var no) && ShouldRunThinningAuthority() && !no.IsSpawned)
                     no.Spawn();
             }
 
