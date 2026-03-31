@@ -118,7 +118,9 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             Vector3 worldOrigin = destructibleWallsParent != null
                 ? destructibleWallsParent.TransformPoint(gridOriginLocal)
                 : gridOriginLocal;
-            ArenaGrid3D.GridOrigin = worldOrigin;
+            // The hybrid arena gameplay uses a fixed XZ grid and expects "floor" to be world Y=0.
+            // Keep GridOrigin.y at 0 so SnapToCell / movement do not lift characters vertically.
+            ArenaGrid3D.GridOrigin = new Vector3(worldOrigin.x, 0f, worldOrigin.z);
             UnityEngine.Debug.Log($"[HybridArenaGrid] GridOrigin set to {ArenaGrid3D.GridOrigin}");
         }
 

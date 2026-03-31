@@ -27,7 +27,13 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             set
             {
                 _idle = value;
-                if (!_idle && animating && animationSprites != null && animationSprites.Length > 0)
+                if (_idle)
+                {
+                    // Ensure we immediately display the idle frame when stopping.
+                    if (spriteRenderer != null)
+                        spriteRenderer.sprite = idleSprite;
+                }
+                else if (animating && animationSprites != null && animationSprites.Length > 0)
                 {
                     animationFrame = 0;
                     spriteRenderer.sprite = animationSprites[0];
@@ -48,6 +54,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             spriteRenderer.enabled = true;
             if (playOnStart && !animating)
                 StartAnimation();
+            else
+                spriteRenderer.sprite = idleSprite;
         }
 
         private void OnDisable()

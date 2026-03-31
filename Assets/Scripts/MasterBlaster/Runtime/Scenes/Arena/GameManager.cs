@@ -22,6 +22,35 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
     [DefaultExecutionOrder(-1)]
     public class GameManager : NetworkBehaviour
     {
+        private static Vector3 AdjustSpawnToFloor(GameObject player, Vector3 desiredWorldOnGridPlane)
+        {
+            // We define spawn positions by their XZ cell center on the arena plane.
+            // If the player has a CharacterController, its transform is typically the capsule center,
+            // not the feet. Convert the desired "feet on plane" position into a correct transform position.
+            float floorY = ArenaGrid3D.GridOrigin.y;
+            desiredWorldOnGridPlane.y = floorY;
+
+            if (player != null && player.TryGetComponent<CharacterController>(out var cc) && cc != null)
+            {
+                // feetWorld = transform.position + (center.y - height/2) * up  (ignoring rotation)
+                // CharacterController's height/center are in the object's local space; account for world scaling.
+                float scaleY = Mathf.Abs(player.transform.lossyScale.y);
+                float feetOffsetWorld = (cc.center.y - (cc.height * 0.5f)) * scaleY;
+                desiredWorldOnGridPlane.y = floorY - feetOffsetWorld;
+            }
+
+            return desiredWorldOnGridPlane;
+        }
+
+        private IEnumerator ClampPlayerFeetToFloorNextFrame(GameObject player)
+        {
+            // Some components (notably FPS PlayerCharacterController) adjust CharacterController height/center in Start,
+            // which can change the implied "feet" offset after we've positioned the player. Re-clamp next frame.
+            yield return null;
+            if (player == null) yield break;
+            player.transform.position = AdjustSpawnToFloor(player, player.transform.position);
+        }
+
         private struct PlayerCandidate
         {
             public GameObject go;
@@ -594,7 +623,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
             AttachInputProvider(playerObj, id, movement);
 
+            // Ensure any scene/prefab offsets don't lift the player off the arena plane.
+            var lp = playerObj.transform.localPosition;
+            lp.y = ArenaGrid3D.GridOrigin.y;
+            playerObj.transform.localPosition = lp;
+
             playerObj.SetActive(true);
+            StartCoroutine(ClampPlayerFeetToFloorNextFrame(playerObj));
         }
 
         private void AttachInputProvider(GameObject playerObj, int id, PlayerController movement)
@@ -827,10 +862,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             foreach (var p in players)
             {
                 if (p == null) continue;
-                _initialPlayerLocalPositionsForNonTraining[p] = p.transform.localPosition;
+                // Scene instances can have stray Y offsets. Treat the arena as XZ only and
+                // clamp initial spawn positions to the arena floor plane.
+                var lp = p.transform.localPosition;
+                lp.y = ArenaGrid3D.GridOrigin.y;
+                _initialPlayerLocalPositionsForNonTraining[p] = lp;
 
                 if (TrainingMode.IsActive && p.activeInHierarchy)
-                    _initialPlayerLocalPositionsForTraining[p] = p.transform.localPosition;
+                    _initialPlayerLocalPositionsForTraining[p] = lp;
             }
 
             // Save every tile in the destructible tilemap.
@@ -993,12 +1032,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 if (pc != null) pc.ResetForEpisode();
 
                 if (worldPositions != null)
-                    p.transform.position = worldPositions[i];       // random world pos
+                {
+                    // Random world pos (tilemap-based) — align player's feet to the arena plane.
+                    var wp = AdjustSpawnToFloor(p, worldPositions[i]);
+                    p.transform.position = wp;
+                }
                 else
-                    p.transform.localPosition = spawnPositions[i];  // fixed slot shuffle
+                {
+                    // Fixed slot shuffle — stored as local positions; convert to world and align to plane.
+                    var lp = spawnPositions[i];
+                    if (p.transform.parent != null)
+                        p.transform.position = AdjustSpawnToFloor(p, p.transform.parent.TransformPoint(lp));
+                    else
+                        p.transform.position = AdjustSpawnToFloor(p, lp);
+                }
 
                 if (!p.activeInHierarchy) p.SetActive(true);
                 if (pc != null) pc.enabled = true;
+                StartCoroutine(ClampPlayerFeetToFloorNextFrame(p));
 
                 var rb = p.GetComponent<Rigidbody2D>();
                 if (rb != null) rb.linearVelocity = Vector2.zero;
@@ -1058,12 +1109,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 if (found)
                 {
                     claimed.Add(chosen);
-                    result.Add(_destructibleTilemap.CellToWorld(chosen) + _destructibleTilemap.tileAnchor);
+                    var wp = _destructibleTilemap.CellToWorld(chosen) + _destructibleTilemap.tileAnchor;
+                    result.Add(AdjustSpawnToFloor(p, wp));
                 }
                 else
                 {
-                    // Fallback: keep the player where they currently are.
-                    result.Add(p != null ? p.transform.position : Vector3.zero);
+                    // Fallback: keep the player where they currently are (but clamp to floor).
+                    var wp = p != null ? p.transform.position : Vector3.zero;
+                    result.Add(AdjustSpawnToFloor(p, wp));
                 }
             }
 
@@ -1282,6 +1335,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             )
                 return;
 
+            spawnPos.y = ArenaGrid3D.GridOrigin.y;
             player.transform.localPosition = spawnPos;
 
             var pc = player.GetComponent<PlayerController>();

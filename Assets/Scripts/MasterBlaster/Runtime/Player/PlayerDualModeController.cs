@@ -3,6 +3,7 @@ using System.Reflection;
 using System.IO;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Bomb;
+using HybridGame.MasterBlaster.Scripts.Camera;
 using HybridGame.MasterBlaster.Scripts.Player.Abilities;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Debug;
@@ -68,6 +69,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private CharacterController m_CC;
         private PlayerCharacterController m_FPSController;
         private PlayerWeaponsManager m_WeaponsManager;
+        private PlayerInputHandler m_FPSInputHandler;
         private BombController3D m_BombController;
         private Health m_Health;
         private GameModeManager.GameMode m_CurrentMode = GameModeManager.GameMode.Bomberman;
@@ -115,6 +117,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             m_CC = GetComponent<CharacterController>();
             m_FPSController = GetComponent<PlayerCharacterController>();
             m_WeaponsManager = GetComponent<PlayerWeaponsManager>();
+            m_FPSInputHandler = GetComponent<PlayerInputHandler>();
             m_BombController = GetComponent<BombController3D>();
             m_Health = GetComponent<Health>();
             m_Superman = GetComponentInChildren<Superman>(true);
@@ -214,6 +217,41 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
             m_BombController?.RefreshBombInputFromDualMode();
 
+            var spriteApplier = GetComponent<PlayerSpriteSetApplier>();
+            if (spriteApplier != null)
+            {
+                // #region agent log
+                try
+                {
+                    System.IO.File.AppendAllText(
+                        System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "debug-9c4db8.log"),
+                        "{\"sessionId\":\"9c4db8\",\"timestamp\":" + System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() +
+                        ",\"runId\":\"run1\",\"hypothesisId\":\"H3\",\"location\":\"PlayerDualModeController.cs:Start\",\"message\":\"sprite_applier_present\",\"data\":{\"go\":\"" +
+                        gameObject.name.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\",\"playerId\":" + playerId + "}}\n"
+                    );
+                }
+                catch { }
+                // #endregion
+                UnityEngine.Debug.Log($"[SPRITEAPPLY] applier_present go={gameObject.name} playerId={playerId}", this);
+                spriteApplier.ApplyForPlayerId(playerId);
+            }
+            else
+            {
+                // #region agent log
+                try
+                {
+                    System.IO.File.AppendAllText(
+                        System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "debug-9c4db8.log"),
+                        "{\"sessionId\":\"9c4db8\",\"timestamp\":" + System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() +
+                        ",\"runId\":\"run1\",\"hypothesisId\":\"H3\",\"location\":\"PlayerDualModeController.cs:Start\",\"message\":\"sprite_applier_missing\",\"data\":{\"go\":\"" +
+                        gameObject.name.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\",\"playerId\":" + playerId + "}}\n"
+                    );
+                }
+                catch { }
+                // #endregion
+                UnityEngine.Debug.LogWarning($"[SPRITEAPPLY] applier_missing go={gameObject.name} playerId={playerId}", this);
+            }
+
             // Stay aligned with GameModeManager even if ApplyMode ran before this object existed
             // (runtime spawn) or could not find this controller (inactive at first ApplyMode).
             if (GameModeManager.Instance != null)
@@ -290,6 +328,14 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             UnityEngine.Debug.Log($"[PlayerDualModeController] OnModeChanged → {newMode}");
             m_CurrentMode = newMode;
 
+            // --- ADD THIS LINE ---
+            // Use the Singleton Instance instead of FindObjectOfType for better performance
+            if (CinemachineModeSwitcher.Instance != null)
+            {
+                CinemachineModeSwitcher.Instance.UpdateAllCameras(newMode);
+            }
+            // ---------------------
+            
             bool isBomberman = newMode == GameModeManager.GameMode.Bomberman;
 
             // FPS controller + weapons: enabled in FPS mode only
@@ -297,12 +343,25 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 m_FPSController.enabled = !isBomberman;
             if (m_WeaponsManager != null)
                 m_WeaponsManager.enabled = !isBomberman;
+            if (m_FPSInputHandler != null)
+                m_FPSInputHandler.enabled = !isBomberman;
             // Bomb controller: enabled in Bomberman mode only
             if (m_BombController != null)
                 m_BombController.enabled = isBomberman;
 
             if (isBomberman)
             {
+                // In Bomberman mode the FPS controller is disabled (and it normally recenters the capsule).
+                // Ensure the CharacterController capsule is centered on its own height so the transform origin
+                // represents "feet on floor" and doesn't appear to pop up when entering play mode.
+                if (m_CC != null)
+                {
+                    // Force a deterministic capsule shape for Bomberman (grid plane gameplay).
+                    // This avoids legacy/scene overrides leaving the capsule with centerY==height (which lifts the transform).
+                    m_CC.height = 1.8f;
+                    m_CC.center = Vector3.up * (m_CC.height * 0.5f);
+                }
+
                 // Snap to grid on entry
                 SnapToGrid();
                 m_BombermanMoving = false;
@@ -571,7 +630,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            m_CC.Move(snapped - transform.position);
+            // When switching back from FPS, the CharacterController can be intersecting or blocked,
+            // causing Move() to fail and leaving the player (and billboard sprite) off-center.
+            // Hard-snap by temporarily disabling the controller.
+            m_CC.enabled = false;
+            transform.position = snapped;
+            m_CC.enabled = true;
         }
 
         private bool CanMoveWithCharacterController()
@@ -863,6 +927,25 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             var pc = GetComponent<PlayerController>();
             if (pc != null)
                 playerId = pc.playerId;
+            else
+            {
+                // Fallback for scenes that use PlayerDualModeController without PlayerController:
+                // infer playerId from GameObject name suffix (e.g. "Player3" -> 3).
+                int inferred = TryInferPlayerIdFromName(gameObject.name);
+                if (inferred > 0)
+                    playerId = inferred;
+            }
+        }
+
+        private static int TryInferPlayerIdFromName(string goName)
+        {
+            if (string.IsNullOrEmpty(goName)) return -1;
+            int i = goName.Length - 1;
+            while (i >= 0 && char.IsDigit(goName[i])) i--;
+            int start = i + 1;
+            if (start >= goName.Length) return -1;
+            if (int.TryParse(goName.Substring(start), out int n) && n > 0) return n;
+            return -1;
         }
 
         private void EnableActions()
@@ -896,22 +979,13 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
             // FPS: movement is PlayerInputHandler — do not enable shared Move (would duplicate input)
             m_MoveAction?.Disable();
-            if (CanDriveBombermanLocally())
-            {
-                m_SwitchModeAction?.Enable();
-                m_ActionsEnabled = true;
-                // #region agent log
-                AgentLogEnableActionsState("fps_owner_switch_only");
-                // #endregion
-            }
-            else
-            {
-                m_SwitchModeAction?.Disable();
-                m_ActionsEnabled = false;
-                // #region agent log
-                AgentLogEnableActionsState("fps_no_owner");
-                // #endregion
-            }
+            // In FPS mode, always allow mode switching for this local player.
+            // We still keep Move disabled here because FPS uses PlayerInputHandler.
+            m_SwitchModeAction?.Enable();
+            m_ActionsEnabled = m_SwitchModeAction != null;
+            // #region agent log
+            AgentLogEnableActionsState("fps_switch_only");
+            // #endregion
         }
 
         // #region agent log

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11111111111111111111111111111111, type: 3}
+  m_Name: ProjectArchitectureReadme
+  m_EditorClassIdentifier:
+  title: MasterBlaster – Architecture Readme
+  shortDescription: "Hybrid Bomberman + FPS built on Unity FPS Microgame, with a single-scene flow option.\nUse the buttons below to jump to key scripts/scenes, and copy the Mermaid diagram into docs/issues."
+  architectureOverview: "## What this project is\nMasterBlaster is a hybrid game that can run in two modes inside the same play session:\n- Bomberman (top-down, grid-snapped movement + bombs)\n- FPS (first-person movement + weapons)\n\nAt runtime, the game flow (Menu -> Countdown -> Game -> Standings/Wheel/Shop -> ...) is driven by a scene/\"single-scene root toggle\" system. The mode switch (Bomberman <-> FPS) is handled separately via GameModeManager.\n\n## The 3 big systems\n1) Scene flow (screens): SceneFlowManager + FlowState\n2) Match loop (arena): GameManager (spawns/sets up players, resets arena, win-state, transitions)\n3) Player/mode: PlayerDualModeController (enables/disables FPS components and drives Bomberman movement)\n\n## Where to start reading code\n- Flow: Assets/Scripts/MasterBlaster/Runtime/Core/SceneFlowManager.cs\n- Match loop: Assets/Scripts/MasterBlaster/Runtime/Scenes/Arena/GameManager.cs\n- Mode switching: Assets/Scripts/MasterBlaster/Runtime/GameModeManager.cs\n- Hybrid player: Assets/Scripts/MasterBlaster/Runtime/Player/PlayerDualModeController.cs\n"
+  keyScriptAssetPaths:
+  - Assets/Scripts/MasterBlaster/Runtime/Core/SceneFlowManager.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Core/SceneFlowMapper.cs
+  - Assets/Scripts/MasterBlaster/Runtime/GameModeManager.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Player/PlayerDualModeController.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Scenes/Arena/GameManager.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Core/SessionManager.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Camera/HybridCameraManager.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Camera/CineMachineModeSwitcher.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Scenes/Shop/ShopController.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Scenes/Arena/TrainingMode.cs
+  - Assets/Scripts/MasterBlaster/Runtime/Scenes/Arena/TrainingAcademyHelper.cs
+  keySceneAssetPaths:
+  - Assets/Scenes/MasterBlaster/MasterBlaster_FPS.unity
+  thirdPartyNotes: "## Unity packages (Packages/manifest.json)\n- Cinemachine (com.unity.cinemachine)\n- Input System (com.unity.inputsystem)\n- Netcode for GameObjects (com.unity.netcode.gameobjects)\n- ML-Agents (com.unity.ml-agents)\n- URP (com.unity.render-pipelines.universal)\n- AI Navigation/NavMesh (com.unity.ai.navigation)\n- ProBuilder/ProGrids, Timeline, Unity UI, etc.\n\n## Project-integrated tooling\n- MCPForUnity (com.coplaydev.unity-mcp) via Git URL dependency\n\n## Asset/plugin code evidence in repo\n- MoreMountains Feedbacks (scripts reference MoreMountains.Feedbacks; MoreMountains csproj files exist at repo root)\n"
+  mermaidDiagram: "flowchart TD\n  SceneFlowManager -->|GoTo(FlowState)| FlowState\n  FlowState -->|Game| GameManager\n  FlowState -->|Shop| ShopController\n  FlowState -->|Standings| StandingsController\n  FlowState -->|Overs| Overs\n\n  GameManager -->|SetupPlayers()| PlayerSlots\n  PlayerSlots -->|human| HumanPlayerInput\n  PlayerSlots -->|ai_heuristic| ScriptedAIBrain\n  PlayerSlots -->|ai_training| BombermanAgent\n\n  GameManager -->|session_state| SessionManager\n  ShopController -->|purchases| SessionManager\n  SessionManager -->|apply_upgrades| PlayerController\n\n  GameModeManager -->|OnModeChanged| PlayerDualModeController\n  GameModeManager -->|OnModeChanged| HybridCameraManager\n  GameModeManager -->|broadcast| CinemachineModeSwitcher\n\n  PlayerDualModeController -->|FPS_enabled| PlayerCharacterController\n  PlayerDualModeController -->|FPS_enabled| PlayerWeaponsManager\n  PlayerDualModeController -->|FPS_enabled| PlayerInputHandler\n  PlayerDualModeController -->|Bomberman_enabled| BombController3D\n\n  TrainingMode -->|IsActive| TrainingAcademyHelper\n  TrainingAcademyHelper -->|sets_PlayerPrefs| GameManager\n  TrainingAcademyHelper -->|Academy_reset| SceneReload\n"
+  howItWorksDetails: "## Runtime flow (screens)\nSceneFlowManager drives the high-level loop:\n- In multi-scene mode it loads Unity scenes by name.\n- In single-scene mode it finds/creates FlowCanvasRoot markers and toggles root GameObjects per FlowState.\n\nKey idea: UI \"screens\" are FlowState roots; the arena is FlowState.Game.\n\n## Match loop (arena)\nGameManager (NetworkBehaviour) owns the arena lifecycle:\n- Reads PlayerPrefs (player count, settings)\n- Discovers player objects and assigns playerId deterministically\n- Attaches an input provider per slot:\n  - HumanPlayerInput (controller / shared actions)\n  - ScriptedAIBrain + AIPlayerInput (heuristic)\n  - BombermanAgent + MLAgentsBrain + AIPlayerInput (RL training)\n- Captures initial arena state (tilemaps, spawn positions)\n- Clears transient objects (bombs/explosions/pickups) when leaving Game\n- Checks win-state and transitions to Standings/Overs or resets training episodes\n\n## Mode switching (Bomberman <-> FPS)\nGameModeManager switches the *control scheme* and camera mode without changing the screen flow:\n- Notifies every PlayerDualModeController (even inactive)\n- Updates cameras (HybridCameraManager and/or CinemachineModeSwitcher)\n- Updates cursor lock state\n\nPlayerDualModeController is the per-player “hybrid glue”:\n- FPS mode: enables PlayerCharacterController + weapons + FPS input.\n- Bomberman mode: disables those, enables Bomberman/bomb components, and runs grid-snapped movement.\n\n## Training mode (ML-Agents)\nTrainingMode.IsActive is true when:\n- scene name contains Train/ML-Agents, or\n- process launched with -training\n\nTrainingAcademyHelper (execution order -2000) writes PlayerPrefs for map/player count before arena init and subscribes to Academy environment resets to reload the scene between episodes.\n"
+

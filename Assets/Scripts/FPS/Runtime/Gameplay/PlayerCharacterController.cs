@@ -7,6 +7,7 @@ namespace Unity.FPS.Gameplay
     [RequireComponent(typeof(CharacterController), typeof(PlayerInputHandler), typeof(AudioSource))]
     public class PlayerCharacterController : MonoBehaviour
     {
+        private static bool s_LoggedCharacterControllerRecentering;
         [Header("References")] [Tooltip("Reference to the main camera used for the player")]
         public Camera PlayerCamera;
 
@@ -171,6 +172,39 @@ namespace Unity.FPS.Gameplay
             m_Actor = GetComponent<Actor>();
             DebugUtility.HandleErrorIfNullGetComponent<Actor, PlayerCharacterController>(m_Actor, this, gameObject);
 
+            if (PlayerCamera == null)
+            {
+                // Best-effort auto assignment: prefer a child Camera tagged MainCamera (common in FPS microgame).
+                var cams = GetComponentsInChildren<Camera>(true);
+                Camera tagged = null;
+                Camera any = null;
+                for (int i = 0; i < cams.Length; i++)
+                {
+                    var cam = cams[i];
+                    if (cam == null) continue;
+                    if (any == null) any = cam;
+                    if (cam.CompareTag("MainCamera"))
+                    {
+                        tagged = cam;
+                        break;
+                    }
+                }
+
+                PlayerCamera = tagged != null ? tagged : any;
+            }
+
+            if (PlayerCamera == null)
+            {
+                // If you removed the player's Camera to rely on Cinemachine, core FPS scripts still expect a Camera for pitch/FOV/height.
+                // Create a disabled helper Camera so gameplay scripts can operate while rendering stays on Main Camera + CinemachineBrain.
+                var go = new GameObject("PlayerCamera (Helper)");
+                go.transform.SetParent(transform, false);
+                go.transform.localPosition = Vector3.up * 1.5f;
+                go.transform.localRotation = Quaternion.identity;
+                PlayerCamera = go.AddComponent<Camera>();
+                PlayerCamera.enabled = false;
+            }
+
             if (m_Controller != null)
                 m_Controller.enableOverlapRecovery = true;
 
@@ -287,6 +321,11 @@ namespace Unity.FPS.Gameplay
 
         void HandleCharacterMovement()
         {
+            if (PlayerCamera == null)
+            {
+                return;
+            }
+
             // horizontal character rotation
             {
                 // rotate the transform with the input speed around its local Y axis
@@ -435,6 +474,12 @@ namespace Unity.FPS.Gameplay
 
         void UpdateCharacterHeight(bool force)
         {
+            // Preserve the world-space "feet" position when changing the CharacterController's height/center.
+            // Otherwise, entering play mode / stance transitions can appear to lift the whole player upward.
+            float feetYBefore = 0f;
+            if (m_Controller != null)
+                feetYBefore = transform.position.y + m_Controller.center.y - (m_Controller.height * 0.5f);
+
             // Update height instantly
             if (force)
             {
@@ -453,6 +498,30 @@ namespace Unity.FPS.Gameplay
                 PlayerCamera.transform.localPosition = Vector3.Lerp(PlayerCamera.transform.localPosition,
                     Vector3.up * m_TargetCharacterHeight * CameraHeightRatio, CrouchingSharpness * Time.deltaTime);
                 m_Actor.AimPoint.transform.localPosition = m_Controller.center;
+            }
+
+            if (m_Controller != null)
+            {
+                float feetYAfter = transform.position.y + m_Controller.center.y - (m_Controller.height * 0.5f);
+                float deltaFeet = feetYBefore - feetYAfter;
+                if (Mathf.Abs(deltaFeet) > 0.0001f)
+                {
+                    var p = transform.position;
+                    p.y += deltaFeet;
+                    transform.position = p;
+                }
+
+#if UNITY_EDITOR
+                if (!s_LoggedCharacterControllerRecentering)
+                {
+                    s_LoggedCharacterControllerRecentering = true;
+                    Debug.Log(
+                        $"[CC-DEBUG] {name} UpdateCharacterHeight(force={force}) set height/center. " +
+                        $"height={m_Controller.height:F3} centerY={m_Controller.center.y:F3} " +
+                        $"posY={transform.position.y:F3} feetY={feetYAfter:F3}"
+                    );
+                }
+#endif
             }
         }
 

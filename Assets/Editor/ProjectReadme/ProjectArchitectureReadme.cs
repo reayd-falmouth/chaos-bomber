@@ -1,0 +1,42 @@
+using System;
+using UnityEngine;
+
+namespace HybridGame.MasterBlaster.EditorDocs
+{
+    [CreateAssetMenu(
+        fileName = "ProjectArchitectureReadme",
+        menuName = "HybridGame/MasterBlaster/Project Architecture Readme"
+    )]
+    public sealed class ProjectArchitectureReadme : ScriptableObject
+    {
+        [Header("Header")]
+        public string title = "MasterBlaster – Architecture Readme";
+        [TextArea(2, 8)]
+        public string shortDescription =
+            "Hybrid Bomberman + FPS built on Unity FPS Microgame, with a single-scene flow option.\n" +
+            "Use the buttons below to jump to key scripts/scenes, and copy the Mermaid diagram into docs/issues.";
+
+        [Header("Architecture")]
+        [TextArea(10, 60)]
+        public string architectureOverview;
+
+        [Header("Key Scripts (paths under Assets/)")]
+        public string[] keyScriptAssetPaths = Array.Empty<string>();
+
+        [Header("Key Scenes (paths under Assets/)")]
+        public string[] keySceneAssetPaths = Array.Empty<string>();
+
+        [Header("Third-party packages/plugins")]
+        [TextArea(10, 60)]
+        public string thirdPartyNotes;
+
+        [Header("Mermaid diagram (copy/paste)")]
+        [TextArea(10, 80)]
+        public string mermaidDiagram;
+
+        [Header("More details")]
+        [TextArea(10, 80)]
+        public string howItWorksDetails;
+    }
+}
+

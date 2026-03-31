@@ -31,6 +31,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         private void Start()
         {
+            // If unset, default to lying flat facing up so an overhead camera can see the sprite.
+            // (SpriteRenderer faces +Z by default; overhead camera looks down -Y.)
+            //if (bombermanEulerAngles == Vector3.zero)
+            //    bombermanEulerAngles = new Vector3(-90f, 0f, 0f);
             ComputeBombermanScale();
         }
 

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 863661197097989755}
   - component: {fileID: 9149497518436788153}
   - component: {fileID: 7702641623047739250}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Destroy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -241,7 +241,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1493969448
+  GlobalObjectIdHash: 4250134204
   InScenePlacedSourceGlobalObjectIdHash: 1493969448
   DeferredDespawnTick: 0
   Ownership: 1
@@ -269,8 +269,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   destructionAnimTime: 0.5
   destroyFX: {fileID: 7702641623047739250}
+  maxHealth: 30
   itemSpawnChance: 1
-  itemSpawnYOffset: 0
   itemPrefabs:
   - {fileID: 1100000000000000001, guid: 0c66cee9307d4787ad21f98c6e90fc6a, type: 3}
   - {fileID: 1100000000000000001, guid: f9bd72e646334f108a5ca8eee0772c02, type: 3}
@@ -284,6 +284,7 @@ MonoBehaviour:
   - {fileID: 1100000000000000001, guid: 3ea14cb796f34af091f7870995263ed2, type: 3}
   - {fileID: 1100000000000000001, guid: 935d3c491fe0475a89a69b369a9f1b67, type: 3}
   - {fileID: 1100000000000000001, guid: 2f01a529bfb641f5ae7662ddb57f89e3, type: 3}
+  itemSpawnYOffset: 0
 --- !u!1 &8875335542391864569
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,7 +294,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2029819244966010917}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Billbox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -309,8 +310,8 @@ Transform:
   m_GameObject: {fileID: 8875335542391864569}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 7, y: 7, z: 7}
+  m_LocalPosition: {x: 0, y: 0.49, z: 0}
+  m_LocalScale: {x: 6, y: 6, z: 6}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 863661197097989755}

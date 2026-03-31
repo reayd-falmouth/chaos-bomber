@@ -93,6 +93,39 @@ namespace Unity.FPS.Gameplay
         WeaponSwitchState m_WeaponSwitchState;
         int m_WeaponSwitchNewWeaponIndex;
 
+        void Awake()
+        {
+            if (WeaponCamera == null)
+            {
+                // Best-effort auto assignment: prefer a child Camera named "WeaponCamera", otherwise any child Camera.
+                var cams = GetComponentsInChildren<Camera>(true);
+                Camera named = null;
+                Camera any = null;
+                for (int i = 0; i < cams.Length; i++)
+                {
+                    var cam = cams[i];
+                    if (cam == null) continue;
+                    if (any == null) any = cam;
+                    if (cam.name == "WeaponCamera")
+                    {
+                        named = cam;
+                        break;
+                    }
+                }
+
+                WeaponCamera = named != null ? named : any;
+            }
+
+            if (WeaponCamera == null)
+            {
+                // If the weapon camera was removed, gameplay code still expects one for weapon-only rendering & FOV sync.
+                var go = new GameObject("WeaponCamera (Helper)");
+                go.transform.SetParent(transform, false);
+                WeaponCamera = go.AddComponent<Camera>();
+                WeaponCamera.enabled = false;
+            }
+        }
+
         void OnEnable()
         {
             if (m_PlayerCharacterController == null)

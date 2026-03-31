@@ -119,5 +119,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player.Abilities
         public void DeactivateNow() => ForceDeactivate();
 
         public bool IsActive => _active;
+
+        public AnimatedSpriteRenderer GhostSpriteRenderer => spriteRendererGhost;
     }
 }
