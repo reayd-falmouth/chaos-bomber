@@ -35,12 +35,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
-            PlayerUpgrades.Clear();
-            PlayerCoins.Clear();
-            PlayerWins.Clear();
-            MatchWinnerPlayerId = 0;
-            MatchWinnerName = null;
-            _playerDeviceIndex.Clear();
+            ResetSession();
             for (int id = 1; id <= playerCount; id++)
             {
                 // Initialize each player with a dictionary to store their upgrades
@@ -55,6 +50,18 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 PlayerCoins[id] = 0;
                 PlayerWins[id] = 0;
             }
+        }
+
+        public void ResetSession()
+        {
+            PlayerUpgrades.Clear();
+            PlayerCoins.Clear();
+            PlayerWins.Clear();
+            MatchWinnerPlayerId = 0;
+            MatchWinnerName = null;
+            _playerDeviceIndex.Clear();
+            ClearShopControllerOverride();
+            _networkClientToPlayer.Clear();
         }
 
         public int GetCoins(int playerId)

@@ -209,6 +209,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             var sfm = SceneFlowManager.I;
             UnityEngine.Debug.Log($"[PauseMenu] QuitToMenu called. SceneFlowManager.I={sfm}, singleSceneMode={sfm?.IsSingleSceneMode}");
             Resume();
+            SessionManager.Instance?.ResetSession();
             if (sfm != null)
                 sfm.GoTo(FlowState.Menu);
             else

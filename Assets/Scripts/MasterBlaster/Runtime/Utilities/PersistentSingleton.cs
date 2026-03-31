@@ -20,5 +20,11 @@ namespace HybridGame.MasterBlaster.Scripts.Utilities
             Instance = this as T;
             DontDestroyOnLoad(gameObject);
         }
+
+        protected virtual void OnDestroy()
+        {
+            if (ReferenceEquals(Instance, this))
+                Instance = null;
+        }
     }
 }
