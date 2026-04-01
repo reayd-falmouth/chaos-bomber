@@ -10,10 +10,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
     {
         [Header("Crawl")]
         [Tooltip("UI units per second (anchoredPosition.y increases upward).")]
-        [Min(0f)] [SerializeField] private float scrollSpeedUnitsPerSecond = 30f;
+        [Min(0f)] [SerializeField] private float scrollSpeedUnitsPerSecond = 100f;
         [Tooltip("Extra space below the viewport bottom before the crawl becomes visible (viewport-local units).")]
         [Min(0f)] [SerializeField] private float startPadding = 0f;
-        [HideInInspector] [SerializeField] private float crawlEndAnchoredY = 600f;
+        [Tooltip("Added after snap; positive moves the whole crawl upward (parent-local Y).")]
+        [SerializeField] private float crawlStartVerticalOffset = 0f;
+        [HideInInspector] [SerializeField] private float crawlEndAnchoredY = 0f;
 
         [Header("Scene References")]
         [SerializeField] private GameObject prologuePanel;
@@ -77,6 +79,36 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             return prologueText != null ? (prologueText.parent as RectTransform) : null;
         }
 
+        /// <summary>
+        /// Local height used for top/bottom math (Unity <see cref="RectTransform.rect"/> is unscaled; scale affects layout).
+        /// </summary>
+        private static float GetTextBlockExtentY(RectTransform text)
+        {
+            if (text == null)
+                return 0f;
+            return text.rect.height * Mathf.Abs(text.localScale.y);
+        }
+
+        /// <summary>Top edge Y of the text rect in the same space as <see cref="RectTransform.anchoredPosition"/> (parent = viewport).</summary>
+        public static float GetContentTopY(RectTransform text)
+        {
+            if (text == null)
+                return 0f;
+            float h = GetTextBlockExtentY(text);
+            float pivotY = text.pivot.y;
+            return text.anchoredPosition.y + (1f - pivotY) * h;
+        }
+
+        /// <summary>Bottom edge Y of the text rect in parent-local space.</summary>
+        public static float GetContentBottomY(RectTransform text)
+        {
+            if (text == null)
+                return 0f;
+            float h = GetTextBlockExtentY(text);
+            float pivotY = text.pivot.y;
+            return text.anchoredPosition.y - pivotY * h;
+        }
+
         private void SnapPrologueTextStartOffscreen()
         {
             if (prologueText == null)
@@ -90,15 +122,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             LayoutRebuilder.ForceRebuildLayoutImmediate(viewport);
             Canvas.ForceUpdateCanvases();
 
-            // Bounds in viewport space so rotation/scale on ancestors stay consistent with scrolling.
-            Bounds viewportBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, viewport);
-            Bounds textBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
-            float viewportYMin = viewportBounds.min.y;
-            float contentTopY = textBounds.max.y;
+            // Use viewport.rect + anchored math in the text parent's space. Axis-aligned bounds from
+            // RectTransformUtility often mis-size scaled/rotated nested canvases and push the start too far down.
+            float viewportYMin = viewport.rect.yMin;
+            float contentTopY = GetContentTopY(prologueText);
             float deltaY = ComputeStartDeltaY(viewportYMin, contentTopY, startPadding);
 
             var pos = prologueText.anchoredPosition;
-            pos.y += deltaY;
+            pos.y += deltaY + crawlStartVerticalOffset;
             prologueText.anchoredPosition = pos;
         }
 
@@ -159,17 +190,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
 
                 if (viewport != null)
                 {
-                    Bounds viewportBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, viewport);
-                    Bounds textBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
-                    float contentBottomY = textBounds.min.y;
+                    float contentBottomY = GetContentBottomY(prologueText);
+                    var rect = viewport.rect;
 
                     if (_prologueCanvasGroup != null)
                         _prologueCanvasGroup.alpha = ComputeCrawlFadeAlpha(
-                            viewportBounds.center.y,
-                            viewportBounds.max.y,
+                            rect.center.y,
+                            rect.yMax,
                             contentBottomY);
 
-                    if (IsCrawlFinished(viewportBounds.max.y, contentBottomY, 0f))
+                    if (IsCrawlFinished(rect.yMax, contentBottomY, 0f))
                         break;
                 }
                 else if (pos.y >= crawlEndAnchoredY)

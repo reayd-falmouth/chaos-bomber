@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using HybridGame.MasterBlaster.Scripts.Scenes.Prologue;
+using UnityEngine;
 
 namespace fps.Tests.EditMode
 {
@@ -64,6 +65,26 @@ namespace fps.Tests.EditMode
             Assert.AreEqual(0.5f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 50f), 0.0001f);
             Assert.AreEqual(0f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 100f), 0.0001f);
             Assert.AreEqual(0f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 150f), 0.0001f);
+        }
+
+        [Test]
+        public void GetContentTopY_AndBottom_UsePivotAndScaledRectHeight()
+        {
+            var go = new GameObject("Rt", typeof(RectTransform));
+            var rt = go.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(100f, 200f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.localScale = new Vector3(2f, 2f, 1f);
+            rt.anchoredPosition = new Vector2(0f, 100f);
+
+            float h = rt.rect.height * Mathf.Abs(rt.localScale.y);
+            float top = PrologueController.GetContentTopY(rt);
+            float bottom = PrologueController.GetContentBottomY(rt);
+
+            Assert.AreEqual(rt.anchoredPosition.y + (1f - rt.pivot.y) * h, top, 0.02f);
+            Assert.AreEqual(rt.anchoredPosition.y - rt.pivot.y * h, bottom, 0.02f);
+
+            Object.DestroyImmediate(go);
         }
     }
 }
