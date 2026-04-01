@@ -101,7 +101,11 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         [SerializeField]
         private Color defaultUiCanvasBackgroundColor = Color.black;
 
-        // Cached from the UI Canvas Image on first apply so Default/Solid can restore after Sprite override.
+        [Tooltip("Sprite for the shared UI Canvas root Image when using Default/Solid, or as fallback when no per-screen sprite is set. If unset, the sprite already on the Image at first apply is used.")]
+        [SerializeField]
+        private Sprite defaultUiCanvasBackgroundSprite;
+
+        // Cached from the UI Canvas Image on first apply when defaultUiCanvasBackgroundSprite is unset.
         private Sprite _uiCanvasOriginalSprite;
 
         [Header("Transitions")]
@@ -532,12 +536,18 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 _uiCanvasOriginalSprite = img.sprite;
         }
 
+        /// <summary>Sprite used to tint solid/background colors; prefers explicit default, then first-seen Image sprite.</summary>
+        private Sprite GetBackdropSpriteForTint(Image img)
+        {
+            EnsureUiCanvasSpriteCached(img);
+            return defaultUiCanvasBackgroundSprite != null ? defaultUiCanvasBackgroundSprite : _uiCanvasOriginalSprite;
+        }
+
         private void ApplyDefaultUiCanvasBackground(Image img)
         {
             if (img == null)
                 return;
-            EnsureUiCanvasSpriteCached(img);
-            img.sprite = _uiCanvasOriginalSprite;
+            img.sprite = GetBackdropSpriteForTint(img);
             img.color = defaultUiCanvasBackgroundColor;
             img.raycastTarget = false;
         }
@@ -563,12 +573,12 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                     ApplyDefaultUiCanvasBackground(img);
                     break;
                 case UiCanvasBackgroundMode.SolidColor:
-                    img.sprite = _uiCanvasOriginalSprite;
+                    img.sprite = GetBackdropSpriteForTint(img);
                     img.color = root.SolidBackgroundColor;
                     img.raycastTarget = false;
                     break;
                 case UiCanvasBackgroundMode.Sprite:
-                    img.sprite = root.BackgroundSprite != null ? root.BackgroundSprite : _uiCanvasOriginalSprite;
+                    img.sprite = root.BackgroundSprite != null ? root.BackgroundSprite : GetBackdropSpriteForTint(img);
                     img.color = root.SpriteTint;
                     img.raycastTarget = false;
                     break;

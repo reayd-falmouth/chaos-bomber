@@ -5,7 +5,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
     /// <summary>How the shared "UI Canvas" root <see cref="UnityEngine.UI.Image"/> is painted while this flow screen is active.</summary>
     public enum UiCanvasBackgroundMode
     {
-        /// <summary>Use <see cref="SceneFlowManager"/> default (e.g. solid black) with the canvas original sprite reference.</summary>
+        /// <summary>Use <see cref="SceneFlowManager"/> default color and optional default backdrop sprite (or cached canvas sprite).</summary>
         Default = 0,
         SolidColor = 1,
         Sprite = 2
