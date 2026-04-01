@@ -3,6 +3,7 @@ using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using HybridGame.MasterBlaster.Scripts.Utilities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Core
 {
@@ -17,7 +18,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         Standings,
         Wheel,
         Shop,
-        Overs
+        Overs,
+        // IMPORTANT: Append-only to avoid breaking serialized enum ints in scenes/prefabs.
+        Prologue,
+        Quote
     }
 
     public class SceneFlowManager : PersistentSingleton<SceneFlowManager>
@@ -39,6 +43,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         
         [SerializeField]
         string creditsScene = "Credits";
+
+        [SerializeField]
+        string prologueScene = "Prologue";
 
         [SerializeField]
         string menuScene = "Menu";
@@ -73,6 +80,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private bool _singleSceneMode;
         private FlowCanvasRoot[] _roots;
         private readonly Dictionary<FlowState, FlowCanvasRoot> _rootByState = new();
+        private Coroutine _transitionRoutine;
+        private CanvasGroup _transitionOverlay;
 
         /// <summary>
         /// Current flow state (used by ContinueOnAnyInput to decide if any key should advance).
@@ -80,15 +89,17 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         public FlowState CurrentState => state;
 
         /// <summary>
-        /// True only for screens where "continue on any input" should advance (Credits, Title).
+        /// True for screens where "continue on any input" should advance (Credits, Title, Standings, etc.).
         /// Menu and other screens must use their own UI (e.g. Return to start).
         /// </summary>
         public static bool ShouldAdvanceOnAnyInput(FlowState state)
         {
             return state == FlowState.Credits
-                || state == FlowState.Title
                 || state == FlowState.Overs
-                || state == FlowState.Controls;
+                || state == FlowState.Controls
+                || state == FlowState.Standings
+                || state == FlowState.Quote
+                || state == FlowState.Prologue;
         }
 
         void Start()
@@ -386,9 +397,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                     return r.state;
             }
 
-            // If nothing is active, default to Menu (the safe "entry" screen).
-            UnityEngine.Debug.LogWarning("[Flow] Single-scene mode: no active FlowCanvasRoot found. Defaulting to Menu.");
-            return FlowState.Menu;
+            // If nothing is active, default to Quote (the intended entry screen).
+            UnityEngine.Debug.LogWarning("[Flow] Single-scene mode: no active FlowCanvasRoot found. Defaulting to Quote.");
+            return FlowState.Quote;
         }
 
         private bool ActivateStateRoot(FlowState next)
@@ -440,10 +451,16 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             {
                 case FlowState.Controls:
                     return FlowState.Title;
+                case FlowState.Quote:
+                    return FlowState.Prologue;
+                case FlowState.Prologue:
+                    return FlowState.Title;
                 case FlowState.Title:
-                    return FlowState.Credits;
+                    // Title is now a menu; do not auto-advance from "press any key".
+                    return FlowState.Title;
                 case FlowState.Credits:
-                    return FlowState.Menu;
+                    // Credits are only reachable from Title and should return there.
+                    return FlowState.Title;
                 case FlowState.Menu:
                     return FlowState.Countdown;
                 case FlowState.Countdown:
@@ -486,7 +503,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         // -------- Core --------
         public void GoTo(FlowState next)
         {
-            UnityEngine.Debug.Log($"[Flow] {state} → {next}");
+            var previous = state;
+            UnityEngine.Debug.Log($"[Flow] {previous} → {next}");
             state = next;
             string sceneName = SceneFor(next);
             AudioController.I?.PreviewSceneMusic(sceneName);
@@ -494,6 +512,14 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             // Single-scene system: toggle root instead of loading new scenes.
             if (_singleSceneMode)
             {
+                if (ShouldTransition(previous, next))
+                {
+                    if (_transitionRoutine != null)
+                        StopCoroutine(_transitionRoutine);
+                    _transitionRoutine = StartCoroutine(TransitionFadeThroughBlack(previous, next, 3f));
+                    return;
+                }
+
                 // Any flow screen other than the arena: clear loose world pickups/explosions/debris.
                 // (1) Orphan drops parented to scene root could still render over UI after Game is disabled.
                 // (2) Standings → Wheel/Shop does not pass "previous == Game", so we must clear on every
@@ -524,11 +550,90 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
         }
 
+        private static bool ShouldTransition(FlowState previous, FlowState next)
+        {
+            return previous == FlowState.Quote && next == FlowState.Prologue;
+        }
+
+        private CanvasGroup GetOrCreateTransitionOverlay()
+        {
+            if (_transitionOverlay != null)
+                return _transitionOverlay;
+
+            var uiCanvas = GameObject.Find("UI Canvas");
+            var parent = uiCanvas != null ? uiCanvas.transform : null;
+            if (parent == null)
+            {
+                var anyCanvas = FindAnyObjectByType<Canvas>();
+                parent = anyCanvas != null ? anyCanvas.transform : null;
+            }
+
+            var go = new GameObject("FlowTransitionOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CanvasGroup));
+            if (parent != null)
+                go.transform.SetParent(parent, false);
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.anchoredPosition = Vector2.zero;
+            rt.localScale = Vector3.one;
+
+            var img = go.GetComponent<Image>();
+            img.color = Color.black;
+            img.raycastTarget = false;
+
+            _transitionOverlay = go.GetComponent<CanvasGroup>();
+            _transitionOverlay.alpha = 0f;
+
+            rt.SetAsLastSibling();
+            return _transitionOverlay;
+        }
+
+        private IEnumerator TransitionFadeThroughBlack(FlowState previous, FlowState next, float durationSeconds)
+        {
+            var overlay = GetOrCreateTransitionOverlay();
+            if (overlay == null)
+            {
+                // Fallback if we couldn't create the overlay
+                ActivateStateRoot(next);
+                yield break;
+            }
+
+            var rt = overlay.GetComponent<RectTransform>();
+            if (rt != null) rt.SetAsLastSibling();
+
+            float half = Mathf.Max(0.01f, durationSeconds * 0.5f);
+
+            // Fade to black
+            for (float t = 0f; t < half; t += Time.unscaledDeltaTime)
+            {
+                overlay.alpha = Mathf.Clamp01(t / half);
+                yield return null;
+            }
+            overlay.alpha = 1f;
+
+            // Switch state root while fully black
+            ActivateStateRoot(next);
+
+            // Fade back in
+            for (float t = 0f; t < half; t += Time.unscaledDeltaTime)
+            {
+                overlay.alpha = 1f - Mathf.Clamp01(t / half);
+                yield return null;
+            }
+            overlay.alpha = 0f;
+
+            _transitionRoutine = null;
+        }
+
         SceneNamesConfig GetConfig() =>
             new SceneNamesConfig
             {
                 Controls = controlsScene,
                 Credits = creditsScene,
+                Prologue = prologueScene,
                 Title = titleScene,
                 Menu = menuScene,
                 Countdown = countdownScene,

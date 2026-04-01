@@ -40,6 +40,30 @@ namespace fps.Tests.EditMode
 
             Assert.Less(deltaY, 0f);
         }
+
+        [Test]
+        public void IsCrawlFinished_ReturnsTrueWhenContentBottomIsAboveViewportTopPlusPadding()
+        {
+            float viewportYMax = 540f;
+            float padding = 10f;
+
+            Assert.IsFalse(PrologueController.IsCrawlFinished(viewportYMax, 549.9f, padding));
+            Assert.IsTrue(PrologueController.IsCrawlFinished(viewportYMax, 550f, padding));
+            Assert.IsTrue(PrologueController.IsCrawlFinished(viewportYMax, 700f, padding));
+        }
+
+        [Test]
+        public void ComputeCrawlFadeAlpha_IsOneUntilBottomReachesCenter_ThenLinearlyToZeroAtTop()
+        {
+            float centerY = 0f;
+            float topY = 100f;
+
+            Assert.AreEqual(1f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, -50f), 0.0001f);
+            Assert.AreEqual(1f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 0f), 0.0001f);
+            Assert.AreEqual(0.5f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 50f), 0.0001f);
+            Assert.AreEqual(0f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 100f), 0.0001f);
+            Assert.AreEqual(0f, PrologueController.ComputeCrawlFadeAlpha(centerY, topY, 150f), 0.0001f);
+        }
     }
 }
 

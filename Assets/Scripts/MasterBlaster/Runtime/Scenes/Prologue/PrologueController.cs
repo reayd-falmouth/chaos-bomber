@@ -8,24 +8,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
 {
     public class PrologueController : MonoBehaviour
     {
-        [Header("Quote Timing")]
-        [Min(0f)] [SerializeField] private float quoteSeconds = 3f;
-        [Min(0.01f)] [SerializeField] private float quoteFadeSeconds = 1f;
-
         [Header("Crawl")]
         [Tooltip("UI units per second (anchoredPosition.y increases upward).")]
         [Min(0f)] [SerializeField] private float scrollSpeedUnitsPerSecond = 30f;
-        [Tooltip("Extra padding below the screen (UI units) before the crawl becomes visible.")]
-        [Min(0f)] [SerializeField] private float startOffscreenPadding = 0f;
-        [Tooltip("AnchoredPosition.y at/above which the crawl is considered finished.")]
-        [SerializeField] private float crawlEndAnchoredY = 600f;
+        [HideInInspector] [SerializeField] private float crawlEndAnchoredY = 600f;
 
         [Header("Scene References")]
-        [SerializeField] private GameObject quotePanel;
         [SerializeField] private GameObject prologuePanel;
         [SerializeField] private RectTransform prologueText;
 
-        private CanvasGroup _quoteCanvasGroup;
         private CanvasGroup _prologueCanvasGroup;
         private bool _skipped;
         private Coroutine _routine;
@@ -40,16 +31,30 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             return (viewportYMin - padding) - contentTopY;
         }
 
+        public static bool IsCrawlFinished(float viewportYMax, float contentBottomY, float padding)
+        {
+            return contentBottomY >= (viewportYMax + padding);
+        }
+
+        public static float ComputeCrawlFadeAlpha(float viewportCenterY, float viewportYMax, float contentBottomY)
+        {
+            float t = Mathf.InverseLerp(viewportCenterY, viewportYMax, contentBottomY);
+            return 1f - Mathf.Clamp01(t);
+        }
+
+        private RectTransform GetViewportRectTransform()
+        {
+            if (prologuePanel != null && prologuePanel.TryGetComponent<RectTransform>(out var panelRect))
+                return panelRect;
+            return prologueText != null ? (prologueText.parent as RectTransform) : null;
+        }
+
         private void SnapPrologueTextStartOffscreen()
         {
             if (prologueText == null)
                 return;
 
-            RectTransform viewport = null;
-            if (prologuePanel != null)
-                viewport = prologuePanel.GetComponent<RectTransform>();
-            if (viewport == null)
-                viewport = prologueText.parent as RectTransform;
+            var viewport = GetViewportRectTransform();
             if (viewport == null)
                 return;
 
@@ -58,7 +63,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             Canvas.ForceUpdateCanvases();
 
             var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
-            float deltaY = ComputeStartDeltaY(viewport.rect.yMin, bounds.max.y, startOffscreenPadding);
+            float deltaY = ComputeStartDeltaY(viewport.rect.yMin, bounds.max.y, 0f);
 
             var pos = prologueText.anchoredPosition;
             pos.y += deltaY;
@@ -95,70 +100,19 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         private IEnumerator Run()
         {
             // Prepare UI state
-            if (quotePanel != null)
-            {
-                quotePanel.SetActive(true);
-
-                // Ensure black background exists and fills screen.
-                var img = quotePanel.GetComponent<Image>();
-                if (img == null)
-                    img = quotePanel.AddComponent<Image>();
-                img.color = Color.black;
-                img.raycastTarget = false;
-
-                _quoteCanvasGroup = quotePanel.GetComponent<CanvasGroup>();
-                if (_quoteCanvasGroup == null)
-                    _quoteCanvasGroup = quotePanel.AddComponent<CanvasGroup>();
-                _quoteCanvasGroup.alpha = 1f;
-            }
-
             if (prologuePanel != null)
             {
                 prologuePanel.SetActive(true);
                 _prologueCanvasGroup = prologuePanel.GetComponent<CanvasGroup>();
                 if (_prologueCanvasGroup == null)
                     _prologueCanvasGroup = prologuePanel.AddComponent<CanvasGroup>();
-                _prologueCanvasGroup.alpha = 0f;
+                _prologueCanvasGroup.alpha = 1f;
             }
 
             SnapPrologueTextStartOffscreen();
 
-            // Quote hold
-            float t = 0f;
-            while (t < quoteSeconds)
-            {
-                if (_skipped) yield break;
-                t += Time.unscaledDeltaTime;
-                yield return null;
-            }
-
-            // Crossfade quote -> prologue
-            if (_quoteCanvasGroup != null || _prologueCanvasGroup != null)
-            {
-                float fadeT = 0f;
-                while (fadeT < quoteFadeSeconds)
-                {
-                    if (_skipped) yield break;
-                    fadeT += Time.unscaledDeltaTime;
-                    float u = Mathf.Clamp01(fadeT / quoteFadeSeconds);
-                    float quoteA = 1f - u;
-                    float prologueA = u;
-                    if (_quoteCanvasGroup != null)
-                        _quoteCanvasGroup.alpha = quoteA;
-                    if (_prologueCanvasGroup != null)
-                        _prologueCanvasGroup.alpha = prologueA;
-                    yield return null;
-                }
-                if (_quoteCanvasGroup != null)
-                    _quoteCanvasGroup.alpha = 0f;
-                if (_prologueCanvasGroup != null)
-                    _prologueCanvasGroup.alpha = 1f;
-            }
-
-            if (quotePanel != null)
-                quotePanel.SetActive(false);
-
             // Crawl
+            var viewport = GetViewportRectTransform();
             while (true)
             {
                 if (_skipped) yield break;
@@ -169,22 +123,33 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
                 pos.y = StepScrollY(pos.y, scrollSpeedUnitsPerSecond, Time.unscaledDeltaTime);
                 prologueText.anchoredPosition = pos;
 
-                if (pos.y >= crawlEndAnchoredY)
+                if (viewport != null)
+                {
+                    var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
+                    if (_prologueCanvasGroup != null)
+                        _prologueCanvasGroup.alpha = ComputeCrawlFadeAlpha(viewport.rect.center.y, viewport.rect.yMax, bounds.min.y);
+
+                    if (IsCrawlFinished(viewport.rect.yMax, bounds.min.y, 0f))
+                        break;
+                }
+                else if (pos.y >= crawlEndAnchoredY)
+                {
+                    // Fallback if viewport is unavailable
                     break;
+                }
 
                 yield return null;
             }
 
             // Finished
-            SceneFlowManager.I?.GoTo(FlowState.Title);
+            SceneFlowManager.I?.SignalScreenDone();
         }
 
         private void SkipToTitle()
         {
             _skipped = true;
-            if (quotePanel != null) quotePanel.SetActive(false);
             if (prologuePanel != null) prologuePanel.SetActive(false);
-            SceneFlowManager.I?.GoTo(FlowState.Title);
+            SceneFlowManager.I?.SignalScreenDone();
         }
 
         private static bool AnySkipPressedThisFrame()
