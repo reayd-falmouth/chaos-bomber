@@ -807,7 +807,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &75535968
 RectTransform:
   m_ObjectHideFlags: 0
@@ -855,6 +855,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Core.FlowCanvasRoot
   state: 11
+  uiCanvasBackground: 0
+  incomingTransition: 0
 --- !u!222 &75535971
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -17307,7 +17309,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -2539.1}
   m_SizeDelta: {x: 386, y: 1621.18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1196422719
@@ -20863,6 +20865,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Core.FlowCanvasRoot
   state: 10
+  uiCanvasBackground: 0
+  incomingTransition: 1
 --- !u!1001 &1395736108
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -24960,7 +24964,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1680740906
 RectTransform:
   m_ObjectHideFlags: 0
@@ -53355,6 +53359,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 1
+  uiCanvasBackground: 0
+  incomingTransition: 2
 --- !u!1 &7689391581460779139
 GameObject:
   m_ObjectHideFlags: 0
@@ -56341,7 +56347,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   standingsPanel: {fileID: 347968733887445074}
-  playerRowPrefab: {fileID: 5273576330799321846, guid: 810e7bc508a92744e827aeda8180e37f, type: 3}
+  playerRowPrefab: {fileID: 5273576330799321846, guid: 810e7bc508a92744e827aeda8180e37f,
+    type: 3}
   trophySprite: {fileID: 21300000, guid: b1d034e71b5cc5e4d8ce547882cc49fe, type: 3}
   avatarSprites:
   - {fileID: 1267943911, guid: 8642032d1ae8ee746a36f32ba6b71c8c, type: 3}

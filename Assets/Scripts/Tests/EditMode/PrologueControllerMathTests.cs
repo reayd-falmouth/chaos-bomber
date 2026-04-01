@@ -27,6 +27,7 @@ namespace fps.Tests.EditMode
             float deltaY = PrologueController.ComputeStartDeltaY(viewportYMin, contentTopY, padding);
 
             Assert.AreEqual((viewportYMin - padding), contentTopY + deltaY, 0.0001f);
+            Assert.AreEqual((viewportYMin - padding) - contentTopY, deltaY, 0.0001f);
         }
 
         [Test]

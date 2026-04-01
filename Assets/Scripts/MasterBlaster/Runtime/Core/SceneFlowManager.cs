@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Collections.Generic;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using HybridGame.MasterBlaster.Scripts.Utilities;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -27,6 +29,13 @@ namespace HybridGame.MasterBlaster.Scripts.Core
     public class SceneFlowManager : PersistentSingleton<SceneFlowManager>
     {
         public static SceneFlowManager I => Instance;
+
+        private enum TransitionKind
+        {
+            None,
+            FadeThroughBlack,
+            PrologueToTitleCrtFlipPulse
+        }
 
         /// <summary>
         /// True when this scene contains <see cref="FlowCanvasRoot"/> markers and we should
@@ -82,11 +91,70 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private readonly Dictionary<FlowState, FlowCanvasRoot> _rootByState = new();
         private Coroutine _transitionRoutine;
         private CanvasGroup _transitionOverlay;
+        private bool _isTransitioning;
+
+        // Runtime-only: very lightweight timing diagnostics for hitches.
+        private const string FlowPerfTag = "[FlowPerf]";
+
+        [Header("UI Canvas background")]
+        [Tooltip("Applied when the active FlowCanvasRoot uses UiCanvasBackgroundMode.Default.")]
+        [SerializeField]
+        private Color defaultUiCanvasBackgroundColor = Color.black;
+
+        // Cached from the UI Canvas Image on first apply so Default/Solid can restore after Sprite override.
+        private Sprite _uiCanvasOriginalSprite;
+
+        [Header("Transitions")]
+        [SerializeField] private float quoteToPrologueFadeSeconds = 3f;
+        [SerializeField] private float prologueToTitleCrtFlipSeconds = 0.35f;
+        [Tooltip("Curve evaluated over normalized time (0..1). Output is multiplied by flipScale and added to the current flip value.")]
+        [SerializeField] private AnimationCurve prologueToTitleFlipCurve =
+            new AnimationCurve(
+                new Keyframe(0f, 0f),
+                new Keyframe(0.45f, 1f),
+                new Keyframe(0.55f, 1f),
+                new Keyframe(1f, 0f)
+            );
+        [Range(0f, 10f)] [SerializeField] private float prologueToTitleFlipScale = 10f;
+
+        // Runtime-only: we never want to mutate the serialized VolumeProfile asset.
+        private Volume _runtimeVolume;
+        private VolumeProfile _runtimeClonedProfile;
+
+        // Runtime-only: active flip parameter state for cancellation/restore.
+        private object _activeFlipParam;
+        private float _activeFlipOriginalValue;
+
+        // #region agent log
+        private static void AgentLog(string runId, string hypothesisId, string location, string message, object data = null)
+        {
+            try
+            {
+                var payload = new
+                {
+                    sessionId = "d5eb48",
+                    runId,
+                    hypothesisId,
+                    location,
+                    message,
+                    data,
+                    timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                System.IO.File.AppendAllText("debug-d5eb48.log", UnityEngine.JsonUtility.ToJson(payload) + "\n");
+            }
+            catch { }
+        }
+        // #endregion
 
         /// <summary>
         /// Current flow state (used by ContinueOnAnyInput to decide if any key should advance).
         /// </summary>
         public FlowState CurrentState => state;
+
+        /// <summary>
+        /// True while a flow transition coroutine is active. Used to gate input during fades.
+        /// </summary>
+        public bool IsTransitioning => _isTransitioning;
 
         /// <summary>
         /// True for screens where "continue on any input" should advance (Credits, Title, Standings, etc.).
@@ -114,7 +182,19 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 ActivateStateRoot(state);
 
                 // In single-scene mode, AudioController is not driven by sceneLoaded routing.
-                AudioController.I?.PreviewSceneMusic(SceneFor(state));
+                if (ShouldSilenceMusicFor(state))
+                    AudioController.I?.StopMusic();
+                else
+                    AudioController.I?.PreviewSceneMusic(SceneFor(state));
+
+                // Pre-warm common transition resources so the first Prologue → Title swap doesn't spike.
+                // Runtime-only: safe to ignore if components are missing.
+                try
+                {
+                    GetOrCreateTransitionOverlay();
+                    GetOrTryCreateScanlinesFlipParam(out _);
+                }
+                catch { }
 
                 string availableStates;
                 if (_rootByState != null && _rootByState.Count > 0)
@@ -409,6 +489,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (!_rootByState.TryGetValue(next, out var target) || target == null)
                 return false;
 
+            float t0 = Time.realtimeSinceStartup;
             UnityEngine.Debug.Log(
                 $"[Flow] Activating root for {next}: {target.gameObject.name} (before activeSelf={target.gameObject.activeSelf} activeInHierarchy={target.gameObject.activeInHierarchy})"
             );
@@ -425,7 +506,87 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             UnityEngine.Debug.Log(
                 $"[Flow] Root for {next} is now activeSelf={target.gameObject.activeSelf} activeInHierarchy={target.gameObject.activeInHierarchy}"
             );
+            float dtMs = (Time.realtimeSinceStartup - t0) * 1000f;
+            UnityEngine.Debug.Log($"{FlowPerfTag} ActivateStateRoot({next}) took {dtMs:F1} ms");
+            ApplyUiCanvasBackgroundFromFlowRoot(target);
             return true;
+        }
+
+        private Image FindUiCanvasRootImage()
+        {
+            var uiCanvasGo = GameObject.Find("UI Canvas");
+            if (uiCanvasGo == null)
+            {
+                var anyCanvas = FindAnyObjectByType<Canvas>();
+                uiCanvasGo = anyCanvas != null ? anyCanvas.gameObject : null;
+            }
+
+            return uiCanvasGo != null ? uiCanvasGo.GetComponent<Image>() : null;
+        }
+
+        private void EnsureUiCanvasSpriteCached(Image img)
+        {
+            if (img == null || _uiCanvasOriginalSprite != null)
+                return;
+            if (img.sprite != null)
+                _uiCanvasOriginalSprite = img.sprite;
+        }
+
+        private void ApplyDefaultUiCanvasBackground(Image img)
+        {
+            if (img == null)
+                return;
+            EnsureUiCanvasSpriteCached(img);
+            img.sprite = _uiCanvasOriginalSprite;
+            img.color = defaultUiCanvasBackgroundColor;
+            img.raycastTarget = false;
+        }
+
+        /// <summary>Configures the shared UI Canvas root Image from the active flow screen.</summary>
+        public void ApplyUiCanvasBackgroundFromFlowRoot(FlowCanvasRoot root)
+        {
+            var img = FindUiCanvasRootImage();
+            if (img == null)
+                return;
+
+            EnsureUiCanvasSpriteCached(img);
+
+            if (root == null)
+            {
+                ApplyDefaultUiCanvasBackground(img);
+                return;
+            }
+
+            switch (root.UiCanvasBackground)
+            {
+                case UiCanvasBackgroundMode.Default:
+                    ApplyDefaultUiCanvasBackground(img);
+                    break;
+                case UiCanvasBackgroundMode.SolidColor:
+                    img.sprite = _uiCanvasOriginalSprite;
+                    img.color = root.SolidBackgroundColor;
+                    img.raycastTarget = false;
+                    break;
+                case UiCanvasBackgroundMode.Sprite:
+                    img.sprite = root.BackgroundSprite != null ? root.BackgroundSprite : _uiCanvasOriginalSprite;
+                    img.color = root.SpriteTint;
+                    img.raycastTarget = false;
+                    break;
+            }
+        }
+
+        private void ForceLayoutForStateRoot(FlowState s)
+        {
+            if (!_rootByState.TryGetValue(s, out var target) || target == null)
+                return;
+
+            float t0 = Time.realtimeSinceStartup;
+            Canvas.ForceUpdateCanvases();
+            if (target.TryGetComponent<RectTransform>(out var rt))
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            Canvas.ForceUpdateCanvases();
+            float dtMs = (Time.realtimeSinceStartup - t0) * 1000f;
+            UnityEngine.Debug.Log($"{FlowPerfTag} ForceLayoutForStateRoot({s}) took {dtMs:F1} ms");
         }
 
         private void RefreshSingleSceneRoots()
@@ -507,16 +668,36 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             UnityEngine.Debug.Log($"[Flow] {previous} → {next}");
             state = next;
             string sceneName = SceneFor(next);
-            AudioController.I?.PreviewSceneMusic(sceneName);
+            if (ShouldSilenceMusicFor(next))
+                AudioController.I?.StopMusic();
+            else
+                AudioController.I?.PreviewSceneMusic(sceneName);
 
             // Single-scene system: toggle root instead of loading new scenes.
             if (_singleSceneMode)
             {
-                if (ShouldTransition(previous, next))
+                var transitionKind = GetTransitionKindForDestination(next);
+                AgentLog("pre-fix-1", "A", "SceneFlowManager.cs:GoTo", "GoTo(single-scene)", new { previous = previous.ToString(), next = next.ToString(), transitionKind = transitionKind.ToString() });
+                if (transitionKind != TransitionKind.None)
                 {
                     if (_transitionRoutine != null)
+                    {
+                        CancelActiveTransitionEffects();
                         StopCoroutine(_transitionRoutine);
-                    _transitionRoutine = StartCoroutine(TransitionFadeThroughBlack(previous, next, 3f));
+                    }
+
+                    switch (transitionKind)
+                    {
+                        case TransitionKind.FadeThroughBlack:
+                            _transitionRoutine = StartCoroutine(TransitionFadeThroughBlack(previous, next, quoteToPrologueFadeSeconds));
+                            break;
+                        case TransitionKind.PrologueToTitleCrtFlipPulse:
+                            _transitionRoutine = StartCoroutine(TransitionPrologueToTitleCrtFlipPulse(previous, next, prologueToTitleCrtFlipSeconds));
+                            break;
+                        default:
+                            _transitionRoutine = null;
+                            break;
+                    }
                     return;
                 }
 
@@ -550,9 +731,25 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
         }
 
-        private static bool ShouldTransition(FlowState previous, FlowState next)
+        private TransitionKind GetTransitionKindForDestination(FlowState next)
         {
-            return previous == FlowState.Quote && next == FlowState.Prologue;
+            if (!_rootByState.TryGetValue(next, out var root) || root == null)
+                return TransitionKind.None;
+
+            switch (root.IncomingTransition)
+            {
+                case FlowIncomingTransition.FadeThroughBlack:
+                    return TransitionKind.FadeThroughBlack;
+                case FlowIncomingTransition.PrologueToTitleCrtFlipPulse:
+                    return TransitionKind.PrologueToTitleCrtFlipPulse;
+                default:
+                    return TransitionKind.None;
+            }
+        }
+
+        private static bool ShouldSilenceMusicFor(FlowState state)
+        {
+            return state == FlowState.Quote || state == FlowState.Prologue;
         }
 
         private CanvasGroup GetOrCreateTransitionOverlay()
@@ -593,11 +790,15 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         private IEnumerator TransitionFadeThroughBlack(FlowState previous, FlowState next, float durationSeconds)
         {
+            _isTransitioning = true;
+            AgentLog("pre-fix-1", "B", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Transition start", new { previous = previous.ToString(), next = next.ToString(), durationSeconds });
             var overlay = GetOrCreateTransitionOverlay();
             if (overlay == null)
             {
                 // Fallback if we couldn't create the overlay
+                AgentLog("pre-fix-1", "B", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Overlay null; activating next root directly", new { next = next.ToString() });
                 ActivateStateRoot(next);
+                _isTransitioning = false;
                 yield break;
             }
 
@@ -615,7 +816,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             overlay.alpha = 1f;
 
             // Switch state root while fully black
+            AgentLog("pre-fix-1", "C", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Switching root while black", new { next = next.ToString() });
             ActivateStateRoot(next);
+            ForceLayoutForStateRoot(next);
+            yield return null; // allow one frame for UI settle before showing
 
             // Fade back in
             for (float t = 0f; t < half; t += Time.unscaledDeltaTime)
@@ -626,6 +830,291 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             overlay.alpha = 0f;
 
             _transitionRoutine = null;
+            _isTransitioning = false;
+            AgentLog("pre-fix-1", "C", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Transition end", new { next = next.ToString() });
+        }
+
+        private IEnumerator TransitionPrologueToTitleCrtFlipPulse(FlowState previous, FlowState next, float durationSeconds)
+        {
+            AgentLog(
+                "pre-fix-1",
+                "F",
+                "SceneFlowManager.cs:TransitionPrologueToTitleCrtFlipPulse",
+                "Transition start",
+                new { previous = previous.ToString(), next = next.ToString(), durationSeconds }
+            );
+
+            CancelActiveTransitionEffects();
+
+            _isTransitioning = true;
+            float total = Mathf.Max(0.01f, durationSeconds);
+
+            var flipParam = GetOrTryCreateScanlinesFlipParam(out float originalValue);
+            if (flipParam == null)
+            {
+                AgentLog(
+                    "pre-fix-1",
+                    "F",
+                    "SceneFlowManager.cs:TransitionPrologueToTitleCrtFlipPulse",
+                    "No flip parameter found; switching root directly",
+                    new { next = next.ToString() }
+                );
+                ActivateStateRoot(next);
+                ForceLayoutForStateRoot(next);
+                _transitionRoutine = null;
+                _isTransitioning = false;
+                yield break;
+            }
+
+            _activeFlipParam = flipParam;
+            _activeFlipOriginalValue = originalValue;
+
+            var overlay = GetOrCreateTransitionOverlay();
+            var overlayRt = overlay != null ? overlay.GetComponent<RectTransform>() : null;
+            if (overlayRt != null) overlayRt.SetAsLastSibling();
+
+            // Drive flip parameter via curve over time.
+            bool didSwitch = false;
+            float scale = Mathf.Clamp(prologueToTitleFlipScale, 0f, 10f);
+            for (float t = 0f; t < total; t += Time.unscaledDeltaTime)
+            {
+                float u = Mathf.Clamp01(t / total);
+                float curve = (prologueToTitleFlipCurve != null) ? prologueToTitleFlipCurve.Evaluate(u) : 0f;
+                float target = originalValue + curve * scale;
+                SetFlipParamValue(flipParam, target);
+
+                // Fade overlay to black over the first half to mask any hitch.
+                if (overlay != null)
+                    overlay.alpha = Mathf.Clamp01(u * 2f);
+
+                // Switch root near the peak of the glitch (midpoint by default).
+                if (u >= 0.5f && !didSwitch)
+                {
+                    didSwitch = true;
+                    ActivateStateRoot(next);
+                    ForceLayoutForStateRoot(next);
+                    yield return null; // allow one frame settle while we're still black
+                }
+                yield return null;
+            }
+
+            if (!didSwitch)
+            {
+                ActivateStateRoot(next);
+                ForceLayoutForStateRoot(next);
+                yield return null;
+            }
+
+            SetFlipParamValue(flipParam, originalValue);
+            CancelActiveTransitionEffects();
+
+            // Fade back in quickly (unscaled) once the new root is live.
+            if (overlay != null)
+            {
+                float fadeOut = 0.15f;
+                for (float t = 0f; t < fadeOut; t += Time.unscaledDeltaTime)
+                {
+                    overlay.alpha = 1f - Mathf.Clamp01(t / fadeOut);
+                    yield return null;
+                }
+                overlay.alpha = 0f;
+            }
+
+            _transitionRoutine = null;
+            _isTransitioning = false;
+            AgentLog(
+                "pre-fix-1",
+                "F",
+                "SceneFlowManager.cs:TransitionPrologueToTitleCrtFlipPulse",
+                "Transition end",
+                new { next = next.ToString() }
+            );
+        }
+
+        private void CancelActiveTransitionEffects()
+        {
+            if (_activeFlipParam != null)
+            {
+                SetFlipParamValue(_activeFlipParam, _activeFlipOriginalValue);
+                _activeFlipParam = null;
+            }
+        }
+
+        private object GetOrTryCreateScanlinesFlipParam(out float originalValue01)
+        {
+            originalValue01 = 0f;
+
+            var vol = GetOrFindRuntimeGlobalVolume();
+            if (vol == null)
+                return null;
+
+            var profile = GetOrCreateRuntimeClonedProfile(vol);
+            if (profile == null)
+                return null;
+
+            // VolFx types may not be referenced directly by this assembly; use reflection.
+            var scanlines = FindVolumeComponentByTypeName(profile, "VolFx.ScanlinesVol")
+                            ?? FindVolumeComponentByTypeName(profile, "ScanlinesVol");
+            if (scanlines == null)
+                return null;
+
+            var flipField = scanlines.GetType().GetField("m_Flip");
+            if (flipField == null)
+                return null;
+
+            var flipParam = flipField.GetValue(scanlines);
+            if (flipParam == null)
+                return null;
+
+            if (!TryGetVolumeParamValue01(flipParam, out originalValue01))
+                originalValue01 = 0f;
+
+            // Ensure override is on so runtime writes take effect.
+            TrySetVolumeParamOverrideState(flipParam, true);
+            return flipParam;
+        }
+
+        private Volume GetOrFindRuntimeGlobalVolume()
+        {
+            if (_runtimeVolume != null)
+                return _runtimeVolume;
+
+            var postProcessingGo = GameObject.Find("PostProcessing");
+            if (postProcessingGo != null)
+                _runtimeVolume = postProcessingGo.GetComponent<Volume>();
+
+            if (_runtimeVolume == null)
+                _runtimeVolume = FindAnyObjectByType<Volume>();
+
+            return _runtimeVolume;
+        }
+
+        private VolumeProfile GetOrCreateRuntimeClonedProfile(Volume volume)
+        {
+            if (volume == null)
+                return null;
+
+            if (_runtimeClonedProfile != null && volume.profile == _runtimeClonedProfile)
+                return _runtimeClonedProfile;
+
+            var shared = volume.sharedProfile;
+            var inst = volume.profile;
+
+            // Clone shared asset into a runtime instance once, and always use that.
+            if (inst == null || inst == shared)
+            {
+                if (shared == null)
+                    return null;
+
+                _runtimeClonedProfile = Instantiate(shared);
+                volume.profile = _runtimeClonedProfile;
+                return _runtimeClonedProfile;
+            }
+
+            // If someone else already assigned an instance, use it (but still cache for reuse).
+            _runtimeClonedProfile = inst;
+            return _runtimeClonedProfile;
+        }
+
+        private static object FindVolumeComponentByTypeName(VolumeProfile profile, string fullOrShortTypeName)
+        {
+            if (profile == null || profile.components == null)
+                return null;
+
+            for (int i = 0; i < profile.components.Count; i++)
+            {
+                var c = profile.components[i];
+                if (c == null) continue;
+
+                var t = c.GetType();
+                if (t == null) continue;
+
+                if (t.FullName == fullOrShortTypeName || t.Name == fullOrShortTypeName)
+                    return c;
+            }
+
+            return null;
+        }
+
+        private static void SetFlipParamValue(object flipParam, float value)
+        {
+            if (flipParam == null)
+                return;
+
+            // Try VolumeParameter<T>.value first.
+            var valueProp = flipParam.GetType().GetProperty("value");
+            if (valueProp != null && valueProp.CanWrite)
+            {
+                try
+                {
+                    valueProp.SetValue(flipParam, value);
+                    return;
+                }
+                catch { }
+            }
+
+            // Fallback to serialized backing field used in YAML (m_Value).
+            var valueField = flipParam.GetType().GetField("m_Value");
+            if (valueField != null)
+            {
+                try { valueField.SetValue(flipParam, value); } catch { }
+            }
+        }
+
+        private static bool TryGetVolumeParamValue01(object param, out float value01)
+        {
+            value01 = 0f;
+            if (param == null) return false;
+
+            var valueProp = param.GetType().GetProperty("value");
+            if (valueProp != null && valueProp.CanRead)
+            {
+                try
+                {
+                    var v = valueProp.GetValue(param);
+                    if (v is float f)
+                    {
+                        value01 = Mathf.Clamp01(f);
+                        return true;
+                    }
+                }
+                catch { }
+            }
+
+            var valueField = param.GetType().GetField("m_Value");
+            if (valueField != null)
+            {
+                try
+                {
+                    var v = valueField.GetValue(param);
+                    if (v is float f)
+                    {
+                        value01 = Mathf.Clamp01(f);
+                        return true;
+                    }
+                }
+                catch { }
+            }
+
+            return false;
+        }
+
+        private static void TrySetVolumeParamOverrideState(object param, bool enabled)
+        {
+            if (param == null) return;
+
+            var overrideProp = param.GetType().GetProperty("overrideState");
+            if (overrideProp != null && overrideProp.CanWrite)
+            {
+                try { overrideProp.SetValue(param, enabled); } catch { }
+                return;
+            }
+
+            var overrideField = param.GetType().GetField("m_OverrideState");
+            if (overrideField != null)
+            {
+                try { overrideField.SetValue(param, enabled); } catch { }
+            }
         }
 
         SceneNamesConfig GetConfig() =>

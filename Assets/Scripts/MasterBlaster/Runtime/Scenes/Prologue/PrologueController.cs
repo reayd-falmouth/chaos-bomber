@@ -11,6 +11,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         [Header("Crawl")]
         [Tooltip("UI units per second (anchoredPosition.y increases upward).")]
         [Min(0f)] [SerializeField] private float scrollSpeedUnitsPerSecond = 30f;
+        [Tooltip("Extra space below the viewport bottom before the crawl becomes visible (viewport-local units).")]
+        [Min(0f)] [SerializeField] private float startPadding = 0f;
         [HideInInspector] [SerializeField] private float crawlEndAnchoredY = 600f;
 
         [Header("Scene References")]
@@ -20,6 +22,32 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         private CanvasGroup _prologueCanvasGroup;
         private bool _skipped;
         private Coroutine _routine;
+        private float _ignoreSkipUntilUnscaledTime;
+
+        [Header("Skip")]
+        [Tooltip("Ignore skip input for a short time after enabling (prevents accidental skip from the click/key that started Play mode or advanced the previous screen).")]
+        [Min(0f)] [SerializeField] private float skipGraceSeconds = 0.25f;
+
+        // #region agent log
+        private static void AgentLog(string runId, string hypothesisId, string location, string message, object data = null)
+        {
+            try
+            {
+                var payload = new
+                {
+                    sessionId = "d5eb48",
+                    runId,
+                    hypothesisId,
+                    location,
+                    message,
+                    data,
+                    timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                System.IO.File.AppendAllText("debug-d5eb48.log", UnityEngine.JsonUtility.ToJson(payload) + "\n");
+            }
+            catch { }
+        }
+        // #endregion
 
         public static float StepScrollY(float currentY, float speedUnitsPerSecond, float deltaTime)
         {
@@ -62,8 +90,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             LayoutRebuilder.ForceRebuildLayoutImmediate(viewport);
             Canvas.ForceUpdateCanvases();
 
-            var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
-            float deltaY = ComputeStartDeltaY(viewport.rect.yMin, bounds.max.y, 0f);
+            // Bounds in viewport space so rotation/scale on ancestors stay consistent with scrolling.
+            Bounds viewportBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, viewport);
+            Bounds textBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
+            float viewportYMin = viewportBounds.min.y;
+            float contentTopY = textBounds.max.y;
+            float deltaY = ComputeStartDeltaY(viewportYMin, contentTopY, startPadding);
 
             var pos = prologueText.anchoredPosition;
             pos.y += deltaY;
@@ -73,6 +105,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         void OnEnable()
         {
             _skipped = false;
+            _ignoreSkipUntilUnscaledTime = Time.unscaledTime + Mathf.Max(0f, skipGraceSeconds);
+            AgentLog("pre-fix-1", "E", "PrologueController.cs:OnEnable", "enabled", new { hasPanel = prologuePanel != null, hasText = prologueText != null, scrollSpeedUnitsPerSecond });
 
             if (_routine != null)
                 StopCoroutine(_routine);
@@ -93,7 +127,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             if (_skipped)
                 return;
 
-            if (AnySkipPressedThisFrame())
+            if (Time.unscaledTime >= _ignoreSkipUntilUnscaledTime && AnySkipPressedThisFrame())
                 SkipToTitle();
         }
 
@@ -125,11 +159,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
 
                 if (viewport != null)
                 {
-                    var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
-                    if (_prologueCanvasGroup != null)
-                        _prologueCanvasGroup.alpha = ComputeCrawlFadeAlpha(viewport.rect.center.y, viewport.rect.yMax, bounds.min.y);
+                    Bounds viewportBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, viewport);
+                    Bounds textBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, prologueText);
+                    float contentBottomY = textBounds.min.y;
 
-                    if (IsCrawlFinished(viewport.rect.yMax, bounds.min.y, 0f))
+                    if (_prologueCanvasGroup != null)
+                        _prologueCanvasGroup.alpha = ComputeCrawlFadeAlpha(
+                            viewportBounds.center.y,
+                            viewportBounds.max.y,
+                            contentBottomY);
+
+                    if (IsCrawlFinished(viewportBounds.max.y, contentBottomY, 0f))
                         break;
                 }
                 else if (pos.y >= crawlEndAnchoredY)
@@ -142,6 +182,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             }
 
             // Finished
+            AgentLog("pre-fix-1", "E", "PrologueController.cs:Run", "crawl finished -> SignalScreenDone", null);
             SceneFlowManager.I?.SignalScreenDone();
         }
 
@@ -149,6 +190,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         {
             _skipped = true;
             if (prologuePanel != null) prologuePanel.SetActive(false);
+            AgentLog("pre-fix-1", "E", "PrologueController.cs:SkipToTitle", "skip -> SignalScreenDone", null);
             SceneFlowManager.I?.SignalScreenDone();
         }
 
