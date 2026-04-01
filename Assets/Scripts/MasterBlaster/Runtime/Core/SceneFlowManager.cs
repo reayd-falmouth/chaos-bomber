@@ -93,6 +93,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private CanvasGroup _transitionOverlay;
         private bool _isTransitioning;
 
+        /// <summary>Cached <see cref="Image"/> on the &quot;UI Canvas&quot; root; cleared when scenes change.</summary>
+        private Image _cachedUiCanvasRootImage;
+
         // Runtime-only: very lightweight timing diagnostics for hitches.
         private const string FlowPerfTag = "[FlowPerf]";
 
@@ -177,6 +180,28 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 || state == FlowState.Prologue;
         }
 
+        void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            InvalidateUiCanvasCache();
+            if (!isActiveAndEnabled)
+                return;
+            RefreshSingleSceneRoots();
+            if (_rootByState.Count == 0)
+                return;
+            if (_rootByState.TryGetValue(state, out var root))
+                ApplyUiCanvasBackgroundFromFlowRoot(root);
+        }
+
         void Start()
         {
             _singleSceneMode = TryInitSingleSceneRoots();
@@ -203,6 +228,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 }
                 catch { }
 
+                // Apply again next frame so the UI Canvas exists even if Start ran before it was ready.
+                StartCoroutine(DeferredApplyUiCanvasBackgroundForCurrentState());
+
                 string availableStates;
                 if (_rootByState != null && _rootByState.Count > 0)
                     availableStates = string.Join(",", _rootByState.Keys);
@@ -219,6 +247,15 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             var sceneName = SceneManager.GetActiveScene().name;
             state = StateForSceneName(sceneName);
             UnityEngine.Debug.Log($"[Flow] Booted in '{sceneName}' → {state}");
+        }
+
+        private IEnumerator DeferredApplyUiCanvasBackgroundForCurrentState()
+        {
+            yield return null;
+            if (!_singleSceneMode)
+                yield break;
+            if (_rootByState.TryGetValue(state, out var root))
+                ApplyUiCanvasBackgroundFromFlowRoot(root);
         }
 
         private bool TryInitSingleSceneRoots()
@@ -519,16 +556,45 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             return true;
         }
 
-        private Image FindUiCanvasRootImage()
+        private void InvalidateUiCanvasCache()
         {
-            var uiCanvasGo = GameObject.Find("UI Canvas");
+            _cachedUiCanvasRootImage = null;
+            _uiCanvasOriginalSprite = null;
+        }
+
+        /// <summary>
+        /// Resolves the full-screen backdrop <see cref="Image"/> on the GameObject named &quot;UI Canvas&quot;.
+        /// Uses inactive search so timing / activation order does not skip the canvas; caches the result.
+        /// </summary>
+        private Image ResolveUiCanvasRootImage()
+        {
+            if (_cachedUiCanvasRootImage != null)
+                return _cachedUiCanvasRootImage;
+
+            GameObject uiCanvasGo = GameObject.Find("UI Canvas");
             if (uiCanvasGo == null)
             {
-                var anyCanvas = FindAnyObjectByType<Canvas>();
-                uiCanvasGo = anyCanvas != null ? anyCanvas.gameObject : null;
+                var canvases = FindObjectsByType<Canvas>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None
+                );
+                for (int i = 0; i < canvases.Length; i++)
+                {
+                    var c = canvases[i];
+                    if (c == null)
+                        continue;
+                    if (c.gameObject.name != "UI Canvas")
+                        continue;
+                    uiCanvasGo = c.gameObject;
+                    break;
+                }
             }
 
-            return uiCanvasGo != null ? uiCanvasGo.GetComponent<Image>() : null;
+            if (uiCanvasGo == null)
+                return null;
+
+            _cachedUiCanvasRootImage = uiCanvasGo.GetComponent<Image>();
+            return _cachedUiCanvasRootImage;
         }
 
         private void EnsureUiCanvasSpriteCached(Image img)
@@ -558,7 +624,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         /// <summary>Configures the shared UI Canvas root Image from the active flow screen.</summary>
         public void ApplyUiCanvasBackgroundFromFlowRoot(FlowCanvasRoot root)
         {
-            var img = FindUiCanvasRootImage();
+            var img = ResolveUiCanvasRootImage();
             if (img == null)
                 return;
 
@@ -770,8 +836,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (_transitionOverlay != null)
                 return _transitionOverlay;
 
-            var uiCanvas = GameObject.Find("UI Canvas");
-            var parent = uiCanvas != null ? uiCanvas.transform : null;
+            var backdrop = ResolveUiCanvasRootImage();
+            var parent = backdrop != null ? backdrop.transform : null;
             if (parent == null)
             {
                 var anyCanvas = FindAnyObjectByType<Canvas>();
