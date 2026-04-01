@@ -85,6 +85,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         [SerializeField] private bool overrideStartState = false;
         [SerializeField] private FlowState overrideStartStateValue = FlowState.Game;
 
+        /// <summary>Set after <see cref="Start"/> assigns <see cref="state"/> so <see cref="OnSceneLoaded"/> does not use the default enum (Controls) before bootstrap.</summary>
+        private bool _flowBootstrapComplete;
+
         // -------- Single-scene mode --------
         private bool _singleSceneMode;
         private FlowCanvasRoot[] _roots;
@@ -100,6 +103,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private const string FlowPerfTag = "[FlowPerf]";
 
         [Header("UI Canvas background")]
+        [Tooltip("Optional. If set, used as the full-screen backdrop Image instead of searching for a GameObject named \"UI Canvas\".")]
+        [SerializeField]
+        private Image uiCanvasBackdropImage;
+
         [Tooltip("Applied when the active FlowCanvasRoot uses UiCanvasBackgroundMode.Default.")]
         [SerializeField]
         private Color defaultUiCanvasBackgroundColor = Color.black;
@@ -110,6 +117,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         // Cached from the UI Canvas Image on first apply when defaultUiCanvasBackgroundSprite is unset.
         private Sprite _uiCanvasOriginalSprite;
+
+        private bool _warnedMissingUiCanvasBackdrop;
 
         [Header("Transitions")]
         [SerializeField] private float quoteToPrologueFadeSeconds = 3f;
@@ -198,8 +207,33 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             RefreshSingleSceneRoots();
             if (_rootByState.Count == 0)
                 return;
-            if (_rootByState.TryGetValue(state, out var root))
+
+            var bootFromHierarchy = GetActiveRootStateOrDefault();
+            var applyState = GetBackdropApplyStateForSceneLoaded(
+                _flowBootstrapComplete,
+                state,
+                overrideStartState,
+                overrideStartStateValue,
+                bootFromHierarchy);
+
+            if (_rootByState.TryGetValue(applyState, out var root))
                 ApplyUiCanvasBackgroundFromFlowRoot(root);
+        }
+
+        /// <summary>
+        /// Pure helper: which <see cref="FlowState"/> should drive the shared backdrop when <see cref="SceneManager.sceneLoaded"/> fires,
+        /// before <see cref="Start"/> has set <see cref="state"/> (<paramref name="flowBootstrapComplete"/> false), vs after.
+        /// </summary>
+        public static FlowState GetBackdropApplyStateForSceneLoaded(
+            bool flowBootstrapComplete,
+            FlowState persistedState,
+            bool overrideStartState,
+            FlowState overrideStartStateValue,
+            FlowState bootFromHierarchy)
+        {
+            if (flowBootstrapComplete)
+                return persistedState;
+            return overrideStartState ? overrideStartStateValue : bootFromHierarchy;
         }
 
         void Start()
@@ -240,6 +274,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                     $"[Flow] Single-scene roots: {availableStates}; activeState={state}"
                 );
                 UnityEngine.Debug.Log($"[Flow] Booted in single-scene mode → {state}");
+                _flowBootstrapComplete = true;
                 return;
             }
 
@@ -247,6 +282,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             var sceneName = SceneManager.GetActiveScene().name;
             state = StateForSceneName(sceneName);
             UnityEngine.Debug.Log($"[Flow] Booted in '{sceneName}' → {state}");
+            _flowBootstrapComplete = true;
         }
 
         private IEnumerator DeferredApplyUiCanvasBackgroundForCurrentState()
@@ -562,14 +598,30 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             _uiCanvasOriginalSprite = null;
         }
 
+        private void LogMissingUiCanvasBackdropOnce()
+        {
+            if (_warnedMissingUiCanvasBackdrop)
+                return;
+            _warnedMissingUiCanvasBackdrop = true;
+            UnityEngine.Debug.LogWarning(
+                "[Flow] Could not resolve UI Canvas backdrop Image. Assign \"UI Canvas Backdrop Image\" on SceneFlowManager, " +
+                "or use a root GameObject named \"UI Canvas\" with an Image on the same GameObject.");
+        }
+
         /// <summary>
-        /// Resolves the full-screen backdrop <see cref="Image"/> on the GameObject named &quot;UI Canvas&quot;.
+        /// Resolves the full-screen backdrop <see cref="Image"/>: optional serialized reference, else GameObject named &quot;UI Canvas&quot;.
         /// Uses inactive search so timing / activation order does not skip the canvas; caches the result.
         /// </summary>
         private Image ResolveUiCanvasRootImage()
         {
             if (_cachedUiCanvasRootImage != null)
                 return _cachedUiCanvasRootImage;
+
+            if (uiCanvasBackdropImage != null)
+            {
+                _cachedUiCanvasRootImage = uiCanvasBackdropImage;
+                return _cachedUiCanvasRootImage;
+            }
 
             GameObject uiCanvasGo = GameObject.Find("UI Canvas");
             if (uiCanvasGo == null)
@@ -591,9 +643,19 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             }
 
             if (uiCanvasGo == null)
+            {
+                LogMissingUiCanvasBackdropOnce();
                 return null;
+            }
 
-            _cachedUiCanvasRootImage = uiCanvasGo.GetComponent<Image>();
+            var img = uiCanvasGo.GetComponent<Image>();
+            if (img == null)
+            {
+                LogMissingUiCanvasBackdropOnce();
+                return null;
+            }
+
+            _cachedUiCanvasRootImage = img;
             return _cachedUiCanvasRootImage;
         }
 
