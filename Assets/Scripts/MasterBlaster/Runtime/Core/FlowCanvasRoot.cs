@@ -4,15 +4,6 @@ using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Core
 {
-    /// <summary>How the shared "UI Canvas" root <see cref="UnityEngine.UI.Image"/> is painted while this flow screen is active.</summary>
-    public enum UiCanvasBackgroundMode
-    {
-        /// <summary>Use <see cref="SceneFlowManager"/> default color/sprite. Solid Color / Sprite override that shared Image for this screen.</summary>
-        Default = 0,
-        SolidColor = 1,
-        Sprite = 2
-    }
-
     /// <summary>Transition played when navigating <em>to</em> this flow state (destination wins).</summary>
     public enum FlowIncomingTransition
     {
@@ -34,21 +25,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         [Tooltip("Which flow state this root represents.")]
         public FlowState state;
 
-        [Header("UI Canvas (shared root)")]
-        [Tooltip("Default = use SceneFlowManager default color/sprite. Solid Color / Sprite override that shared Image for this screen.")]
-        [SerializeField]
-        private UiCanvasBackgroundMode uiCanvasBackground = UiCanvasBackgroundMode.Default;
-
-        [Tooltip("Only used when mode is Solid Color (overrides SceneFlowManager default).")]
-        [SerializeField]
-        private Color solidBackgroundColor = Color.white;
-
-        [SerializeField]
-        private Sprite backgroundSprite;
-
-        [SerializeField]
-        private Color spriteTint = Color.white;
-
         [Header("Transition when entering this screen")]
         [Tooltip("Incoming transition when navigating to this state (destination wins).")]
         [SerializeField]
@@ -61,16 +37,13 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private bool useGameObjectActivation;
 
         [Tooltip("Controllers to enable only while this flow screen is active (CanvasGroup mode). " +
-                 "If empty, same-GameObject MonoBehaviours whose type name ends with \"Controller\" are toggled.")]
+                 "If empty, MonoBehaviours on this root and children whose type name ends with \"Controller\" are toggled " +
+                 "(excluding nested FlowCanvasRoot subtrees).")]
         [SerializeField]
         private Behaviour[] managedBehaviours;
 
         private CanvasGroup _canvasGroup;
 
-        public UiCanvasBackgroundMode UiCanvasBackground => uiCanvasBackground;
-        public Color SolidBackgroundColor => solidBackgroundColor;
-        public Sprite BackgroundSprite => backgroundSprite;
-        public Color SpriteTint => spriteTint;
         public FlowIncomingTransition IncomingTransition => incomingTransition;
 
         public bool UseGameObjectActivation => useGameObjectActivation;
@@ -124,14 +97,35 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private List<Behaviour> CollectAutoManagedBehaviours()
         {
             var list = new List<Behaviour>();
-            var mbs = GetComponents<MonoBehaviour>();
+            var mbs = GetComponentsInChildren<MonoBehaviour>(true);
             for (int i = 0; i < mbs.Length; i++)
             {
                 var mb = mbs[i];
-                if (IsAutoManagedMonoBehaviour(mb))
-                    list.Add(mb);
+                if (!IsAutoManagedMonoBehaviour(mb))
+                    continue;
+                // Another flow root under this subtree manages its own behaviours.
+                if (mb.gameObject != gameObject && mb.gameObject.GetComponent<FlowCanvasRoot>() != null)
+                    continue;
+                list.Add(mb);
             }
             return list;
+        }
+
+        /// <summary>
+        /// Disables managed behaviours on every <see cref="FlowCanvasRoot"/> in the loaded scene(s), before Awake/OnEnable.
+        /// See <see cref="FlowScreenLifecycleBootstrap"/>.
+        /// </summary>
+        public static void DisableAllManagedBehavioursForInitialSceneLoad()
+        {
+            var roots = UnityEngine.Object.FindObjectsByType<FlowCanvasRoot>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+            for (int i = 0; i < roots.Length; i++)
+            {
+                if (roots[i] != null)
+                    roots[i].SetManagedBehavioursEnabled(false);
+            }
         }
 
         /// <summary>Enables or disables managed behaviours (no-op for GameObject activation mode).</summary>
@@ -143,9 +137,66 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             for (int i = 0; i < list.Count; i++)
             {
                 var b = list[i];
-                if (b != null)
-                    b.enabled = enabled;
+                if (b == null)
+                    continue;
+
+                if (!enabled)
+                {
+                    if (!b.enabled)
+                        continue;
+                    if (b is IFlowScreen fs)
+                        fs.OnFlowDismissed();
+                    b.enabled = false;
+                }
+                else
+                {
+                    if (b.enabled)
+                        continue;
+                    b.enabled = true;
+                    if (b is IFlowScreen fs2)
+                        fs2.OnFlowPresented();
+                }
             }
+        }
+
+        /// <summary>
+        /// Stops and clears every <see cref="ParticleSystem"/> under this flow root so VFX do not keep
+        /// simulating or drawing when another <see cref="FlowState"/> is active (CanvasGroup alpha alone does not stop world/sim particles).
+        /// Skips particle systems under a nested <see cref="FlowCanvasRoot"/> subtree.
+        /// </summary>
+        public void StopParticleSystemsWhenFlowHidden()
+        {
+            if (useGameObjectActivation)
+                return;
+
+            var systems = GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                var ps = systems[i];
+                if (ps == null)
+                    continue;
+                if (BelongsToNestedFlowRootSubtree(ps.transform))
+                    continue;
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+        }
+
+        /// <summary>
+        /// True if <paramref name="t"/> is under another <see cref="FlowCanvasRoot"/> before reaching this root
+        /// (that nested screen manages its own particles).
+        /// </summary>
+        private bool BelongsToNestedFlowRootSubtree(Transform t)
+        {
+            for (var walk = t; walk != null; walk = walk.parent)
+            {
+                if (walk == transform)
+                    return false;
+                var nested = walk.GetComponent<FlowCanvasRoot>();
+                if (nested != null && nested != this)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

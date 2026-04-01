@@ -99,29 +99,18 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         /// <summary>Cached uGUI <see cref="Image"/> used as the full-screen backdrop; cleared when scenes change.</summary>
         /// <remarks>
         /// This is not UI Toolkit: <c>UIDocument</c> / <c>PanelSettings</c> are unaffected.
-        /// See <see cref="ApplyUiCanvasBackgroundFromFlowRoot"/>.
+        /// See <see cref="ApplyUiCanvasBackdropFromFlowRoot"/>.
         /// </remarks>
         private Image _cachedUiCanvasRootImage;
 
         // Runtime-only: very lightweight timing diagnostics for hitches.
         private const string FlowPerfTag = "[FlowPerf]";
 
-        // Full-screen flow backdrop: one uGUI Image (see ApplyUiCanvasBackgroundFromFlowRoot). Not UI Toolkit PanelSettings.
-        [Header("UI Canvas background")]
-        [Tooltip("Optional. If set, used as the full-screen backdrop Image instead of searching for a GameObject named \"UI Canvas\".")]
+        // Full-screen flow backdrop: one uGUI Image (see ApplyUiCanvasBackdropFromFlowRoot). Not UI Toolkit PanelSettings.
+        [Header("UI Canvas backdrop")]
+        [Tooltip("Optional. If set, used as the full-screen backdrop Image instead of searching for a GameObject named \"UI Canvas\". Sprite and color are scene-authored; flow code does not override them.")]
         [SerializeField]
         private Image uiCanvasBackdropImage;
-
-        [Tooltip("Applied when the active FlowCanvasRoot uses UiCanvasBackgroundMode.Default.")]
-        [SerializeField]
-        private Color defaultUiCanvasBackgroundColor = Color.black;
-
-        [Tooltip("Sprite for the shared UI Canvas root Image when using Default/Solid, or as fallback when no per-screen sprite is set. If unset, the sprite already on the Image at first apply is used.")]
-        [SerializeField]
-        private Sprite defaultUiCanvasBackgroundSprite;
-
-        // Cached from the UI Canvas Image on first apply when defaultUiCanvasBackgroundSprite is unset.
-        private Sprite _uiCanvasOriginalSprite;
 
         private bool _warnedMissingUiCanvasBackdrop;
 
@@ -166,9 +155,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             catch { }
         }
         // #endregion
-
-        /// <summary>Color used for the shared UI Canvas root when <see cref="UiCanvasBackgroundMode.Default"/> is active.</summary>
-        public Color DefaultUiCanvasBackgroundColor => defaultUiCanvasBackgroundColor;
 
         /// <summary>
         /// Current flow state (used by ContinueOnAnyInput to decide if any key should advance).
@@ -222,7 +208,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 bootFromHierarchy);
 
             if (_rootByState.TryGetValue(applyState, out var root))
-                ApplyUiCanvasBackgroundFromFlowRoot(root);
+                ApplyUiCanvasBackdropFromFlowRoot(root);
         }
 
         /// <summary>
@@ -290,14 +276,14 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             _flowBootstrapComplete = true;
         }
 
-        /// <summary>Waits one frame then applies <see cref="ApplyUiCanvasBackgroundFromFlowRoot"/> so the &quot;UI Canvas&quot; backdrop exists if <see cref="Start"/> ran early.</summary>
+        /// <summary>Waits one frame then applies <see cref="ApplyUiCanvasBackdropFromFlowRoot"/> so the &quot;UI Canvas&quot; backdrop exists if <see cref="Start"/> ran early.</summary>
         private IEnumerator DeferredApplyUiCanvasBackgroundForCurrentState()
         {
             yield return null;
             if (!_singleSceneMode)
                 yield break;
             if (_rootByState.TryGetValue(state, out var root))
-                ApplyUiCanvasBackgroundFromFlowRoot(root);
+                ApplyUiCanvasBackdropFromFlowRoot(root);
         }
 
         private bool TryInitSingleSceneRoots()
@@ -621,8 +607,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                         continue;
 
                     bool isCurrent = r.state == next;
-                    // Controllers off before activating so disabled scripts do not get a spurious OnEnable.
-                    if (!r.gameObject.activeSelf)
+                    // Non-current: always turn controllers off first (even if this root stayed active in the hierarchy).
+                    if (!isCurrent)
                         r.SetManagedBehavioursEnabled(false);
 
                     if (!r.gameObject.activeSelf)
@@ -630,6 +616,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
                     var cg = r.GetOrEnsureCanvasGroup();
                     FlowCanvasRoot.ApplyCanvasGroupVisibility(cg, isCurrent);
+                    if (!isCurrent)
+                        r.StopParticleSystemsWhenFlowHidden();
                     r.SetManagedBehavioursEnabled(isCurrent);
                 }
             }
@@ -664,16 +652,15 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             );
             float dtMs = (Time.realtimeSinceStartup - t0) * 1000f;
             UnityEngine.Debug.Log($"{FlowPerfTag} ApplyFlowState({next}) took {dtMs:F1} ms");
-            ApplyUiCanvasBackgroundFromFlowRoot(target);
+            ApplyUiCanvasBackdropFromFlowRoot(target);
             return true;
         }
 
-        /// <summary>Clears cached backdrop <see cref="Image"/> and original sprite so the next resolve runs after a scene load.</summary>
+        /// <summary>Clears cached backdrop <see cref="Image"/> so the next resolve runs after a scene load.</summary>
         /// <remarks>Called from <see cref="OnSceneLoaded"/>.</remarks>
         private void InvalidateUiCanvasCache()
         {
             _cachedUiCanvasRootImage = null;
-            _uiCanvasOriginalSprite = null;
         }
 
         private void LogMissingUiCanvasBackdropOnce()
@@ -741,73 +728,16 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             return _cachedUiCanvasRootImage;
         }
 
-        /// <summary>Stores <see cref="Image.sprite"/> from the backdrop the first time, when <see cref="defaultUiCanvasBackgroundSprite"/> is unset.</summary>
-        private void EnsureUiCanvasSpriteCached(Image img)
-        {
-            if (img == null || _uiCanvasOriginalSprite != null)
-                return;
-            if (img.sprite != null)
-                _uiCanvasOriginalSprite = img.sprite;
-        }
-
-        /// <summary>Sprite used to tint solid/default backgrounds: explicit default, else first-seen sprite on the backdrop <see cref="Image"/>.</summary>
-        private Sprite GetBackdropSpriteForTint(Image img)
-        {
-            EnsureUiCanvasSpriteCached(img);
-            return defaultUiCanvasBackgroundSprite != null ? defaultUiCanvasBackgroundSprite : _uiCanvasOriginalSprite;
-        }
-
-        /// <summary>Sets backdrop to <see cref="defaultUiCanvasBackgroundColor"/> with <see cref="GetBackdropSpriteForTint"/>; disables raycasts.</summary>
-        private void ApplyDefaultUiCanvasBackground(Image img)
-        {
-            if (img == null)
-                return;
-            img.sprite = GetBackdropSpriteForTint(img);
-            img.color = defaultUiCanvasBackgroundColor;
-            img.raycastTarget = false;
-        }
-
-        /// <summary>Configures the shared full-screen uGUI backdrop <see cref="Image"/> from the active <see cref="FlowCanvasRoot"/>.</summary>
-        /// <remarks>
-        /// Does not call <see cref="Canvas.ForceUpdateCanvases"/>; layout forcing is separate (<see cref="ForceLayoutForStateRoot"/>).
-        /// <para><b>Modes</b> (see <see cref="FlowCanvasRoot.UiCanvasBackground"/>):</para>
-        /// <list type="bullet">
-        /// <item><description><b>Default</b> — sprite <see cref="GetBackdropSpriteForTint"/>, color <see cref="defaultUiCanvasBackgroundColor"/>.</description></item>
-        /// <item><description><b>SolidColor</b> — sprite <see cref="GetBackdropSpriteForTint"/>, color <see cref="FlowCanvasRoot.SolidBackgroundColor"/>.</description></item>
-        /// <item><description><b>Sprite</b> — sprite <see cref="FlowCanvasRoot.BackgroundSprite"/> if set, else fallback; color <see cref="FlowCanvasRoot.SpriteTint"/>.</description></item>
-        /// </list>
-        /// All modes set <see cref="Image.raycastTarget"/> to <c>false</c>.
-        /// </remarks>
-        public void ApplyUiCanvasBackgroundFromFlowRoot(FlowCanvasRoot root)
+        /// <summary>
+        /// Resolves the shared full-screen uGUI backdrop <see cref="Image"/> for transitions; does not change sprite or color (scene-authored).
+        /// </summary>
+        /// <remarks>Does not call <see cref="Canvas.ForceUpdateCanvases"/>; layout forcing is separate (<see cref="ForceLayoutForStateRoot"/>).</remarks>
+        public void ApplyUiCanvasBackdropFromFlowRoot(FlowCanvasRoot _)
         {
             var img = ResolveUiCanvasRootImage();
             if (img == null)
                 return;
-
-            EnsureUiCanvasSpriteCached(img);
-
-            if (root == null)
-            {
-                ApplyDefaultUiCanvasBackground(img);
-                return;
-            }
-
-            switch (root.UiCanvasBackground)
-            {
-                case UiCanvasBackgroundMode.Default:
-                    ApplyDefaultUiCanvasBackground(img);
-                    break;
-                case UiCanvasBackgroundMode.SolidColor:
-                    img.sprite = GetBackdropSpriteForTint(img);
-                    img.color = root.SolidBackgroundColor;
-                    img.raycastTarget = false;
-                    break;
-                case UiCanvasBackgroundMode.Sprite:
-                    img.sprite = root.BackgroundSprite != null ? root.BackgroundSprite : GetBackdropSpriteForTint(img);
-                    img.color = root.SpriteTint;
-                    img.raycastTarget = false;
-                    break;
-            }
+            img.raycastTarget = false;
         }
 
         private void ForceLayoutForStateRoot(FlowState s)
