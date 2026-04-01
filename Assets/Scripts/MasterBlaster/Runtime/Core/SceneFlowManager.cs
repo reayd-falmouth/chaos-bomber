@@ -150,6 +150,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         }
         // #endregion
 
+        /// <summary>Color used for the shared UI Canvas root when <see cref="UiCanvasBackgroundMode.Default"/> is active.</summary>
+        public Color DefaultUiCanvasBackgroundColor => defaultUiCanvasBackgroundColor;
+
         /// <summary>
         /// Current flow state (used by ContinueOnAnyInput to decide if any key should advance).
         /// </summary>

@@ -8,7 +8,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
     public class QuoteController : MonoBehaviour
     {
         [Header("Quote Timing")]
-        [Min(0f)] [SerializeField] private float quoteSeconds = 3f;
+        [Min(0f)] [SerializeField] private float quoteSeconds = 10f;
 
         [Header("Scene References")]
         [SerializeField] private GameObject quotePanel;
@@ -17,8 +17,30 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
         private Transform _quoteOriginalParent;
         private int _quoteOriginalSiblingIndex;
 
+        // #region agent log
+        private static void AgentLog(string runId, string hypothesisId, string location, string message, object data = null)
+        {
+            try
+            {
+                var payload = new
+                {
+                    sessionId = "d5eb48",
+                    runId,
+                    hypothesisId,
+                    location,
+                    message,
+                    data,
+                    timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                System.IO.File.AppendAllText("debug-d5eb48.log", UnityEngine.JsonUtility.ToJson(payload) + "\n");
+            }
+            catch { }
+        }
+        // #endregion
+
         void OnEnable()
         {
+            AgentLog("pre-fix-1", "D", "QuoteController.cs:OnEnable", "enabled", new { quoteSeconds, hasQuotePanel = quotePanel != null });
             if (_routine != null)
                 StopCoroutine(_routine);
             _routine = StartCoroutine(Run());
@@ -36,6 +58,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
         private IEnumerator Run()
         {
             PrepareQuoteUi();
+            AgentLog("pre-fix-1", "D", "QuoteController.cs:Run", "quote started", null);
 
             float t = 0f;
             while (t < quoteSeconds)
@@ -45,6 +68,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
             }
 
             TearDownQuoteUi();
+            AgentLog("pre-fix-1", "D", "QuoteController.cs:Run", "quote finished -> SignalScreenDone", null);
             SceneFlowManager.I?.SignalScreenDone();
         }
 
@@ -93,11 +117,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
             var quoteCanvas = quotePanel.GetComponentInParent<Canvas>();
             EnsureCanvasCamera(quoteCanvas);
 
-            // Ensure black background exists and fills screen.
+            // Full-screen Image so layout/stretch works; keep transparent so the shared UI Canvas
+            // root (tinted by SceneFlowManager / FlowCanvasRoot) remains visible underneath.
             var img = quotePanel.GetComponent<Image>();
             if (img == null)
                 img = quotePanel.AddComponent<Image>();
-            img.color = Color.black;
+            img.color = Color.clear;
             img.raycastTarget = false;
 
             var quoteRt = quotePanel.GetComponent<RectTransform>();

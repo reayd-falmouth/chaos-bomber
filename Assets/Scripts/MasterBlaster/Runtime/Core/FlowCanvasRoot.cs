@@ -32,10 +32,11 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         public FlowState state;
 
         [Header("UI Canvas (shared root)")]
-        [Tooltip("How to paint the main UI Canvas Image when this screen is active.")]
+        [Tooltip("Default = use SceneFlowManager default color/sprite. Solid Color / Sprite override that shared Image for this screen.")]
         [SerializeField]
         private UiCanvasBackgroundMode uiCanvasBackground = UiCanvasBackgroundMode.Default;
 
+        [Tooltip("Only used when mode is Solid Color (overrides SceneFlowManager default).")]
         [SerializeField]
         private Color solidBackgroundColor = Color.black;
 

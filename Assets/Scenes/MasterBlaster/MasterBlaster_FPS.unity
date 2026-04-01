@@ -259,6 +259,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 5
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!1 &40751221
 GameObject:
   m_ObjectHideFlags: 0
@@ -293,8 +298,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -98.00018}
-  m_SizeDelta: {x: 0, y: 507.04}
+  m_AnchoredPosition: {x: 0, y: -175.7601}
+  m_SizeDelta: {x: 0, y: 351.5202}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &40751223
 Canvas:
@@ -856,6 +861,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Core.FlowCanvasRoot
   state: 11
   uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
   incomingTransition: 0
 --- !u!222 &75535971
 CanvasRenderer:
@@ -20848,6 +20856,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Scenes.Prologue.PrologueController
   scrollSpeedUnitsPerSecond: 100
+  startPadding: 0
+  crawlStartVerticalOffset: 0
   crawlEndAnchoredY: 600
   prologuePanel: {fileID: 40751221}
   prologueText: {fileID: 1196422718}
@@ -20866,6 +20876,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Core.FlowCanvasRoot
   state: 10
   uiCanvasBackground: 0
+  solidBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
   incomingTransition: 1
 --- !u!1001 &1395736108
 PrefabInstance:
@@ -22867,8 +22880,9 @@ MonoBehaviour:
   oversScene: Overs
   overrideStartState: 0
   overrideStartStateValue: 5
-  defaultUiCanvasBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
-  defaultUiCanvasBackgroundSprite: {fileID: 21300000, guid: cdf8e9c3c009ca14894fe8f1a1e6fc3a, type: 3}
+  defaultUiCanvasBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultUiCanvasBackgroundSprite: {fileID: 21300000, guid: cdf8e9c3c009ca14894fe8f1a1e6fc3a,
+    type: 3}
   quoteToPrologueFadeSeconds: 3
   prologueToTitleCrtFlipSeconds: 3
   prologueToTitleFlipCurve:
@@ -25001,6 +25015,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Core.FlowCanvasRoot
   state: 0
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!114 &1680740909
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37704,6 +37723,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 3
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!222 &2135426448755312033
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -48139,8 +48163,8 @@ MonoBehaviour:
   targetSprite: {fileID: 6466372286454469611}
   innerColor: {r: 0.9056604, g: 0.8034549, b: 0.32894266, a: 1}
   outerColor: {r: 1, g: 0.67031866, b: 0, a: 1}
-  glowWidth: 17.6
-  glowSoftness: 3.67
+  glowWidth: 50
+  glowSoftness: 2.29
   glowIntensity: 10
 --- !u!1 &5097496093031024367
 GameObject:
@@ -48248,6 +48272,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 4
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!1 &5130405531210804359
 GameObject:
   m_ObjectHideFlags: 0
@@ -48652,6 +48681,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 6
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!114 &5357568448420319527
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50890,6 +50924,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 8
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!114 &6545085718312212373
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -51124,6 +51163,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 7
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!224 &6646292703604323698
 RectTransform:
   m_ObjectHideFlags: 0
@@ -52080,6 +52124,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 9
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!224 &7013920850021230171
 RectTransform:
   m_ObjectHideFlags: 0
@@ -53362,6 +53411,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 1
   uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
   incomingTransition: 2
 --- !u!1 &7689391581460779139
 GameObject:
@@ -56788,6 +56840,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 2
+  uiCanvasBackground: 0
+  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  backgroundSprite: {fileID: 0}
+  spriteTint: {r: 1, g: 1, b: 1, a: 1}
+  incomingTransition: 0
 --- !u!1 &9058626210917241446
 GameObject:
   m_ObjectHideFlags: 0
