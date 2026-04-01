@@ -39,7 +39,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         /// <summary>
         /// True when this scene contains <see cref="FlowCanvasRoot"/> markers and we should
-        /// toggle state roots instead of loading additional Unity scenes.
+        /// drive flow in-scene (CanvasGroup + controllers, or SetActive for Game) instead of loading additional Unity scenes.
         /// </summary>
         public bool IsSingleSceneMode => _singleSceneMode;
 
@@ -96,12 +96,17 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private CanvasGroup _transitionOverlay;
         private bool _isTransitioning;
 
-        /// <summary>Cached <see cref="Image"/> on the &quot;UI Canvas&quot; root; cleared when scenes change.</summary>
+        /// <summary>Cached uGUI <see cref="Image"/> used as the full-screen backdrop; cleared when scenes change.</summary>
+        /// <remarks>
+        /// This is not UI Toolkit: <c>UIDocument</c> / <c>PanelSettings</c> are unaffected.
+        /// See <see cref="ApplyUiCanvasBackgroundFromFlowRoot"/>.
+        /// </remarks>
         private Image _cachedUiCanvasRootImage;
 
         // Runtime-only: very lightweight timing diagnostics for hitches.
         private const string FlowPerfTag = "[FlowPerf]";
 
+        // Full-screen flow backdrop: one uGUI Image (see ApplyUiCanvasBackgroundFromFlowRoot). Not UI Toolkit PanelSettings.
         [Header("UI Canvas background")]
         [Tooltip("Optional. If set, used as the full-screen backdrop Image instead of searching for a GameObject named \"UI Canvas\".")]
         [SerializeField]
@@ -245,7 +250,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 state = (overrideStartState) ? overrideStartStateValue : GetActiveRootStateOrDefault();
 
                 // Enforce "exactly one root active" even if the scene author forgot.
-                ActivateStateRoot(state);
+                ApplyFlowState(state);
 
                 // In single-scene mode, AudioController is not driven by sceneLoaded routing.
                 if (ShouldSilenceMusicFor(state))
@@ -285,6 +290,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             _flowBootstrapComplete = true;
         }
 
+        /// <summary>Waits one frame then applies <see cref="ApplyUiCanvasBackgroundFromFlowRoot"/> so the &quot;UI Canvas&quot; backdrop exists if <see cref="Start"/> ran early.</summary>
         private IEnumerator DeferredApplyUiCanvasBackgroundForCurrentState()
         {
             yield return null;
@@ -548,50 +554,122 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         private FlowState GetActiveRootStateOrDefault()
         {
-            // Prefer an explicitly active root in the hierarchy.
+            // 1) Physical activation root (e.g. Game / arena).
             for (int i = 0; i < _roots.Length; i++)
             {
                 var r = _roots[i];
-                if (r == null) continue;
+                if (r == null || !r.UseGameObjectActivation)
+                    continue;
+                if (r.gameObject.activeSelf)
+                    return r.state;
+            }
+
+            // 2) CanvasGroup flow root that looks visible.
+            for (int i = 0; i < _roots.Length; i++)
+            {
+                var r = _roots[i];
+                if (r == null || r.UseGameObjectActivation)
+                    continue;
+                if (!r.gameObject.activeInHierarchy)
+                    continue;
+                var cg = r.GetComponent<CanvasGroup>();
+                if (cg != null && cg.alpha > 0.5f)
+                    return r.state;
+            }
+
+            // 3) Legacy: any active CanvasGroup-mode root (author may not have added CanvasGroup yet).
+            for (int i = 0; i < _roots.Length; i++)
+            {
+                var r = _roots[i];
+                if (r == null || r.UseGameObjectActivation)
+                    continue;
                 if (r.gameObject.activeInHierarchy)
                     return r.state;
             }
 
-            // If nothing is active, default to Quote (the intended entry screen).
             UnityEngine.Debug.LogWarning("[Flow] Single-scene mode: no active FlowCanvasRoot found. Defaulting to Quote.");
             return FlowState.Quote;
         }
 
-        private bool ActivateStateRoot(FlowState next)
+        /// <summary>
+        /// Single-scene flow: UI roots use <see cref="CanvasGroup"/> + managed behaviours; Game uses <c>SetActive</c>.
+        /// </summary>
+        private bool ApplyFlowState(FlowState next)
         {
             if (!_singleSceneMode || _roots == null || _roots.Length == 0)
                 return false;
             if (!_rootByState.TryGetValue(next, out var target) || target == null)
                 return false;
 
+            if (next != FlowState.Game)
+                GameManager.Instance?.ClearMatchTransientObjects();
+
             float t0 = Time.realtimeSinceStartup;
             UnityEngine.Debug.Log(
-                $"[Flow] Activating root for {next}: {target.gameObject.name} (before activeSelf={target.gameObject.activeSelf} activeInHierarchy={target.gameObject.activeInHierarchy})"
+                $"[Flow] ApplyFlowState {next}: target={target.gameObject.name} usePhysicalActivation={target.UseGameObjectActivation} " +
+                $"(before activeSelf={target.gameObject.activeSelf} activeInHierarchy={target.gameObject.activeInHierarchy})"
             );
 
-            for (int i = 0; i < _roots.Length; i++)
+            bool enteringGame = next == FlowState.Game;
+
+            void ApplyCanvasGroupRoots()
             {
-                var r = _roots[i];
-                if (r == null) continue;
-                if (r.gameObject.activeSelf)
-                    r.gameObject.SetActive(false);
+                for (int i = 0; i < _roots.Length; i++)
+                {
+                    var r = _roots[i];
+                    if (r == null || r.UseGameObjectActivation)
+                        continue;
+
+                    bool isCurrent = r.state == next;
+                    // Controllers off before activating so disabled scripts do not get a spurious OnEnable.
+                    if (!r.gameObject.activeSelf)
+                        r.SetManagedBehavioursEnabled(false);
+
+                    if (!r.gameObject.activeSelf)
+                        r.gameObject.SetActive(true);
+
+                    var cg = r.GetOrEnsureCanvasGroup();
+                    FlowCanvasRoot.ApplyCanvasGroupVisibility(cg, isCurrent);
+                    r.SetManagedBehavioursEnabled(isCurrent);
+                }
             }
 
-            target.gameObject.SetActive(true);
+            void ApplyActivationRoots()
+            {
+                for (int i = 0; i < _roots.Length; i++)
+                {
+                    var r = _roots[i];
+                    if (r == null || !r.UseGameObjectActivation)
+                        continue;
+                    bool on = r.state == next;
+                    if (r.gameObject.activeSelf != on)
+                        r.gameObject.SetActive(on);
+                }
+            }
+
+            // Entering Game: hide UI first, then enable arena. Leaving Game: stop arena first, then show UI.
+            if (enteringGame)
+            {
+                ApplyCanvasGroupRoots();
+                ApplyActivationRoots();
+            }
+            else
+            {
+                ApplyActivationRoots();
+                ApplyCanvasGroupRoots();
+            }
+
             UnityEngine.Debug.Log(
-                $"[Flow] Root for {next} is now activeSelf={target.gameObject.activeSelf} activeInHierarchy={target.gameObject.activeInHierarchy}"
+                $"[Flow] ApplyFlowState {next} done: target activeSelf={target.gameObject.activeSelf} activeInHierarchy={target.gameObject.activeInHierarchy}"
             );
             float dtMs = (Time.realtimeSinceStartup - t0) * 1000f;
-            UnityEngine.Debug.Log($"{FlowPerfTag} ActivateStateRoot({next}) took {dtMs:F1} ms");
+            UnityEngine.Debug.Log($"{FlowPerfTag} ApplyFlowState({next}) took {dtMs:F1} ms");
             ApplyUiCanvasBackgroundFromFlowRoot(target);
             return true;
         }
 
+        /// <summary>Clears cached backdrop <see cref="Image"/> and original sprite so the next resolve runs after a scene load.</summary>
+        /// <remarks>Called from <see cref="OnSceneLoaded"/>.</remarks>
         private void InvalidateUiCanvasCache()
         {
             _cachedUiCanvasRootImage = null;
@@ -609,9 +687,13 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         }
 
         /// <summary>
-        /// Resolves the full-screen backdrop <see cref="Image"/>: optional serialized reference, else GameObject named &quot;UI Canvas&quot;.
-        /// Uses inactive search so timing / activation order does not skip the canvas; caches the result.
+        /// Resolves the full-screen backdrop uGUI <see cref="Image"/>.
         /// </summary>
+        /// <remarks>
+        /// Order: (1) <see cref="uiCanvasBackdropImage"/> if assigned; else (2) <c>GameObject.Find("UI Canvas")</c>;
+        /// else (3) search <see cref="Canvas"/> instances (including inactive) named <c>UI Canvas</c>; require <see cref="Image"/> on that GameObject.
+        /// Result is cached in <see cref="_cachedUiCanvasRootImage"/> until <see cref="InvalidateUiCanvasCache"/>.
+        /// </remarks>
         private Image ResolveUiCanvasRootImage()
         {
             if (_cachedUiCanvasRootImage != null)
@@ -659,6 +741,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             return _cachedUiCanvasRootImage;
         }
 
+        /// <summary>Stores <see cref="Image.sprite"/> from the backdrop the first time, when <see cref="defaultUiCanvasBackgroundSprite"/> is unset.</summary>
         private void EnsureUiCanvasSpriteCached(Image img)
         {
             if (img == null || _uiCanvasOriginalSprite != null)
@@ -667,13 +750,14 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 _uiCanvasOriginalSprite = img.sprite;
         }
 
-        /// <summary>Sprite used to tint solid/background colors; prefers explicit default, then first-seen Image sprite.</summary>
+        /// <summary>Sprite used to tint solid/default backgrounds: explicit default, else first-seen sprite on the backdrop <see cref="Image"/>.</summary>
         private Sprite GetBackdropSpriteForTint(Image img)
         {
             EnsureUiCanvasSpriteCached(img);
             return defaultUiCanvasBackgroundSprite != null ? defaultUiCanvasBackgroundSprite : _uiCanvasOriginalSprite;
         }
 
+        /// <summary>Sets backdrop to <see cref="defaultUiCanvasBackgroundColor"/> with <see cref="GetBackdropSpriteForTint"/>; disables raycasts.</summary>
         private void ApplyDefaultUiCanvasBackground(Image img)
         {
             if (img == null)
@@ -683,7 +767,17 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             img.raycastTarget = false;
         }
 
-        /// <summary>Configures the shared UI Canvas root Image from the active flow screen.</summary>
+        /// <summary>Configures the shared full-screen uGUI backdrop <see cref="Image"/> from the active <see cref="FlowCanvasRoot"/>.</summary>
+        /// <remarks>
+        /// Does not call <see cref="Canvas.ForceUpdateCanvases"/>; layout forcing is separate (<see cref="ForceLayoutForStateRoot"/>).
+        /// <para><b>Modes</b> (see <see cref="FlowCanvasRoot.UiCanvasBackground"/>):</para>
+        /// <list type="bullet">
+        /// <item><description><b>Default</b> — sprite <see cref="GetBackdropSpriteForTint"/>, color <see cref="defaultUiCanvasBackgroundColor"/>.</description></item>
+        /// <item><description><b>SolidColor</b> — sprite <see cref="GetBackdropSpriteForTint"/>, color <see cref="FlowCanvasRoot.SolidBackgroundColor"/>.</description></item>
+        /// <item><description><b>Sprite</b> — sprite <see cref="FlowCanvasRoot.BackgroundSprite"/> if set, else fallback; color <see cref="FlowCanvasRoot.SpriteTint"/>.</description></item>
+        /// </list>
+        /// All modes set <see cref="Image.raycastTarget"/> to <c>false</c>.
+        /// </remarks>
         public void ApplyUiCanvasBackgroundFromFlowRoot(FlowCanvasRoot root)
         {
             var img = ResolveUiCanvasRootImage();
@@ -849,11 +943,11 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 if (next != FlowState.Game)
                     GameManager.Instance?.ClearMatchTransientObjects();
 
-                if (!ActivateStateRoot(next))
+                if (!ApplyFlowState(next))
                 {
                     // Cache may be stale — refresh roots from scene and retry once.
                     RefreshSingleSceneRoots();
-                    if (!ActivateStateRoot(next))
+                    if (!ApplyFlowState(next))
                     {
                         string availableStates = _rootByState != null && _rootByState.Count > 0
                             ? string.Join(",", _rootByState.Keys)
@@ -938,7 +1032,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             {
                 // Fallback if we couldn't create the overlay
                 AgentLog("pre-fix-1", "B", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Overlay null; activating next root directly", new { next = next.ToString() });
-                ActivateStateRoot(next);
+                ApplyFlowState(next);
                 _isTransitioning = false;
                 yield break;
             }
@@ -958,7 +1052,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
             // Switch state root while fully black
             AgentLog("pre-fix-1", "C", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Switching root while black", new { next = next.ToString() });
-            ActivateStateRoot(next);
+            ApplyFlowState(next);
             ForceLayoutForStateRoot(next);
             yield return null; // allow one frame for UI settle before showing
 
@@ -1000,7 +1094,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                     "No flip parameter found; switching root directly",
                     new { next = next.ToString() }
                 );
-                ActivateStateRoot(next);
+                ApplyFlowState(next);
                 ForceLayoutForStateRoot(next);
                 _transitionRoutine = null;
                 _isTransitioning = false;
@@ -1032,7 +1126,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 if (u >= 0.5f && !didSwitch)
                 {
                     didSwitch = true;
-                    ActivateStateRoot(next);
+                    ApplyFlowState(next);
                     ForceLayoutForStateRoot(next);
                     yield return null; // allow one frame settle while we're still black
                 }
@@ -1041,7 +1135,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
             if (!didSwitch)
             {
-                ActivateStateRoot(next);
+                ApplyFlowState(next);
                 ForceLayoutForStateRoot(next);
                 yield return null;
             }

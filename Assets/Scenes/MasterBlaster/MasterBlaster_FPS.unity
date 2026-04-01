@@ -22880,6 +22880,7 @@ MonoBehaviour:
   oversScene: Overs
   overrideStartState: 0
   overrideStartStateValue: 5
+  uiCanvasBackdropImage: {fileID: 0}
   defaultUiCanvasBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
   defaultUiCanvasBackgroundSprite: {fileID: 21300000, guid: cdf8e9c3c009ca14894fe8f1a1e6fc3a,
     type: 3}
@@ -37724,7 +37725,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 3
   uiCanvasBackground: 0
-  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  solidBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
   backgroundSprite: {fileID: 0}
   spriteTint: {r: 1, g: 1, b: 1, a: 1}
   incomingTransition: 0
@@ -53411,7 +53412,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 1
   uiCanvasBackground: 0
-  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  solidBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
   backgroundSprite: {fileID: 0}
   spriteTint: {r: 1, g: 1, b: 1, a: 1}
   incomingTransition: 2
@@ -56841,7 +56842,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Core.FlowCanvasRoot
   state: 2
   uiCanvasBackground: 0
-  solidBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  solidBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
   backgroundSprite: {fileID: 0}
   spriteTint: {r: 1, g: 1, b: 1, a: 1}
   incomingTransition: 0
