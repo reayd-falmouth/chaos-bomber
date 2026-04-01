@@ -227,7 +227,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   standingsPanel: {fileID: 6131469410763607368}
-  playerRowPrefab: {fileID: 5273576330799321846, guid: 6e67649171b53294fbd86fc2bcf68109,
+  playerRowPrefab: {fileID: 5273576330799321846, guid: 810e7bc508a92744e827aeda8180e37f,
     type: 3}
   trophySprite: {fileID: 4444980147945960928, guid: 3a2bebeece517634e83385c8ed26f632,
     type: 3}

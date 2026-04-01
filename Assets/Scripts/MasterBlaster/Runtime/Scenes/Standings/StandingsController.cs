@@ -80,7 +80,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
 
         private void Advance()
         {
-            SceneFlowManager.I.SignalScreenDone();
+            SceneFlowManager.I?.SignalScreenDone();
         }
     }
 }
