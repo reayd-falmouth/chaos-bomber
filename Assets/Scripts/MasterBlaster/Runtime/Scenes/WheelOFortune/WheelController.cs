@@ -37,7 +37,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
         [SerializeField] private MMF_Player tickFeedbacks;
         [SerializeField] private MMF_Player rewardFeedbacks;
 
-        private Transform[] rowPointers;
+        private const string PointerInactiveText = " ";
+        private const string PointerActiveText = ">";
+
+        private Text[] rowPointers;
         private int playerCount;
 
         private Coroutine _spinCoroutine;
@@ -53,18 +56,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
             // How many rows exist under the panel (e.g. 5)
             int maxRows = wheelPanel.childCount;
             int requested = Mathf.Clamp(PlayerPrefs.GetInt("Players", 2), 0, maxRows);
-            var pointers = new List<Transform>();
+            
+            // Ensure the list is using <Text>
+            var pointers = new List<Text>(); 
+
             for (int i = 0; i < maxRows; i++)
             {
                 Transform row = wheelPanel.GetChild(i);
                 bool wanted = i < requested;
+
                 if (!wanted)
                 {
                     row.gameObject.SetActive(false);
                     continue;
                 }
 
-                var pointerTf = row.Find("Pointer");
+                // 1. Find the Pointer Transform first
+                Transform pointerTf = row.Find("Pointer");
+
                 if (pointerTf == null)
                 {
                     UnityEngine.Debug.LogWarning($"[WheelController] Row '{row.name}' has no child 'Pointer'; deactivating row.");
@@ -74,6 +83,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
 
                 row.gameObject.SetActive(true);
 
+                // 2. Pointer Text stays enabled; inactive rows use a space so layout width is stable.
+                Text pText = pointerTf.GetComponent<Text>();
+                if (pText != null)
+                {
+                    pointers.Add(pText);
+                    pText.enabled = true;
+                }
+
+                // Keep the GameObject active so the Layout Group doesn't shift
+                pointerTf.gameObject.SetActive(true);
+
                 // WheelRow prefab historically used typo "Avater"; support both names.
                 Transform avatarTf = FindChildByNames(row, "Avatar", "Avater");
                 if (avatarTf != null)
@@ -82,9 +102,6 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
                     if (avatar != null && avatarSprites != null && avatarSprites.Length > i)
                         avatar.sprite = avatarSprites[i];
                 }
-
-                pointers.Add(pointerTf);
-                pointerTf.gameObject.SetActive(false);
             }
 
             playerCount = pointers.Count;
@@ -92,6 +109,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
 
             if (playerCount <= 0)
                 return;
+
+            ApplyPointerTexts(rowPointers, 0, PointerInactiveText, PointerActiveText);
 
             // Start spin
             _spinCoroutine = StartCoroutine(SpinAndStop());
@@ -121,12 +140,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
 
             while (elapsed < spinDuration)
             {
-                // Hide all pointers
-                for (int i = 0; i < playerCount; i++)
-                    rowPointers[i].gameObject.SetActive(false);
-
-                // Show current pointer
-                rowPointers[index].gameObject.SetActive(true);
+                ApplyPointerTexts(rowPointers, index, PointerInactiveText, PointerActiveText);
 
                 tickFeedbacks?.PlayFeedbacks();
                 
@@ -139,6 +153,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
                 index = (index + 1) % playerCount;
                 elapsed += delay;
             }
+
+            ApplyPointerTexts(rowPointers, stopIndex, PointerInactiveText, PointerActiveText);
 
             rewardFeedbacks?.PlayFeedbacks();
 
@@ -155,6 +171,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
             yield return new WaitForSeconds(postSpinDelay);
 
             SceneFlowManager.I.SignalScreenDone();
+        }
+
+        /// <summary>
+        /// Sets each pointer <see cref="Text.text"/> to <paramref name="inactiveText"/> except
+        /// <paramref name="activeIndex"/> which gets <paramref name="activeText"/> (layout-stable highlight).
+        /// </summary>
+        public static void ApplyPointerTexts(Text[] pointers, int activeIndex, string inactiveText, string activeText)
+        {
+            if (pointers == null || pointers.Length == 0)
+                return;
+
+            int idx = Mathf.Clamp(activeIndex, 0, pointers.Length - 1);
+            for (int i = 0; i < pointers.Length; i++)
+            {
+                if (pointers[i] == null)
+                    continue;
+                pointers[i].text = i == idx ? activeText : inactiveText;
+            }
         }
 
         /// <summary>Returns the first direct child whose name matches one of the candidates (in order).</summary>
