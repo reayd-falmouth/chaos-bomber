@@ -1,4 +1,3 @@
-#if UNITY_EDITOR
 using System.Collections.Generic;
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using UnityEditor;
@@ -11,8 +10,8 @@ using Object = UnityEngine.Object;
 namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
 {
     /// <summary>
-    /// Builds 3D character preview slots for Avatar Select. Assign <see cref="CharacterData.previewPrefab"/> on
-    /// <see cref="AvatarController"/> for each entry, then run this menu. Re-run after changing prefabs.
+    /// Builds 3D character preview slots for Avatar Select. Lives in <c>HybridGame.Menus</c> asmdef so it
+    /// compiles with the menu bootstrap (see <see cref="HybridGame.Menus.HybridGameMasterBlasterSetupMenus"/>).
     /// </summary>
     public static class AvatarPreviewStudioSetup
     {
@@ -21,7 +20,6 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
 
         private static readonly Vector3 StudioWorldPosition = new(5300f, 0f, 5300f);
 
-        /// <summary>Invoked from the HybridGame.Menus editor menu bootstrap.</summary>
         public static void RunBuild()
         {
             var avatar = Object.FindFirstObjectByType<AvatarController>(FindObjectsInactive.Include);
@@ -285,4 +283,3 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
         }
     }
 }
-#endif
