@@ -7,6 +7,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Core
@@ -18,7 +19,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         const string PrefMusicInt = "VolMusicInt";
         const string PrefSfxInt = "VolSfxInt";
         const string PrefScanlines = "Scanlines";
-        public const string PrefOnlinePlay = "OnlinePlay";
         const int VolumeMax = 10;
 
         [Serializable]
@@ -34,18 +34,21 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         [SerializeField] private bool isPauseMenu = true;
 
         [Header("Root")]
-        [SerializeField] GameObject menuPanel; 
+        [FormerlySerializedAs("pausePanel")]
+        [SerializeField] GameObject menuPanel;
         [SerializeField] Volume globalVolume;
         [SerializeField] GameObject controlsPanel;
 
         [Header("Visuals")]
+        [FormerlySerializedAs("pauseMenuTitleText")]
         [SerializeField] Text menuTitleText;
+        [FormerlySerializedAs("pauseBackgroundImage")]
         [SerializeField] Image backgroundImage;
         [SerializeField] string settingsTitle = "SETTINGS\n\n------";
         [SerializeField] string pauseTitle = "PAUSED\n\n------";
 
         [Header("Menu Setup")]
-        [Tooltip("Assign rows: Master, SFX, Music, Online, Scanlines, Controls, Exit/Back.")]
+        [Tooltip("Assign rows: Master, SFX, Music, Scanlines, Controls, Exit/Back (6 entries).")]
         [SerializeField] MenuOption[] options;
 
         [Header("Input")]
@@ -58,7 +61,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         private int _selectedIndex;
         private int _masterVolInt, _musicVolInt, _sfxVolInt;
-        private bool _onlinePlay, _scanlines, _active;
+        private bool _scanlines, _active;
         private bool _showingControls;
         private bool _moveWasEnabled, _submitWasEnabled;
         private Vector2 _lastMoveInput;
@@ -233,8 +236,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 case 0: _masterVolInt = Mathf.Clamp(_masterVolInt + delta, 0, VolumeMax); break;
                 case 1: _sfxVolInt = Mathf.Clamp(_sfxVolInt + delta, 0, VolumeMax); break;
                 case 2: _musicVolInt = Mathf.Clamp(_musicVolInt + delta, 0, VolumeMax); break;
-                case 3: _onlinePlay = !_onlinePlay; break;
-                case 4: _scanlines = !_scanlines; ApplyScanlines(); break;
+                case 3: _scanlines = !_scanlines; ApplyScanlines(); break;
             }
             ApplyVolumes();
             UpdateMenuUI();
@@ -290,8 +292,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (options.Length > 0 && options[0].valueLabel != null) options[0].valueLabel.text = _masterVolInt.ToString();
             if (options.Length > 1 && options[1].valueLabel != null) options[1].valueLabel.text = _sfxVolInt.ToString();
             if (options.Length > 2 && options[2].valueLabel != null) options[2].valueLabel.text = _musicVolInt.ToString();
-            if (options.Length > 3 && options[3].valueLabel != null) options[3].valueLabel.text = _onlinePlay ? "YES" : "NO";
-            if (options.Length > 4 && options[4].valueLabel != null) options[4].valueLabel.text = _scanlines ? "ON" : "OFF";
+            if (options.Length > 3 && options[3].valueLabel != null) options[3].valueLabel.text = _scanlines ? "ON" : "OFF";
             UpdatePointers();
         }
 
@@ -310,7 +311,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             _masterVolInt = PlayerPrefs.GetInt(PrefMasterInt, 10);
             _musicVolInt = PlayerPrefs.GetInt(PrefMusicInt, 10);
             _sfxVolInt = PlayerPrefs.GetInt(PrefSfxInt, 10);
-            _onlinePlay = PlayerPrefs.GetInt(PrefOnlinePlay, 1) == 1;
             _scanlines = PlayerPrefs.GetInt(PrefScanlines, 1) == 1;
         }
 
@@ -319,7 +319,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             PlayerPrefs.SetInt(PrefMasterInt, _masterVolInt);
             PlayerPrefs.SetInt(PrefMusicInt, _musicVolInt);
             PlayerPrefs.SetInt(PrefSfxInt, _sfxVolInt);
-            PlayerPrefs.SetInt(PrefOnlinePlay, _onlinePlay ? 1 : 0);
             PlayerPrefs.SetInt(PrefScanlines, _scanlines ? 1 : 0);
             PlayerPrefs.Save();
         }
