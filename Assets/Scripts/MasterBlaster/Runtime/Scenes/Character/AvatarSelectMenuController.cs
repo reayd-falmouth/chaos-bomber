@@ -1,24 +1,40 @@
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 {
     /// <summary>
-    /// Select / Back menu for the avatar screen. Attach to the SelectMenu prefab root.
-    /// Navigation uses <see cref="SceneFlowManager"/> only (no direct scene loads).
+    /// Generic two-row Select / Back menu for any flow screen (avatar pick, level select, etc.).
+    /// Attach to the SelectMenu prefab root. Navigation uses <see cref="SceneFlowManager"/> only.
     /// </summary>
     public class AvatarSelectMenuController : MonoBehaviour
     {
+        [Header("Flow (SceneFlowManager)")]
+        [Tooltip("Flow state when the user confirms the Select row.")]
+        [SerializeField]
+        FlowState selectTargetFlowState = FlowState.LevelSelect;
+
+        [Tooltip("Flow state when the user confirms the Back row.")]
+        [SerializeField]
+        FlowState backTargetFlowState = FlowState.Title;
+
         [Header("Binding")]
+        [Tooltip("Optional. When null, a parent AvatarController is used only if persist is enabled.")]
         [SerializeField]
         AvatarController avatarController;
 
-        [Tooltip("Assign the same Input Action Asset as AvatarController (Player map: Move.y, PlaceBomb).")]
+        [Tooltip("Assign the same Input Action Asset as other UI on this screen (Player map: Move.y, PlaceBomb).")]
         [SerializeField]
         InputActionAsset inputActions;
+
+        [Header("Optional: avatar prefs on Select")]
+        [Tooltip("When enabled and an AvatarController is available, writes CurrentIndex to SelectedAvatar PlayerPrefs before flow navigation.")]
+        [SerializeField]
+        bool persistSelectedAvatarToPlayerPrefs = true;
 
         [Header("Pointers")]
         [SerializeField]
@@ -39,6 +55,15 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         [SerializeField]
         Button backButton;
+
+        [Header("Hooks")]
+        [Tooltip("Invoked when Select is confirmed, before optional avatar prefs and GoTo(selectTarget).")]
+        [SerializeField]
+        UnityEvent onSelectInvoked;
+
+        [Tooltip("Invoked when Back is confirmed, before GoTo(backTarget).")]
+        [SerializeField]
+        UnityEvent onBackInvoked;
 
         InputAction _moveAction;
         InputAction _submitAction;
@@ -61,6 +86,17 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             backPointerText = backPtr;
             selectButton = selectBtn;
             backButton = backBtn;
+        }
+
+        /// <summary>PlayMode tests: flow targets and avatar persistence.</summary>
+        public void ConfigureFlowForTests(
+            FlowState selectTarget,
+            FlowState backTarget,
+            bool persistAvatarPrefs)
+        {
+            selectTargetFlowState = selectTarget;
+            backTargetFlowState = backTarget;
+            persistSelectedAvatarToPlayerPrefs = persistAvatarPrefs;
         }
 
         void Awake()
@@ -183,20 +219,25 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         void TryConfirmSelection()
         {
-            PersistCurrentAvatar();
-            RequestFlowNavigation(FlowState.LevelSelect);
+            onSelectInvoked?.Invoke();
+            PersistOptionalAvatar();
+            RequestFlowNavigation(selectTargetFlowState);
         }
 
         void TryGoBack()
         {
-            RequestFlowNavigation(FlowState.Title);
+            onBackInvoked?.Invoke();
+            RequestFlowNavigation(backTargetFlowState);
         }
 
-        void PersistCurrentAvatar()
+        void PersistOptionalAvatar()
         {
-            if (avatarController == null)
+            if (!persistSelectedAvatarToPlayerPrefs)
                 return;
-            PlayerPrefs.SetInt(AvatarSelectController.SelectedAvatarPrefsKey, avatarController.CurrentIndex);
+            var ac = avatarController != null ? avatarController : GetComponentInParent<AvatarController>();
+            if (ac == null)
+                return;
+            PlayerPrefs.SetInt(AvatarSelectController.SelectedAvatarPrefsKey, ac.CurrentIndex);
             PlayerPrefs.Save();
         }
 

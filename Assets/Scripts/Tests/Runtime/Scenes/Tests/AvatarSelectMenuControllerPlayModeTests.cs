@@ -192,6 +192,39 @@ namespace HybridGame.MasterBlaster.Tests
             Assert.That(PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey), Is.EqualTo(0));
         }
 
+        [UnityTest]
+        public IEnumerator SubmitOnSelectRow_NoAvatar_CustomFlowTargets_NoPlayerPrefsWrite()
+        {
+            PlayerPrefs.DeleteKey(AvatarSelectController.SelectedAvatarPrefsKey);
+
+            var parent = new GameObject("MenuOnlyParent");
+            var inputAsset = CreateMenuInputAsset();
+
+            var menuGo = new GameObject("SelectMenu");
+            menuGo.transform.SetParent(parent.transform, false);
+            menuGo.SetActive(false);
+            var selPtr = new GameObject("SelPtr").AddComponent<Text>();
+            selPtr.transform.SetParent(menuGo.transform, false);
+            var backPtr = new GameObject("BackPtr").AddComponent<Text>();
+            backPtr.transform.SetParent(menuGo.transform, false);
+
+            var menu = menuGo.AddComponent<TestMenu>();
+            menu.ConfigureForTests(inputAsset, selPtr, backPtr, null, null);
+            menu.ConfigureFlowForTests(FlowState.Game, FlowState.Menu, persistAvatarPrefs: false);
+            menuGo.SetActive(true);
+
+            yield return null;
+
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            Press(keyboard.spaceKey);
+            yield return null;
+            Release(keyboard.spaceKey);
+            yield return null;
+
+            Assert.That(menu.LastRequestedState, Is.EqualTo(FlowState.Game));
+            Assert.That(PlayerPrefs.HasKey(AvatarSelectController.SelectedAvatarPrefsKey), Is.False);
+        }
+
         static Sprite CreateSprite(Color c)
         {
             var tex = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: false);

@@ -30,7 +30,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         public CharacterData[] characters;
         private int currentIndex = 0;
 
-        /// <summary>Index into <see cref="characters"/>; used by <see cref="AvatarSelectMenuController"/> when confirming.</summary>
+        /// <summary>Index into <see cref="characters"/>; used when <see cref="AvatarSelectMenuController"/> has avatar persistence enabled.</summary>
         public int CurrentIndex => currentIndex;
 
         private InputAction _moveAction;
@@ -77,7 +77,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             if (_moveAction == null)
                 return;
 
-            // Flow advance is handled by AvatarSelectMenuController; character browse is allowed
+            // Select/Back flow is handled by AvatarSelectMenuController (or another screen menu); character browse is allowed
             // even when SceneFlowManager.IsTransitioning (menu still gates confirm/back).
 
             if (characters == null || characters.Length == 0)

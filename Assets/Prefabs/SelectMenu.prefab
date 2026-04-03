@@ -496,14 +496,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c3a9012d4ef4a1b9e8c7d6f5a4b3210, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  selectTargetFlowState: 14
+  backTargetFlowState: 1
   avatarController: {fileID: 0}
   inputActions: {fileID: -944628639613478452, guid: 4e97eeb4966259d499a1bd0f20139e31, type: 3}
+  persistSelectedAvatarToPlayerPrefs: 1
   pointCharacter: '> '
   inactivePointer: '  '
   selectPointerText: {fileID: 8665691279567936463}
   backPointerText: {fileID: 5751755601279614783}
   selectButton: {fileID: 3812736455129012}
   backButton: {fileID: 3812736455129013}
+  onSelectInvoked:
+    m_PersistentCalls:
+      m_Calls: []
+  onBackInvoked:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &3812736455129012
 MonoBehaviour:
   m_ObjectHideFlags: 0
