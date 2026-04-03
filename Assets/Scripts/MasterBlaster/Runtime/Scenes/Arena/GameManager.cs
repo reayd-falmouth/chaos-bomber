@@ -134,6 +134,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         public void SetRandomizeSpawnPositions(bool value) => _randomizeSpawnPositions = value;
         private bool _lastCapturedNormalLevel;
         private string _lastCapturedLevelId = string.Empty;
+        private int _lastCapturedArenaIndex = -1;
 
         [Header("Spawn points (optional overrides)")]
         [Tooltip("Optional explicit spawn points for player slots 1..5. If assigned, these override captured scene poses for New Game resets.")]
@@ -313,6 +314,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             var selectedLoader = GetComponentInChildren<SelectedLevelLoader>(true);
             selectedLoader?.ReapplyFromPrefs();
 
+            var arenaLevelSwitcher = GetComponentInChildren<HybridArenaLevelRootSwitcher>(true);
+            arenaLevelSwitcher?.ReapplyFromPrefs();
+
             var mapSelector = GetComponentInChildren<MapSelector>(true);
             if (!SelectedLevelLoader.SuppressDefaultMapSelector)
                 mapSelector?.Apply(normalLevel);
@@ -336,12 +340,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             // - non-training single-scene mode: capture so ResetArenaForNewRound() can restore layout.
             bool currentNormalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
             string currentLevelId = PlayerPrefs.GetString(LevelSelectionPrefs.SelectedLevelIdKey, string.Empty);
+            int currentArenaIndex = PlayerPrefs.GetInt(LevelSelectionPrefs.SelectedArenaIndexKey, 0);
 
             if (
                 !_initialArenaCaptured
                 || _initialArenaCapturedForTraining != TrainingMode.IsActive
                 || _lastCapturedNormalLevel != currentNormalLevel
                 || _lastCapturedLevelId != currentLevelId
+                || _lastCapturedArenaIndex != currentArenaIndex
             )
             {
                 CaptureInitialArenaState();
@@ -349,6 +355,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 _initialArenaCapturedForTraining = TrainingMode.IsActive;
                 _lastCapturedNormalLevel = currentNormalLevel;
                 _lastCapturedLevelId = currentLevelId;
+                _lastCapturedArenaIndex = currentArenaIndex;
             }
 
             if (!TrainingMode.IsActive)

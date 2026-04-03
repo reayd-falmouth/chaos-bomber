@@ -4,7 +4,7 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 {
     /// <summary>
-    /// Instantiates the level prefab chosen in <see cref="LevelSelectLocal.LevelSelectController"/> before
+    /// Instantiates the level prefab chosen in level select (and <see cref="LevelSelectionPrefs.SelectedLevelIdKey"/>) before
     /// <see cref="MapSelector"/> applies normal/alt roots. Disables both map roots when a custom level is active.
     /// </summary>
     [DefaultExecutionOrder(-550)]

@@ -51,7 +51,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
-            PublishGridOrigin();
+            RepublishGridOriginInternal();
         }
 
         private void Start()
@@ -60,12 +60,31 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             RestoreDestructiblesFromBaselineThenRethinAndRebuild();
         }
 
+        private void EnsureGridBuilt()
+        {
+            if (_destructibles != null && _indestructibleMask != null)
+                return;
+
+            // If something queries walkability before Start(), build a best-effort grid
+            // from whatever is currently in the scene hierarchy.
+            BuildGrid();
+        }
+
         private static void CloneChildPreserveLocal(Transform src, Transform dstParent)
         {
             if (src == null || dstParent == null) return;
             var go = Instantiate(src.gameObject);
             go.name = src.gameObject.name;
             var t = go.transform;
+
+            // Netcode note: Some layout prefabs include NetworkObjects.
+            // When NGO isn't running, setting parent on a NetworkObject can throw NotListeningException.
+            // In offline mode, strip the NetworkObject component so we can parent normally.
+            var nm = NetworkManager.Singleton;
+            bool ngoListening = nm != null && nm.IsListening;
+            if (!ngoListening && go.TryGetComponent<NetworkObject>(out var netObj) && netObj != null)
+                DestroyImmediate(netObj);
+
             t.SetParent(dstParent, false);
             t.localPosition = src.localPosition;
             t.localRotation = src.localRotation;
@@ -117,7 +136,10 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                 var child = destructibleWallsParent.GetChild(i);
                 if (child == null) continue;
                 // Detach first so the hierarchy updates immediately (Destroy is end-of-frame).
-                child.SetParent(null, false);
+                // Netcode note: NetworkObjects can throw NotListeningException when re-parented if NGO isn't running.
+                // In offline/single-player (not listening) we skip detaching and just destroy.
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    child.SetParent(null, false);
                 Destroy(child.gameObject);
             }
 
@@ -140,8 +162,15 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
                 CloneChildPreserveLocal(src, destructibleWallsParent);
                 var restored = destructibleWallsParent.GetChild(destructibleWallsParent.childCount - 1).gameObject;
-                if (restored.TryGetComponent<NetworkObject>(out var no) && ShouldRunThinningAuthority() && !no.IsSpawned)
+                // Only spawn NGO NetworkObjects when NGO is actually running and we are server/host.
+                if (restored.TryGetComponent<NetworkObject>(out var no)
+                    && NetworkManager.Singleton != null
+                    && NetworkManager.Singleton.IsListening
+                    && NetworkManager.Singleton.IsServer
+                    && !no.IsSpawned)
+                {
                     no.Spawn();
+                }
             }
 
             if (thinSceneDestructibles && ShouldRunThinningAuthority())
@@ -203,7 +232,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         /// World-space origin of cell (0,0), including floor height (Y). Must run in Awake so
         /// Bomberman movement sees the correct plane before the first frame.
         /// </summary>
-        private void PublishGridOrigin()
+        private void RepublishGridOriginInternal()
         {
             Vector3 worldOrigin = destructibleWallsParent != null
                 ? destructibleWallsParent.TransformPoint(gridOriginLocal)
@@ -212,6 +241,42 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             // Keep GridOrigin.y at 0 so SnapToCell / movement do not lift characters vertically.
             ArenaGrid3D.GridOrigin = new Vector3(worldOrigin.x, 0f, worldOrigin.z);
             UnityEngine.Debug.Log($"[HybridArenaGrid] GridOrigin set to {ArenaGrid3D.GridOrigin}");
+        }
+
+        /// <summary>
+        /// Recompute <see cref="ArenaGrid3D.GridOrigin"/> after <see cref="destructibleWallsParent"/> or
+        /// <see cref="gridOriginLocal"/> changes (e.g. multi-arena root switcher).
+        /// </summary>
+        public void RepublishGridOrigin() => RepublishGridOriginInternal();
+
+        /// <summary>
+        /// Clears captured destructible baseline and logical grid so a new layout can be bound
+        /// (see <see cref="RecaptureBaselineAndRestoreLayout"/>).
+        /// </summary>
+        public void ResetDestructibleBaselineState()
+        {
+            _destructibles = null;
+            _indestructibleMask = null;
+            if (_baselineDestructiblesRoot != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(_baselineDestructiblesRoot.gameObject);
+                else
+                    Object.DestroyImmediate(_baselineDestructiblesRoot.gameObject);
+                _baselineDestructiblesRoot = null;
+            }
+            _baselineCaptured = false;
+        }
+
+        /// <summary>
+        /// After rebinding wall parents, rebuild baseline from current scene/prefab settings and
+        /// repopulate <see cref="destructibleWallsParent"/>. Use when re-entering Game without a domain reload.
+        /// </summary>
+        public void RecaptureBaselineAndRestoreLayout()
+        {
+            ResetDestructibleBaselineState();
+            CaptureBaselineDestructiblesIfNeeded();
+            RestoreDestructiblesFromBaselineThenRethinAndRebuild();
         }
 
         private void BuildGrid()
@@ -244,6 +309,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public void ClearCell(Vector2Int cell)
         {
             if (!InBounds(cell)) return;
+            EnsureGridBuilt();
             _destructibles[cell.x, cell.y] = null;
         }
 
@@ -251,6 +317,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public void SetDestructible(Vector2Int cell, WallBlock3D block)
         {
             if (!InBounds(cell)) return;
+            EnsureGridBuilt();
             _destructibles[cell.x, cell.y] = block;
         }
 
@@ -258,6 +325,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public bool IsIndestructible(Vector2Int cell)
         {
             if (!InBounds(cell)) return true; // out of bounds = blocked
+            EnsureGridBuilt();
             return _indestructibleMask[cell.x, cell.y];
         }
 
@@ -265,6 +333,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public WallBlock3D GetDestructible(Vector2Int cell)
         {
             if (!InBounds(cell)) return null;
+            EnsureGridBuilt();
             return _destructibles[cell.x, cell.y];
         }
 
@@ -272,6 +341,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public bool IsWalkable(Vector2Int cell)
         {
             if (!InBounds(cell)) return false;
+            EnsureGridBuilt();
             return !_indestructibleMask[cell.x, cell.y] && _destructibles[cell.x, cell.y] == null;
         }
 
