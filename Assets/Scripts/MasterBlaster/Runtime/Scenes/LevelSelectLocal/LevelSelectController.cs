@@ -91,7 +91,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.LevelSelectLocal
         {
             if (inputActions == null)
             {
-                Debug.LogWarning("[LevelSelectController] InputActionAsset not assigned.");
+                UnityEngine.Debug.LogWarning("[LevelSelectController] InputActionAsset not assigned.");
                 return;
             }
 
