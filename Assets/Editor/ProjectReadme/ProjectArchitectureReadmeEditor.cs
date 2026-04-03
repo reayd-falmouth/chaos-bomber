@@ -6,7 +6,7 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.EditorDocs
 {
     [CustomEditor(typeof(ProjectArchitectureReadme))]
-    public sealed class ProjectArchitectureReadmeEditor : Editor
+    public sealed class ProjectArchitectureReadmeEditor : UnityEditor.Editor
     {
         private Vector2 _scroll;
 
