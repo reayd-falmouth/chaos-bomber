@@ -11,6 +11,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         [TextArea(3, 10)]
         public string characterDescription;
         public Sprite characterSprite;
+
+        [Tooltip("Optional 3D root for Avatar Select RenderTexture preview. Run HybridGame → Setup → Build Avatar Preview Studio after assigning.")]
+        public GameObject previewPrefab;
     }
 
     public class AvatarController : MonoBehaviour
@@ -21,7 +24,11 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         [Tooltip("Drag the RetroTerminalStreamer component here.")]
         public RetroTerminalStreamer retroStreamer;
-        
+
+        [Tooltip("Optional 3D viewport (RenderTexture). Wired by Build Avatar Preview Studio.")]
+        [SerializeField]
+        private AvatarPreviewRenderer avatarPreview;
+
         [Header("Input Setup")]
         [Tooltip("Assign the UIMenus Input Action Asset in the Inspector.")]
         public InputActionAsset inputActions;
@@ -60,6 +67,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         private void OnEnable()
         {
             _moveAction?.Enable();
+            RefreshAvatarPreview();
         }
 
         private void OnDisable()
@@ -127,9 +135,17 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             {
                 descriptionText.text = current.characterDescription;
             }
+
+            RefreshAvatarPreview();
         
             // Reflects the "retro-reboot" identity mentioned in your doc
             Debug.Log("Loading Player Type: " + current.characterName);
+        }
+
+        void RefreshAvatarPreview()
+        {
+            if (avatarPreview != null && characters != null && characters.Length > 0)
+                avatarPreview.SetPreviewIndex(currentIndex);
         }
     }
 }
