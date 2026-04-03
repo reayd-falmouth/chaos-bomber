@@ -53,7 +53,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.LevelSelectLocal
 
         [Header("Preview")]
         [SerializeField]
-        private Camera previewCamera;
+        private global::UnityEngine.Camera previewCamera;
 
         [SerializeField]
         private Transform previewInstanceParent;
@@ -316,7 +316,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.LevelSelectLocal
                 camGo.transform.SetParent(previewInstanceParent, false);
                 camGo.transform.localPosition = new Vector3(0f, 8f, -14f);
                 camGo.transform.localRotation = Quaternion.Euler(25f, 35f, 0f);
-                previewCamera = camGo.AddComponent<Camera>();
+                previewCamera = camGo.AddComponent<global::UnityEngine.Camera>();
                 previewCamera.clearFlags = CameraClearFlags.SolidColor;
                 previewCamera.backgroundColor = new Color(0.04f, 0.04f, 0.08f, 1f);
                 previewCamera.nearClipPlane = 0.1f;
