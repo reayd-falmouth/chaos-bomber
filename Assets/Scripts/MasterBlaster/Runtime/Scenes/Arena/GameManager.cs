@@ -10,6 +10,7 @@ using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
 using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player.AI;
+using HybridGame.MasterBlaster.Scripts.Levels;
 using Unity.FPS.Game;
 using Unity.Netcode;
 using UnityEngine;
@@ -132,6 +133,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
         public void SetRandomizeSpawnPositions(bool value) => _randomizeSpawnPositions = value;
         private bool _lastCapturedNormalLevel;
+        private string _lastCapturedLevelId = string.Empty;
 
         [Header("Spawn points (optional overrides)")]
         [Tooltip("Optional explicit spawn points for player slots 1..5. If assigned, these override captured scene poses for New Game resets.")]
@@ -307,9 +309,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 LoadAlternateLevelSettings();
 
             // In single-scene mode we toggle the Game root, so Unity won't re-run MapSelector.Awake/Start.
-            // Re-apply the selected map variant and (optionally) restart the match timer every time we enter Game.
+            // Re-apply dynamic level prefab (if any) and/or the normal/alt map variant every time we enter Game.
+            var selectedLoader = GetComponentInChildren<SelectedLevelLoader>(true);
+            selectedLoader?.ReapplyFromPrefs();
+
             var mapSelector = GetComponentInChildren<MapSelector>(true);
-            mapSelector?.Apply(normalLevel);
+            if (!SelectedLevelLoader.SuppressDefaultMapSelector)
+                mapSelector?.Apply(normalLevel);
+            else
+                mapSelector?.DisableBothRoots();
 
             // Recentre letterbox camera on active arena tilemaps (single-scene flow does not reload scene).
             var letterbox = FindFirstObjectByType<AmigaLetterboxCamera>();
@@ -327,17 +335,20 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             // - training: capture once for ResetArenaForTraining()
             // - non-training single-scene mode: capture so ResetArenaForNewRound() can restore layout.
             bool currentNormalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
+            string currentLevelId = PlayerPrefs.GetString(LevelSelectionPrefs.SelectedLevelIdKey, string.Empty);
 
             if (
                 !_initialArenaCaptured
                 || _initialArenaCapturedForTraining != TrainingMode.IsActive
                 || _lastCapturedNormalLevel != currentNormalLevel
+                || _lastCapturedLevelId != currentLevelId
             )
             {
                 CaptureInitialArenaState();
                 _initialArenaCaptured = true;
                 _initialArenaCapturedForTraining = TrainingMode.IsActive;
                 _lastCapturedNormalLevel = currentNormalLevel;
+                _lastCapturedLevelId = currentLevelId;
             }
 
             if (!TrainingMode.IsActive)
@@ -846,6 +857,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             return health == null || !health.IsDead;
         }
 
+        private static int GetArenaPlayerId(GameObject p)
+        {
+            if (p == null) return 0;
+            var pc = p.GetComponent<PlayerController>();
+            if (pc != null && pc.playerId > 0) return pc.playerId;
+            var dual = p.GetComponent<PlayerDualModeController>();
+            if (dual != null && dual.playerId > 0) return dual.playerId;
+            return 0;
+        }
+
         public void CheckWinState()
         {
             // In online play, only the host drives win-state and scene transitions.
@@ -873,6 +894,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                     lastAlivePlayerId = pc.playerId;
                     lastAlivePcWins = pc.wins;
                 }
+                else
+                {
+                    // Hybrid/FPS player variants may not have the 2D arena PlayerController.
+                    // Still track winner ID so Standings trophies can show session wins.
+                    int id = GetArenaPlayerId(p);
+                    if (id > 0)
+                        lastAlivePlayerId = id;
+                }
             }
 
             // Use SessionManager as source of truth for win count when deciding Overs vs Standings
@@ -896,22 +925,28 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             {
                 _roundEndProcessed = true;
                 var lastAlive = players[result.LastAliveIndex.Value];
-                var movement = lastAlive.GetComponent<PlayerController>();
-                if (movement != null)
+                int winnerId = GetArenaPlayerId(lastAlive);
+                var movement = lastAlive != null ? lastAlive.GetComponent<PlayerController>() : null;
+                if (winnerId > 0)
                 {
                     if (SessionManager.Instance != null)
                     {
-                        SessionManager.Instance.AddWin(movement.playerId);
-                        movement.wins = SessionManager.Instance.GetWins(movement.playerId);
+                        SessionManager.Instance.AddWin(winnerId);
+                        if (movement != null)
+                            movement.wins = SessionManager.Instance.GetWins(winnerId);
                     }
-                    else
+                    else if (movement != null)
                         movement.wins++;
+
+                    string levelId = PlayerPrefs.GetString(LevelSelectionPrefs.SelectedLevelIdKey, string.Empty);
+                    if (!string.IsNullOrEmpty(levelId))
+                        LevelWinPersistence.MarkPlayerWonLevel(levelId, winnerId);
 
                     // Defensive: re-check from SessionManager in case we were given stale wins
                     int winsAfterThisRound =
                         SessionManager.Instance != null
-                            ? SessionManager.Instance.GetWins(movement.playerId)
-                            : movement.wins;
+                            ? SessionManager.Instance.GetWins(winnerId)
+                            : (movement != null ? movement.wins : 0);
                     bool shouldGoToOvers = winsAfterThisRound >= winsNeeded;
 
                     if (result.Outcome == WinOutcome.GoToOvers || shouldGoToOvers)
@@ -926,7 +961,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                         }
                         if (SessionManager.Instance != null)
                             SessionManager.Instance.SetMatchWinner(
-                                movement.playerId,
+                                winnerId,
                                 lastAlive.name
                             );
                         ClearMatchTransientObjects();
@@ -1073,8 +1108,23 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             {
                 if (d == null)
                     continue;
-                // Explosion debris (isDebris) and Superman pushable blocks (runtime Instantiate → "(Clone)").
-                if (d.isDebris || d.gameObject.name.Contains("(Clone)"))
+                // Explosion debris (isDebris) should always be cleared.
+                if (d.isDebris)
+                {
+                    Destroy(d.gameObject);
+                    continue;
+                }
+
+                // Important: Hybrid 3D arena restores the destructible wall layout by instantiating prefab children.
+                // Those walls are "(Clone)" too — we must not clear them when leaving/re-entering the match flow.
+                bool isArenaLayoutWall =
+                    d.TryGetComponent<WallBlock3D>(out _)
+                    || (HybridArenaGrid.Instance != null
+                        && HybridArenaGrid.Instance.destructibleWallsParent != null
+                        && d.transform.IsChildOf(HybridArenaGrid.Instance.destructibleWallsParent));
+
+                // Only clear non-layout clones (e.g. runtime spawned junk). Layout walls are preserved.
+                if (!isArenaLayoutWall && d.gameObject.name.Contains("(Clone)"))
                     Destroy(d.gameObject);
             }
 
@@ -1259,6 +1309,21 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 p.transform.localRotation = kvp.Value.localRot;
 
                 if (pc != null) pc.enabled = true;
+
+                // Hybrid/FPS players don't always have arena PlayerController, but still need a clean slate.
+                var dual = p.GetComponent<PlayerDualModeController>();
+                if (dual != null)
+                    dual.ResetForNewGame();
+
+                // Defensive: ensure full health even if no dual-mode controller is present.
+                var health = p.GetComponent<Health>();
+                health?.ResetToFullHealth();
+
+                // Clear any leftover velocities between rounds.
+                var rb2d = p.GetComponent<Rigidbody2D>();
+                if (rb2d != null) rb2d.linearVelocity = Vector2.zero;
+                var rb3d = p.GetComponent<Rigidbody>();
+                if (rb3d != null) rb3d.linearVelocity = Vector3.zero;
 
                 var bc = p.GetComponent<BombController>();
                 if (bc != null) bc.enabled = true; // OnEnable resets bombsRemaining

@@ -23,7 +23,12 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         Overs,
         // IMPORTANT: Append-only to avoid breaking serialized enum ints in scenes/prefabs.
         Prologue,
-        Quote
+        Quote,
+        Settings,
+        AvatarSelect,
+        LevelSelectOnline,
+        SearchingOnline,
+        LevelSelectLocal
     }
 
     public class SceneFlowManager : PersistentSingleton<SceneFlowManager>
@@ -77,6 +82,21 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         [SerializeField]
         string oversScene = "Overs";
 
+        [SerializeField]
+        string settingsScene = "Settings";
+
+        [SerializeField]
+        string avatarSelectScene = "AvatarSelect";
+
+        [SerializeField]
+        string levelSelectOnlineScene = "LevelSelectOnline";
+
+        [SerializeField]
+        string searchingOnlineScene = "SearchingOnline";
+
+        [SerializeField]
+        string levelSelectLocalScene = "LevelSelectLocal";
+
         FlowState state;
 
         [Header("Start State Override")]
@@ -102,6 +122,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         /// See <see cref="ApplyUiCanvasBackdropFromFlowRoot"/>.
         /// </remarks>
         private Image _cachedUiCanvasRootImage;
+        private Sprite _cachedUiCanvasRootDefaultSprite;
+        private Color _cachedUiCanvasRootDefaultColor;
+        private bool _hasCachedUiCanvasRootDefaults;
 
         // Runtime-only: very lightweight timing diagnostics for hitches.
         private const string FlowPerfTag = "[FlowPerf]";
@@ -351,6 +374,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             TryAttachRootFromFirstController<Scenes.WheelOFortune.WheelController>(FlowState.Wheel);
             TryAttachRootFromFirstController<Scenes.Shop.ShopController>(FlowState.Shop);
             TryAttachRootFromFirstController<Scenes.GameOver.WinnerController>(FlowState.Overs);
+            TryAttachRootFromFirstController<Scenes.AvatarSelect.AvatarSelectController>(FlowState.AvatarSelect);
+            TryAttachRootFromFirstController<Scenes.OnlineLevelSelect.OnlineLevelSelectController>(FlowState.LevelSelectOnline);
+            TryAttachRootFromFirstController<Scenes.SearchingOnline.SearchingOnlineController>(FlowState.SearchingOnline);
+            TryAttachRootFromFirstController<Scenes.LevelSelectLocal.LevelSelectController>(FlowState.LevelSelectLocal);
         }
 
         private void TryAutoAttachFromNameMatchingForMissingStates()
@@ -585,7 +612,19 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (!_singleSceneMode || _roots == null || _roots.Length == 0)
                 return false;
             if (!_rootByState.TryGetValue(next, out var target) || target == null)
-                return false;
+            {
+                // Settings screen is created on-demand so we can add it without requiring
+                // a scene-authored FlowCanvasRoot marker.
+                if (next == FlowState.Settings && TryEnsureSettingsFlowRootExists(out target))
+                {
+                    // Refresh cached arrays so the new root is included in toggle loops.
+                    RefreshSingleSceneRoots();
+                }
+                else
+                {
+                    return false;
+                }
+            }
 
             if (next != FlowState.Game)
                 GameManager.Instance?.ClearMatchTransientObjects();
@@ -600,6 +639,23 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
             void ApplyCanvasGroupRoots()
             {
+                // Two-pass update:
+                // 1) Disable all non-current controller behaviours first.
+                // 2) Then update visibility and enable only the current controller behaviours.
+                //
+                // This prevents a non-current root's OnDisable from running after the current root's OnEnable,
+                // which can disable shared InputAction instances and make menu input appear "dead".
+                for (int i = 0; i < _roots.Length; i++)
+                {
+                    var r = _roots[i];
+                    if (r == null || r.UseGameObjectActivation)
+                        continue;
+
+                    bool isCurrent = r.state == next;
+                    if (!isCurrent)
+                        r.SetManagedBehavioursEnabled(false);
+                }
+
                 for (int i = 0; i < _roots.Length; i++)
                 {
                     var r = _roots[i];
@@ -609,15 +665,13 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                     bool isCurrent = r.state == next;
                     // Non-current: always turn controllers off first (even if this root stayed active in the hierarchy).
                     if (!isCurrent)
-                        r.SetManagedBehavioursEnabled(false);
+                        r.StopParticleSystemsWhenFlowHidden();
 
                     if (!r.gameObject.activeSelf)
                         r.gameObject.SetActive(true);
 
                     var cg = r.GetOrEnsureCanvasGroup();
                     FlowCanvasRoot.ApplyCanvasGroupVisibility(cg, isCurrent);
-                    if (!isCurrent)
-                        r.StopParticleSystemsWhenFlowHidden();
                     r.SetManagedBehavioursEnabled(isCurrent);
                 }
             }
@@ -656,11 +710,48 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             return true;
         }
 
+        /// <summary>
+        /// Creates a Settings flow root at runtime so single-scene mode can display the settings screen
+        /// without requiring a scene-authored FlowCanvasRoot marker.
+        /// </summary>
+        private bool TryEnsureSettingsFlowRootExists(out FlowCanvasRoot root)
+        {
+            root = null;
+
+            if (_rootByState.TryGetValue(FlowState.Settings, out var existing) && existing != null)
+            {
+                root = existing;
+                return true;
+            }
+
+            // Try to parent under an existing UI Canvas so it behaves like the other UI flow roots.
+            GameObject uiCanvasGo = GameObject.Find("UI Canvas");
+            if (uiCanvasGo == null)
+            {
+                var anyCanvas = FindAnyObjectByType<Canvas>();
+                uiCanvasGo = anyCanvas != null ? anyCanvas.gameObject : null;
+            }
+            if (uiCanvasGo == null)
+                return false;
+
+            var go = new GameObject("FlowRoot_Settings", typeof(RectTransform));
+            go.transform.SetParent(uiCanvasGo.transform, worldPositionStays: false);
+
+            root = go.AddComponent<FlowCanvasRoot>();
+            root.state = FlowState.Settings;
+            
+            _rootByState[FlowState.Settings] = root;
+            return root != null;
+        }
+
         /// <summary>Clears cached backdrop <see cref="Image"/> so the next resolve runs after a scene load.</summary>
         /// <remarks>Called from <see cref="OnSceneLoaded"/>.</remarks>
         private void InvalidateUiCanvasCache()
         {
             _cachedUiCanvasRootImage = null;
+            _cachedUiCanvasRootDefaultSprite = null;
+            _cachedUiCanvasRootDefaultColor = default;
+            _hasCachedUiCanvasRootDefaults = false;
         }
 
         private void LogMissingUiCanvasBackdropOnce()
@@ -689,6 +780,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (uiCanvasBackdropImage != null)
             {
                 _cachedUiCanvasRootImage = uiCanvasBackdropImage;
+                _cachedUiCanvasRootDefaultSprite = _cachedUiCanvasRootImage.sprite;
+                _cachedUiCanvasRootDefaultColor = _cachedUiCanvasRootImage.color;
+                _hasCachedUiCanvasRootDefaults = true;
                 return _cachedUiCanvasRootImage;
             }
 
@@ -725,6 +819,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             }
 
             _cachedUiCanvasRootImage = img;
+            _cachedUiCanvasRootDefaultSprite = img.sprite;
+            _cachedUiCanvasRootDefaultColor = img.color;
+            _hasCachedUiCanvasRootDefaults = true;
             return _cachedUiCanvasRootImage;
         }
 
@@ -732,12 +829,17 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         /// Resolves the shared full-screen uGUI backdrop <see cref="Image"/> for transitions; does not change sprite or color (scene-authored).
         /// </summary>
         /// <remarks>Does not call <see cref="Canvas.ForceUpdateCanvases"/>; layout forcing is separate (<see cref="ForceLayoutForStateRoot"/>).</remarks>
-        public void ApplyUiCanvasBackdropFromFlowRoot(FlowCanvasRoot _)
+        public void ApplyUiCanvasBackdropFromFlowRoot(FlowCanvasRoot root)
         {
             var img = ResolveUiCanvasRootImage();
             if (img == null)
                 return;
             img.raycastTarget = false;
+
+            // Restore scene-authored defaults when leaving an overriding flow root (e.g. Quote -> Prologue).
+            var defaultSprite = _hasCachedUiCanvasRootDefaults ? _cachedUiCanvasRootDefaultSprite : img.sprite;
+            var defaultColor = _hasCachedUiCanvasRootDefaults ? _cachedUiCanvasRootDefaultColor : img.color;
+            root?.ApplyUiCanvasBackdropOverride(img, defaultSprite, defaultColor);
         }
 
         private void ForceLayoutForStateRoot(FlowState s)
@@ -849,6 +951,12 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                     {
                         CancelActiveTransitionEffects();
                         StopCoroutine(_transitionRoutine);
+                        // If we cancel the coroutine mid-flight, the coroutine's own `_isTransitioning=false`
+                        // at the end never runs. Clear the gate immediately so menu input can resume.
+                        _transitionRoutine = null;
+                        _isTransitioning = false;
+                        if (_transitionOverlay != null)
+                            _transitionOverlay.alpha = 0f;
                     }
 
                     switch (transitionKind)
@@ -1290,6 +1398,11 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 Prologue = prologueScene,
                 Title = titleScene,
                 Menu = menuScene,
+                Settings = settingsScene,
+                AvatarSelect = avatarSelectScene,
+                LevelSelectOnline = levelSelectOnlineScene,
+                SearchingOnline = searchingOnlineScene,
+                LevelSelectLocal = levelSelectLocalScene,
                 Countdown = countdownScene,
                 Game = gameScene,
                 Standings = standingsScene,

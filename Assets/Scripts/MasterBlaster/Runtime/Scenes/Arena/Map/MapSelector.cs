@@ -20,12 +20,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         void Awake()
         {
+            if (SelectedLevelLoader.SuppressDefaultMapSelector)
+                return;
+
             bool useNormal = PlayerPrefs.GetInt("NormalLevel", 1) == 1; // default: normal on
             Apply(useNormal);
         }
 
         /// <summary>Call this if you toggle NormalLevel at runtime.</summary>
         public void RefreshFromPrefs() => Apply(PlayerPrefs.GetInt("NormalLevel", 1) == 1);
+
+        /// <summary>Disables normal and alt map roots (used when a dynamically selected level prefab is active).</summary>
+        public void DisableBothRoots()
+        {
+            if (normalRoot != null)
+                normalRoot.SetActive(false);
+            if (altRoot != null)
+                altRoot.SetActive(false);
+        }
 
         public void Apply(bool useNormal)
         {
