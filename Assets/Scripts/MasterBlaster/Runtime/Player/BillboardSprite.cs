@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using UnityEngine;
 
@@ -41,7 +42,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private void LateUpdate()
         {
             if (GameModeManager.Instance == null ||
-                GameModeManager.Instance.CurrentMode == GameModeManager.GameMode.Bomberman)
+                GameModeManager.IsGridPresentationMode(GameModeManager.Instance.CurrentMode))
             {
                 transform.rotation   = Quaternion.Euler(bombermanEulerAngles);
                 transform.localScale = m_BombermanScale;

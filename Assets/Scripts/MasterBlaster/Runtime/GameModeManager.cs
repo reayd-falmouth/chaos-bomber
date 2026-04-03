@@ -8,12 +8,22 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.Scripts
 {
     /// <summary>
-    /// Manages switching between Bomberman (top-down) and FPS modes in a single scene.
+    /// Manages switching between Bomberman (top-down), FPS, and angled arena view in a single scene.
     /// Single-player implementation — Phase 6 will add NetworkVariable for online sync.
     /// </summary>
     public class GameModeManager : MonoBehaviour
     {
-        public enum GameMode { Bomberman, FPS }
+        /// <summary>Append-only enum values for serialized data compatibility.</summary>
+        public enum GameMode
+        {
+            Bomberman,
+            FPS,
+            ArenaPerspective
+        }
+
+        /// <summary>Top-down or angled arena: grid movement and bombs; not first-person.</summary>
+        public static bool IsGridPresentationMode(GameMode mode) =>
+            mode == GameMode.Bomberman || mode == GameMode.ArenaPerspective;
 
         public static GameModeManager Instance { get; private set; }
         public GameMode CurrentMode { get; private set; } = GameMode.Bomberman;
@@ -45,7 +55,7 @@ namespace HybridGame.MasterBlaster.Scripts
         private void Update()
         {
             if (Input.GetKeyDown(devToggleKey))
-                SwitchMode(CurrentMode == GameMode.Bomberman ? GameMode.FPS : GameMode.Bomberman);
+                SwitchMode(GameModeCycle.GetNext(CurrentMode));
         }
 
         public void SwitchMode(GameMode newMode)

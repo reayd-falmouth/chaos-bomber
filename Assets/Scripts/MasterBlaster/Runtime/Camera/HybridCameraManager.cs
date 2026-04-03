@@ -1,10 +1,11 @@
 using System.Collections;
+using HybridGame.MasterBlaster.Scripts;
 using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Camera
 {
     /// <summary>
-    /// Switches between the first-person FPS camera and an orthographic overhead Bomberman camera.
+    /// Switches between FPS, orthographic overhead Bomberman, and optional perspective arena cameras.
     /// Camera.main always refers to the active camera because depth values are swapped.
     /// </summary>
     public class HybridCameraManager : MonoBehaviour
@@ -15,6 +16,9 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
 
         [Tooltip("Overhead orthographic camera for Bomberman mode (scene-level, not player child)")]
         public UnityEngine.Camera bombermanCamera;
+
+        [Tooltip("Optional perspective arena camera for ArenaPerspective mode (angled view). If unassigned, ortho is used for that mode too.")]
+        public UnityEngine.Camera arenaPerspectiveCamera;
 
         [Header("Bomberman Camera Settings")]
         [Tooltip("Orthographic size — set to half the arena's largest dimension")]
@@ -48,21 +52,24 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
         public void SetMode(GameModeManager.GameMode mode)
         {
             bool isFPS = mode == GameModeManager.GameMode.FPS;
+            bool isPerspective = mode == GameModeManager.GameMode.ArenaPerspective;
+            bool useDedicatedPerspective = isPerspective && arenaPerspectiveCamera != null;
+            bool showOrtho = mode == GameModeManager.GameMode.Bomberman
+                || (isPerspective && arenaPerspectiveCamera == null);
 
-            // Only one camera should carry MainCamera — avoids Camera.main resolving wrong / blank view when both exist in scene.
-            if (fpsCamera != null && bombermanCamera != null)
+            void TagMain(UnityEngine.Camera main, UnityEngine.Camera untagA, UnityEngine.Camera untagB)
             {
-                if (isFPS)
-                {
-                    bombermanCamera.gameObject.tag = "Untagged";
-                    fpsCamera.gameObject.tag = "MainCamera";
-                }
-                else
-                {
-                    fpsCamera.gameObject.tag = "Untagged";
-                    bombermanCamera.gameObject.tag = "MainCamera";
-                }
+                if (main != null) main.gameObject.tag = "MainCamera";
+                if (untagA != null && untagA != main) untagA.gameObject.tag = "Untagged";
+                if (untagB != null && untagB != main) untagB.gameObject.tag = "Untagged";
             }
+
+            if (isFPS)
+                TagMain(fpsCamera, bombermanCamera, arenaPerspectiveCamera);
+            else if (useDedicatedPerspective)
+                TagMain(arenaPerspectiveCamera, fpsCamera, bombermanCamera);
+            else if (bombermanCamera != null)
+                TagMain(bombermanCamera, fpsCamera, arenaPerspectiveCamera);
 
             if (fpsCamera != null)
             {
@@ -79,17 +86,20 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
                 {
                     fpsCamera.enabled = false;
                     fpsCamera.enabled = true;
-                    // URP can show a blank/sky-only view if ResetProjectionMatrix runs before PlayerWeaponsManager
-                    // applies FOV the same frame. Defer one frame so FOV and camera state are consistent.
                     m_FpsProjectionResetRoutine = StartCoroutine(ResetFpsProjectionNextFrame());
                 }
             }
 
             if (bombermanCamera != null)
             {
-                bombermanCamera.gameObject.SetActive(!isFPS);
-                bombermanCamera.depth = isFPS ? -1 : 0;
-                // if (!isFPS) ApplyLetterbox();
+                bombermanCamera.gameObject.SetActive(showOrtho);
+                bombermanCamera.depth = showOrtho ? 0 : -1;
+            }
+
+            if (arenaPerspectiveCamera != null)
+            {
+                arenaPerspectiveCamera.gameObject.SetActive(useDedicatedPerspective);
+                arenaPerspectiveCamera.depth = useDedicatedPerspective ? 0 : -1;
             }
         }
 

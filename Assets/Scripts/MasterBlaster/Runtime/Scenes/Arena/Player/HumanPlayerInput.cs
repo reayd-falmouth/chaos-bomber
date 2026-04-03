@@ -33,7 +33,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
         private InputAction _moveAction;
         private InputAction _bombAction;
         private InputAction _detonateAction;
+        private InputAction _switchModeAction;
         private bool _bombHeldLastFrame;
+
+        /// <summary>True when input is read from a specific gamepad (not shared keyboard bindings).</summary>
+        public bool UsesDedicatedGamepad => _gamepad != null;
 
         /// <summary>Lock this component to a specific gamepad so it ignores all other controllers.</summary>
         public void SetGamepad(Gamepad gamepad)
@@ -41,6 +45,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _gamepad = gamepad;
             _debugUntil = Time.unscaledTime + 5f; // log input for 5 s after assignment
             UnityEngine.Debug.Log($"[HumanPlayerInput] {gameObject.name} → locked to: {(gamepad != null ? $"{gamepad.displayName} ({gamepad.GetType().Name})" : "NULL")}");
+            // Shared SwitchMode listens to any gamepad; disable it when using per-pad North for mode switch.
+            if (_gamepad != null)
+                _switchModeAction?.Disable();
+            else if (isActiveAndEnabled)
+                _switchModeAction?.Enable();
         }
 
         public void Init(int deviceIndex, KeyCode up, KeyCode down, KeyCode left, KeyCode right, KeyCode bomb, KeyCode detonate)
@@ -63,11 +72,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _moveAction = map.FindAction("Move");
             _bombAction = map.FindAction("PlaceBomb");
             _detonateAction = map.FindAction("Detonate");
+            _switchModeAction = map.FindAction("SwitchMode");
             if (isActiveAndEnabled)
             {
                 _moveAction?.Enable();
                 _bombAction?.Enable();
                 _detonateAction?.Enable();
+                if (_gamepad == null)
+                    _switchModeAction?.Enable();
+                else
+                    _switchModeAction?.Disable();
             }
         }
 
@@ -76,6 +90,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _moveAction?.Enable();
             _bombAction?.Enable();
             _detonateAction?.Enable();
+            if (_gamepad == null)
+                _switchModeAction?.Enable();
+            else
+                _switchModeAction?.Disable();
         }
 
         private void OnDisable()
@@ -83,6 +101,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _moveAction?.Disable();
             _bombAction?.Disable();
             _detonateAction?.Disable();
+            _switchModeAction?.Disable();
         }
 
         private void LateUpdate()
@@ -143,6 +162,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             if (_detonateAction != null)
                 return _detonateAction.IsPressed();
             return _bombAction != null && _bombAction.IsPressed();
+        }
+
+        /// <summary>
+        /// North / Tab mode switch: per-gamepad when locked, otherwise the shared SwitchMode action.
+        /// </summary>
+        public bool WasSwitchModePressedThisFrame()
+        {
+            if (_gamepad != null)
+                return _gamepad.buttonNorth.wasPressedThisFrame;
+            return _switchModeAction != null && _switchModeAction.WasPressedThisFrame();
         }
     }
 }

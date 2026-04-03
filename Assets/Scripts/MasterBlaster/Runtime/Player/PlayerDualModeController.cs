@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.IO;
+using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Bomb;
 using HybridGame.MasterBlaster.Scripts.Camera;
@@ -21,9 +22,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 {
     /// <summary>
     /// Added alongside the existing PlayerCharacterController on the player prefab.
-    /// In FPS mode    : defers entirely to PlayerCharacterController (which stays enabled).
-    /// In Bomberman   : disables PlayerCharacterController + PlayerWeaponsManager and drives
-    ///                   grid-snapped XZ movement via the same CharacterController component.
+    /// In FPS mode              : defers to PlayerCharacterController (enabled).
+    /// In Bomberman / ArenaPerspective : disables FPS components; grid movement + 3D bombs.
     ///
     /// Also manages directional sprite selection for both modes.
     /// </summary>
@@ -169,7 +169,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (m_BombController != null)
                 m_BombController.enabled = false;
 
-            if (m_CurrentMode == GameModeManager.GameMode.Bomberman)
+            if (GameModeManager.IsGridPresentationMode(m_CurrentMode))
                 ShowBombermanDeathVisual();
 
             // Trigger win-state check — mirrors PlayerController.OnDeathSequenceEnded()
@@ -191,8 +191,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 spriteDeath.gameObject.SetActive(false);
             }
 
-            // Ensure the normal directional sprites are visible again in Bomberman mode
-            if (m_CurrentMode == GameModeManager.GameMode.Bomberman)
+            // Ensure the normal directional sprites are visible again in grid presentation modes
+            if (GameModeManager.IsGridPresentationMode(m_CurrentMode))
                 SetSpriteDirection(m_LastDir, moving: false);
         }
 
@@ -301,17 +301,22 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             if (m_IsDead) return;
 
-            if (m_SwitchModeAction != null && m_SwitchModeAction.WasPressedThisFrame() && CanDriveBombermanLocally())
+            if (MayProcessSwitchModeInput())
             {
-                var next = m_CurrentMode == GameModeManager.GameMode.Bomberman
-                    ? GameModeManager.GameMode.FPS
-                    : GameModeManager.GameMode.Bomberman;
-                GameModeManager.Instance?.SwitchMode(next);
+                bool pressed = false;
+                var hip = GetComponent<HumanPlayerInput>();
+                if (hip != null)
+                    pressed = hip.WasSwitchModePressedThisFrame();
+                else if (m_SwitchModeAction != null && m_SwitchModeAction.enabled)
+                    pressed = m_SwitchModeAction.WasPressedThisFrame();
+
+                if (pressed)
+                    GameModeManager.Instance?.SwitchMode(GameModeCycle.GetNext(m_CurrentMode));
             }
 
-            if (m_CurrentMode != GameModeManager.GameMode.Bomberman) return;
+            if (!GameModeManager.IsGridPresentationMode(m_CurrentMode)) return;
 
-            // Keep the cursor unlocked every frame in Bomberman mode.
+            // Keep the cursor unlocked every frame in grid presentation modes.
             // PlayerInputHandler.Start() locks the cursor unconditionally; if it runs
             // after GameModeManager.Start() the cursor ends up locked, CanProcessInput()
             // returns true, and mouse input rotates the player's Y axis even though
@@ -323,7 +328,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             }
 
             // #region agent log
-            if (!_agentLoggedFirstBmInputProbe && m_CurrentMode == GameModeManager.GameMode.Bomberman &&
+            if (!_agentLoggedFirstBmInputProbe && GameModeManager.IsGridPresentationMode(m_CurrentMode) &&
                 Time.frameCount >= 5)
             {
                 _agentLoggedFirstBmInputProbe = true;
@@ -356,20 +361,20 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             }
             // ---------------------
             
-            bool isBomberman = newMode == GameModeManager.GameMode.Bomberman;
+            bool useGrid = GameModeManager.IsGridPresentationMode(newMode);
+            bool isFps = newMode == GameModeManager.GameMode.FPS;
 
             // FPS controller + weapons: enabled in FPS mode only
             if (m_FPSController != null)
-                m_FPSController.enabled = !isBomberman;
+                m_FPSController.enabled = isFps;
             if (m_WeaponsManager != null)
-                m_WeaponsManager.enabled = !isBomberman;
+                m_WeaponsManager.enabled = isFps;
             if (m_FPSInputHandler != null)
-                m_FPSInputHandler.enabled = !isBomberman;
-            // Bomb controller: enabled in Bomberman mode only
+                m_FPSInputHandler.enabled = isFps;
             if (m_BombController != null)
-                m_BombController.enabled = isBomberman;
+                m_BombController.enabled = useGrid;
 
-            if (isBomberman)
+            if (useGrid)
             {
                 // In Bomberman mode the FPS controller is disabled (and it normally recenters the capsule).
                 // Ensure the CharacterController capsule is centered on its own height so the transform origin
@@ -679,7 +684,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         /// </summary>
         public Vector2Int GetBombermanMoveIntentCardinal()
         {
-            if (m_CurrentMode != GameModeManager.GameMode.Bomberman) return Vector2Int.zero;
+            if (!GameModeManager.IsGridPresentationMode(m_CurrentMode)) return Vector2Int.zero;
             if (m_IsDead || stop) return Vector2Int.zero;
             if (!ShouldProcessBombermanMovement()) return Vector2Int.zero;
 
@@ -765,7 +770,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 if (spriteLeft) spriteLeft.gameObject.SetActive(false);
                 if (spriteRight) spriteRight.gameObject.SetActive(false);
             }
-            else if (m_CurrentMode == GameModeManager.GameMode.Bomberman && !m_IsDead)
+            else if (GameModeManager.IsGridPresentationMode(m_CurrentMode) && !m_IsDead)
                 SetSpriteDirection(m_LastDir, m_BombermanMoving);
         }
 
@@ -780,7 +785,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 m_RemoteBombVisualActive = false;
                 if (spriteRemoteBomb != null)
                     spriteRemoteBomb.gameObject.SetActive(false);
-                if (m_CurrentMode == GameModeManager.GameMode.Bomberman && !m_IsDead)
+                if (GameModeManager.IsGridPresentationMode(m_CurrentMode) && !m_IsDead)
                     SetSpriteDirection(m_LastDir, m_BombermanMoving);
                 return;
             }
@@ -811,7 +816,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             m_RemoteBombVisualActive = false;
             if (spriteRemoteBomb != null)
                 spriteRemoteBomb.gameObject.SetActive(false);
-            if (m_CurrentMode == GameModeManager.GameMode.Bomberman && !m_IsDead)
+            if (GameModeManager.IsGridPresentationMode(m_CurrentMode) && !m_IsDead)
                 SetSpriteDirection(m_LastDir, false);
         }
 
@@ -839,7 +844,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             {
                 m_RemoteBombVisualActive = false;
                 spriteRemoteBomb.gameObject.SetActive(false);
-                if (m_CurrentMode == GameModeManager.GameMode.Bomberman && !m_IsDead)
+                if (GameModeManager.IsGridPresentationMode(m_CurrentMode) && !m_IsDead)
                     SetSpriteDirection(m_LastDir, false);
             }
         }
@@ -858,7 +863,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             m_RemoteBombVisualActive = false;
             if (spriteRemoteBomb != null)
                 spriteRemoteBomb.gameObject.SetActive(false);
-            if (m_CurrentMode == GameModeManager.GameMode.Bomberman && !m_IsDead)
+            if (GameModeManager.IsGridPresentationMode(m_CurrentMode) && !m_IsDead)
                 SetSpriteDirection(m_LastDir, m_BombermanMoving);
         }
 
@@ -968,9 +973,28 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             return -1;
         }
 
+        private bool IsAiControlled() => GetComponent<AIPlayerInput>() != null;
+
+        /// <summary>Humans that drive this slot may cycle view mode; AI must not consume SwitchMode.</summary>
+        private bool MayProcessSwitchModeInput() =>
+            !IsAiControlled() && CanDriveBombermanLocally();
+
         private void EnableActions()
         {
-            if (m_CurrentMode == GameModeManager.GameMode.Bomberman)
+            if (IsAiControlled())
+            {
+                m_MoveAction?.Disable();
+                m_SwitchModeAction?.Disable();
+                m_ActionsEnabled = false;
+                m_BombController?.RefreshBombInputFromDualMode();
+                AgentLogEnableActionsState("ai_no_actions");
+                return;
+            }
+
+            var humanPad = GetComponent<HumanPlayerInput>();
+            bool useSharedSwitch = humanPad == null || !humanPad.UsesDedicatedGamepad;
+
+            if (GameModeManager.IsGridPresentationMode(m_CurrentMode))
             {
                 if (!ShouldProcessBombermanMovement())
                 {
@@ -978,9 +1002,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                     m_SwitchModeAction?.Disable();
                     m_ActionsEnabled = false;
                     m_BombController?.RefreshBombInputFromDualMode();
-                    // #region agent log
                     AgentLogEnableActionsState("bomberman_no_input_slot");
-                    // #endregion
                     return;
                 }
 
@@ -988,24 +1010,28 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                     m_MoveAction?.Enable();
                 else
                     m_MoveAction?.Disable();
-                m_SwitchModeAction?.Enable();
+
+                if (useSharedSwitch)
+                    m_SwitchModeAction?.Enable();
+                else
+                    m_SwitchModeAction?.Disable();
+
                 m_ActionsEnabled = true;
                 m_BombController?.RefreshBombInputFromDualMode();
-                // #region agent log
                 AgentLogEnableActionsState("bomberman_local_input");
-                // #endregion
                 return;
             }
 
             // FPS: movement is PlayerInputHandler — do not enable shared Move (would duplicate input)
             m_MoveAction?.Disable();
-            // In FPS mode, always allow mode switching for this local player.
-            // We still keep Move disabled here because FPS uses PlayerInputHandler.
-            m_SwitchModeAction?.Enable();
-            m_ActionsEnabled = m_SwitchModeAction != null;
-            // #region agent log
+            if (useSharedSwitch)
+                m_SwitchModeAction?.Enable();
+            else
+                m_SwitchModeAction?.Disable();
+
+            m_ActionsEnabled = useSharedSwitch ? m_SwitchModeAction != null : true;
+            m_BombController?.RefreshBombInputFromDualMode();
             AgentLogEnableActionsState("fps_switch_only");
-            // #endregion
         }
 
         // #region agent log

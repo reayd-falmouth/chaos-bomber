@@ -4,7 +4,8 @@
     "references": [
         "HybridGame",
         "fps.Game",
-        "fps.Gameplay"
+        "fps.Gameplay",
+        "GUID:4307f53044263cf4b835bd812fc161a4"
     ],
     "includePlatforms": [
         "Editor"
