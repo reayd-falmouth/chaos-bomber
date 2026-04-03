@@ -13,8 +13,8 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
     /// </summary>
     public static class DestructibleWallGenerator
     {
-        [MenuItem("HybridGame/Generate Destructible Walls")]
-        private static void GenerateWalls()
+        /// <summary>Invoked from the HybridGame.Menus editor menu bootstrap.</summary>
+        public static void GenerateWalls()
         {
             var grid = Object.FindFirstObjectByType<HybridArenaGrid>();
             if (grid == null)

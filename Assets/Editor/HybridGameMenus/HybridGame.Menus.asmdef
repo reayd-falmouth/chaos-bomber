@@ -1,0 +1,18 @@
+{
+    "name": "HybridGame.Menus",
+    "rootNamespace": "HybridGame.Menus",
+    "references": [
+        "GUID:b56b5445694c9f64791db3dd23d40b11"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

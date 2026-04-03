@@ -18,14 +18,10 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
     public static class ArenaPreviewStudioSetup
     {
         private const string StudioName = "ArenaPreviewStudio";
-        private const string MenuPath = "HybridGame/Setup/Build Level Select Arena Preview Studio";
-        private const string ToolsMenuPath = "Tools/Master Blaster/Build Level Select Arena Preview Studio";
-
         private static readonly Vector3 StudioWorldPosition = new(5200f, 0f, 5200f);
 
-        [MenuItem(MenuPath, false, 510)]
-        [MenuItem(ToolsMenuPath, false, 510)]
-        private static void RunBuild()
+        /// <summary>Invoked from the HybridGame.Menus editor menu bootstrap.</summary>
+        public static void RunBuild()
         {
             // Game flow is often inactive in the editor; the switcher sits on HybridArenaGrid under that hierarchy.
             var switcher = Object.FindFirstObjectByType<HybridArenaLevelRootSwitcher>(FindObjectsInactive.Include);

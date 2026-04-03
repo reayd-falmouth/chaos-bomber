@@ -17,15 +17,12 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
     public static class AvatarPreviewStudioSetup
     {
         private const string StudioName = "AvatarPreviewStudio";
-        private const string MenuPath = "HybridGame/Setup/Build Avatar Preview Studio";
-        private const string ToolsMenuPath = "Tools/Master Blaster/Build Avatar Preview Studio";
         private const string RenderTexturePath = "Assets/Settings/MasterBlaster/AvatarSelectPreview.renderTexture";
 
         private static readonly Vector3 StudioWorldPosition = new(5300f, 0f, 5300f);
 
-        [MenuItem(MenuPath, false, 520)]
-        [MenuItem(ToolsMenuPath, false, 520)]
-        private static void RunBuild()
+        /// <summary>Invoked from the HybridGame.Menus editor menu bootstrap.</summary>
+        public static void RunBuild()
         {
             var avatar = Object.FindFirstObjectByType<AvatarController>(FindObjectsInactive.Include);
             if (avatar == null)

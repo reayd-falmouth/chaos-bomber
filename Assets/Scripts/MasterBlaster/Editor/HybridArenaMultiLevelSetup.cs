@@ -16,9 +16,8 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
         private const string DestructiblePrefabGuid = "743c1258fd76aee46850f782dc2f7220";
         private const string IndestructiblePrefabGuid = "2646c645e7c358f4b9befd72888daed3";
 
-        [MenuItem("HybridGame/Setup/Master Blaster FPS — Build 10 Arena Slots And Wire Switcher", false, 500)]
-        [MenuItem("Tools/Master Blaster/Build 10 Arena Slots And Wire Switcher", false, 500)]
-        private static void RunSetup()
+        /// <summary>Invoked from the HybridGame.Menus editor menu bootstrap.</summary>
+        public static void RunSetup()
         {
             var grid = Object.FindFirstObjectByType<HybridArenaGrid>(FindObjectsInactive.Include);
             if (grid == null)
