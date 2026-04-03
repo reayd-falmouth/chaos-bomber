@@ -269,10 +269,12 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
                 // Pre-warm common transition resources so the first Prologue → Title swap doesn't spike.
                 // Runtime-only: safe to ignore if components are missing.
+                var titleTransitionKind = GetTransitionKindForDestination(FlowState.Title);
                 try
                 {
                     GetOrCreateTransitionOverlay();
-                    GetOrTryCreateScanlinesFlipParam(out _);
+                    if (titleTransitionKind == TransitionKind.PrologueToTitleCrtFlipPulse)
+                        GetOrTryCreateScanlinesFlipParam(out _);
                 }
                 catch { }
 
@@ -403,6 +405,12 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
                 CollectByName(root.transform, byName);
 
+            // Cache once; searching per FlowState is expensive.
+            var canvases = FindObjectsByType<Canvas>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+
             // Attach markers for missing states, preferring Canvas objects when possible.
             foreach (FlowState s in System.Enum.GetValues(typeof(FlowState)))
             {
@@ -412,10 +420,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 var candidates = CandidateRootNamesFor(s);
 
                 // Canvas preference: if a Canvas GameObject matches by name, attach marker to it.
-                var canvases = FindObjectsByType<Canvas>(
-                    FindObjectsInactive.Include,
-                    FindObjectsSortMode.None
-                );
                 bool attachedByCanvas = false;
                 for (int i = 0; i < canvases.Length && !attachedByCanvas; i++)
                 {
@@ -848,10 +852,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 return;
 
             float t0 = Time.realtimeSinceStartup;
-            Canvas.ForceUpdateCanvases();
+            // Defer layout to Unity's normal layout pass (end-of-frame).
+            // This avoids a synchronous layout hitch during flow transitions.
             if (target.TryGetComponent<RectTransform>(out var rt))
-                LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
-            Canvas.ForceUpdateCanvases();
+                LayoutRebuilder.MarkLayoutForRebuild(rt);
             float dtMs = (Time.realtimeSinceStartup - t0) * 1000f;
             UnityEngine.Debug.Log($"{FlowPerfTag} ForceLayoutForStateRoot({s}) took {dtMs:F1} ms");
         }
