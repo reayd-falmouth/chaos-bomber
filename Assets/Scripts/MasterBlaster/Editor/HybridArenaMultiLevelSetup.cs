@@ -19,10 +19,15 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
         [MenuItem("HybridGame/Setup/Master Blaster FPS — Build 10 Arena Slots And Wire Switcher")]
         private static void RunSetup()
         {
-            var grid = Object.FindFirstObjectByType<HybridArenaGrid>();
+            var grid = Object.FindFirstObjectByType<HybridArenaGrid>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
             if (grid == null)
             {
-                EditorUtility.DisplayDialog("HybridArenaMultiLevelSetup", "No HybridArenaGrid in the loaded scenes.", "OK");
+                EditorUtility.DisplayDialog(
+                    "HybridArenaMultiLevelSetup",
+                    "No HybridArenaGrid found. Open the hybrid scene (e.g. MasterBlaster_FPS); the arena may be under an inactive Game root.",
+                    "OK");
                 return;
             }
 
