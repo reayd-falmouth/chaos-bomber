@@ -475,6 +475,19 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             if (count <= 0)
                 return result;
 
+            // 0) Scene-authored slot references (Hybrid FPS arena): deterministic and independent of playerId sync order.
+            if (ArenaPlayerSlotResolver.TryResolve(
+                    count,
+                    topLeftPlayer,
+                    topRightPlayer,
+                    bottomLeftPlayer,
+                    bottomRightPlayer,
+                    middlePlayer,
+                    result))
+            {
+                return result;
+            }
+
             // Some scenes only have `PlayerDualModeController` (no arena-only `PlayerController`).
             // We always want to discover the *objects we can attach HumanPlayerInput to*.
             var candidates = new List<PlayerCandidate>();
@@ -558,151 +571,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 return result;
             }
 
-            // 2) Fallback: spatial heuristics (use row extremes + left/right).
-            const float eps = 0.01f;
-
-            float maxY = float.MinValue;
-            float minY = float.MaxValue;
-            float centerX = 0f;
+            // 2) Fallback: spatial heuristics (row axis = Y, else Z for flat floors, else X). See ArenaPlayerSpatialFallback.
+            var spatial = new List<ArenaPlayerSpatialFallback.Candidate>(candidates.Count);
             for (int i = 0; i < candidates.Count; i++)
             {
-                var lp = candidates[i].localPos;
-                maxY = Mathf.Max(maxY, lp.y);
-                minY = Mathf.Min(minY, lp.y);
-                centerX += lp.x;
+                var c = candidates[i];
+                spatial.Add(new ArenaPlayerSpatialFallback.Candidate { go = c.go, localPos = c.localPos });
             }
-            centerX /= Mathf.Max(1, candidates.Count);
-
-            var topRow = new List<PlayerCandidate>();
-            var bottomRow = new List<PlayerCandidate>();
-            foreach (var c in candidates)
-            {
-                var lp = c.localPos;
-                if (Mathf.Abs(lp.y - maxY) <= eps) topRow.Add(c);
-                else if (Mathf.Abs(lp.y - minY) <= eps) bottomRow.Add(c);
-            }
-
-            PlayerCandidate PickTopLeft()
-            {
-                PlayerCandidate best = default;
-                float bestX = float.MaxValue;
-                for (int i = 0; i < topRow.Count; i++)
-                {
-                    float x = topRow[i].localPos.x;
-                    if (x < bestX)
-                    {
-                        bestX = x;
-                        best = topRow[i];
-                    }
-                }
-                return best;
-            }
-
-            PlayerCandidate PickTopRight()
-            {
-                PlayerCandidate best = default;
-                float bestX = float.MinValue;
-                for (int i = 0; i < topRow.Count; i++)
-                {
-                    float x = topRow[i].localPos.x;
-                    if (x > bestX)
-                    {
-                        bestX = x;
-                        best = topRow[i];
-                    }
-                }
-                return best;
-            }
-
-            PlayerCandidate PickBottomLeft()
-            {
-                PlayerCandidate best = default;
-                float bestX = float.MaxValue;
-                for (int i = 0; i < bottomRow.Count; i++)
-                {
-                    float x = bottomRow[i].localPos.x;
-                    if (x < bestX)
-                    {
-                        bestX = x;
-                        best = bottomRow[i];
-                    }
-                }
-                return best;
-            }
-
-            PlayerCandidate PickBottomRight()
-            {
-                PlayerCandidate best = default;
-                float bestX = float.MinValue;
-                for (int i = 0; i < bottomRow.Count; i++)
-                {
-                    float x = bottomRow[i].localPos.x;
-                    if (x > bestX)
-                    {
-                        bestX = x;
-                        best = bottomRow[i];
-                    }
-                }
-                return best;
-            }
-
-            PlayerCandidate PickMiddle()
-            {
-                float midY = (maxY + minY) * 0.5f;
-                PlayerCandidate best = default;
-                float bestScore = float.MaxValue;
-                for (int i = 0; i < candidates.Count; i++)
-                {
-                    var c = candidates[i];
-                    var lp = c.localPos;
-                    if (Mathf.Abs(lp.y - maxY) <= eps || Mathf.Abs(lp.y - minY) <= eps)
-                        continue;
-
-                    float dy = Mathf.Abs(lp.y - midY);
-                    float dx = Mathf.Abs(lp.x - centerX);
-                    float score = dy + dx * 0.5f;
-                    if (score < bestScore)
-                    {
-                        bestScore = score;
-                        best = c;
-                    }
-                }
-                return best;
-            }
-
-            if (count == 1)
-                result[0] = PickTopLeft().go;
-            else if (count == 2)
-            {
-                // ArenaLogic: id1=TopLeft, id2=BottomRight
-                result[0] = PickTopLeft().go;
-                result[1] = PickBottomRight().go;
-            }
-            else if (count == 3)
-            {
-                // ArenaLogic: id1=TopLeft, id2=BottomRight, id3=Middle
-                result[0] = PickTopLeft().go;
-                result[1] = PickBottomRight().go;
-                result[2] = PickMiddle().go;
-            }
-            else if (count == 4)
-            {
-                // ArenaLogic: id1=TopLeft, id2=TopRight, id3=BottomLeft, id4=BottomRight
-                result[0] = PickTopLeft().go;
-                result[1] = PickTopRight().go;
-                result[2] = PickBottomLeft().go;
-                result[3] = PickBottomRight().go;
-            }
-            else
-            {
-                // count >= 5: id1=TopLeft, id2=TopRight, id3=BottomLeft, id4=BottomRight, id5=Middle
-                result[0] = PickTopLeft().go;
-                result[1] = PickTopRight().go;
-                result[2] = PickBottomLeft().go;
-                result[3] = PickBottomRight().go;
-                result[4] = PickMiddle().go;
-            }
-
+            ArenaPlayerSpatialFallback.FillResult(spatial, count, result);
             return result;
         }
 
