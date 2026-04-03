@@ -26,9 +26,7 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
         private static void RunBuild()
         {
             // Game flow is often inactive in the editor; the switcher sits on HybridArenaGrid under that hierarchy.
-            var switcher = Object.FindFirstObjectByType<HybridArenaLevelRootSwitcher>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+            var switcher = Object.FindFirstObjectByType<HybridArenaLevelRootSwitcher>(FindObjectsInactive.Include);
             if (switcher == null)
             {
                 EditorUtility.DisplayDialog(
@@ -222,10 +220,10 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
             Camera cam,
             RenderTexture rt)
         {
-            var renderer = Object.FindFirstObjectByType<LevelArenaPreviewRenderer>();
+            var renderer = Object.FindFirstObjectByType<LevelArenaPreviewRenderer>(FindObjectsInactive.Include);
             if (renderer == null)
             {
-                var ls = Object.FindFirstObjectByType<LevelSelectController>();
+                var ls = Object.FindFirstObjectByType<LevelSelectController>(FindObjectsInactive.Include);
                 if (ls != null)
                     renderer = Undo.AddComponent<LevelArenaPreviewRenderer>(ls.gameObject);
             }
@@ -258,7 +256,7 @@ namespace HybridGame.Editor.MasterBlaster.Scripts.Editor
 
             renderer.SetPreviewIndex(0);
 
-            var levelSelect = Object.FindFirstObjectByType<LevelSelectController>();
+            var levelSelect = Object.FindFirstObjectByType<LevelSelectController>(FindObjectsInactive.Include);
             if (levelSelect != null)
             {
                 var lso = new SerializedObject(levelSelect);
