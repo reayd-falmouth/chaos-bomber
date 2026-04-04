@@ -67,7 +67,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             _grid = GetComponent<HybridArenaGrid>();
             if (_grid == null)
             {
-                Debug.LogWarning("[HybridArenaLevelRootSwitcher] No HybridArenaGrid on this GameObject.");
+                UnityEngine.Debug.LogWarning("[HybridArenaLevelRootSwitcher] No HybridArenaGrid on this GameObject.");
                 return;
             }
 
@@ -94,6 +94,16 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
         private void ApplyArenaIndex(int index, bool rebindBaselineForRuntime)
         {
+            if (_grid.destructibleWallsLayoutPrefab != null
+                && levelWallRoots != null
+                && levelWallRoots.Length > 1)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[HybridArenaLevelRootSwitcher] HybridArenaGrid.destructibleWallsLayoutPrefab is set while multiple arena slots are configured. "
+                    + "Baseline restore always clones that single prefab, so every selected level matches the same destructible layout. "
+                    + "Clear the prefab when using per-slot wall roots authored in the scene.");
+            }
+
             int idx = ResolveEffectiveIndex(index);
             var active = levelWallRoots[idx];
 
