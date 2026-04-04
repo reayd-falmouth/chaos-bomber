@@ -25,6 +25,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
         // Direct gamepad reference for the current player (refreshed when player changes).
         private Gamepad _currentGamepad;
         private int? _currentDeviceIndex;
+        private int? _arenaOwnerPlayerIdBeforeShop;
         private Vector2 _lastMoveInput;
         private bool _bombHeldLastFrame;
 
@@ -86,6 +87,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
             RefreshCoinsDisplay();
             UpdateHeading();
             RefreshGamepad();
+
+            // Remember who owned this controller in the arena so we can restore it when leaving the shop.
+            _arenaOwnerPlayerIdBeforeShop = null;
+            if (SessionManager.Instance != null && _currentDeviceIndex.HasValue)
+                _arenaOwnerPlayerIdBeforeShop = SessionManager.Instance.GetPlayerIdAssignedToDevice(_currentDeviceIndex.Value);
         }
 
         /// <summary>Lock input to the current player's assigned gamepad. Falls back to the first connected gamepad.</summary>
@@ -308,8 +314,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
                     // Last player done → leave shop
                     if (SessionManager.Instance != null && _currentDeviceIndex.HasValue)
                     {
-                        SessionManager.Instance.SetShopControllerOverride(currentPlayer, _currentDeviceIndex.Value);
-                        UnityEngine.Debug.Log($"[ShopController] Leaving shop: override arena device to player {currentPlayer} (deviceIndex={_currentDeviceIndex.Value}).");
+                        int restorePlayerId = _arenaOwnerPlayerIdBeforeShop ?? currentPlayer;
+                        SessionManager.Instance.SetShopControllerOverride(restorePlayerId, _currentDeviceIndex.Value);
+                        UnityEngine.Debug.Log($"[ShopController] Leaving shop: restore arena controller owner to player {restorePlayerId} (deviceIndex={_currentDeviceIndex.Value}).");
 
                         // #region agent log
                         AgentDebugNdjson_88a510.Log(
@@ -317,7 +324,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
                             location: "ShopController.AttemptPurchase(EXIT)",
                             message: "setting shop->arena controller override",
                             dataJsonObject:
-                                "{\"currentPlayer\":" + currentPlayer +
+                                "{\"restorePlayerId\":" + restorePlayerId +
                                 ",\"deviceIndex\":" + _currentDeviceIndex.Value + "}",
                             runId: "pre"
                         );

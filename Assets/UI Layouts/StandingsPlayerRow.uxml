@@ -1,0 +1,9 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Layouts/Default.uss?fileID=7433441132597879392&amp;guid=81f1e8d717bdf2f4ea75d27cdccfce9a&amp;type=3#Default"/>
+    <ui:VisualElement name="StandingsRow" class="standings-player-row" style="flex-grow: 1; align-self: flex-start; align-items: center; flex-direction: row; height: 10px;">
+        <ui:Image name="Avatar" class="avatar"/>
+        <ui:VisualElement name="TrophyContainer" style="flex-grow: 1; flex-direction: row;">
+            <ui:Image name="Trophy" class="trophy"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,118 +1,130 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 {
-    /// <summary>
-    /// Moves a UI element across the screen, then respawns it at a random off-screen position.
-    /// Designed for Title scene ambient objects like asteroid/comet images.
-    /// Optional randomized cooldown: object waits off-screen before moving again.
-    /// </summary>
-    [RequireComponent(typeof(RectTransform))]
+    [RequireComponent(typeof(Image))]
     public class TitleObjectDrifter : MonoBehaviour
     {
-        [Header("Movement")]
-        [SerializeField] private Vector2 direction = new Vector2(1f, 0f);
-        [SerializeField] private float speed = 140f;
+        public enum DriftPreset
+        {
+            Custom,
+            HorizontalRight,
+            HorizontalLeft,
+            DiagonalDownRight,
+            DiagonalDownLeft,
+            StraightDown
+        }
 
-        [Header("Bounds (Screen-space margin in pixels)")]
-        [SerializeField] private float offscreenMargin = 200f;
+        [Header("Sprite Settings")]
+        [SerializeField] private Sprite objectSprite;
 
-        [Header("Cooldown (after each pass)")]
-        [Tooltip("When enabled, waits a random time at the spawn edge before moving again.")]
-        [SerializeField] private bool useRandomCooldown = true;
-        [SerializeField] private Vector2 cooldownSecondsRange = new Vector2(0.35f, 1.75f);
+        [Header("1 & 2. Speed and Direction")]
+        [SerializeField] private DriftPreset directionPreset = DriftPreset.HorizontalRight;
+        
+        [Tooltip("Only used if Preset is set to Custom.")]
+        [Range(0, 360)]
+        [SerializeField] private float movementAngle = 0f;
+        
+        [Tooltip("The speed in pixels per second.")]
+        [SerializeField] private float speed = 150f;
 
-        [Header("Random Respawn")]
-        [SerializeField] private bool randomizeSpeed = true;
-        [SerializeField] private Vector2 speedRange = new Vector2(90f, 220f);
-        [SerializeField] private bool randomizeVerticalSpawn = true;
-        [SerializeField] private Vector2 spawnYRange = new Vector2(-450f, 450f);
+        [Header("3. Positioning (Start/End)")]
+        [SerializeField] private Vector2 startPosition = new Vector2(-1200, 0);
+        [SerializeField] private Vector2 resetThreshold = new Vector2(1200, 0);
+        [SerializeField] private float verticalRandomness = 300f;
+
+        [Header("4. Frequency (Cooldown)")]
+        [SerializeField] private float minWaitTime = 0.5f;
+        [SerializeField] private float maxWaitTime = 3.0f;
 
         private RectTransform _rt;
-        private Vector2 _moveDir;
-        private float _currentSpeed;
-        private float _cooldownUntilUnscaled;
+        private Image _image;
+        private Vector3 _velocity;
+        private bool _isWaiting = false;
 
-        private void Awake()
+        private void Awake() 
         {
             _rt = GetComponent<RectTransform>();
-            _moveDir = direction.sqrMagnitude < 0.0001f ? Vector2.right : direction.normalized;
-            _currentSpeed = Mathf.Max(1f, speed);
+            _image = GetComponent<Image>();
+
+            if (objectSprite != null)
+                _image.sprite = objectSprite;
+
+            CalculateVelocity();
+            ResetObject();
         }
 
-        private void OnEnable()
+        private void LateUpdate()
         {
-            _cooldownUntilUnscaled = 0f;
-            ApplyRandomSpeed();
+            if (_isWaiting) return;
+
+            _rt.anchoredPosition += (Vector2)_velocity * Time.unscaledDeltaTime;
+
+            if (HasPassedThreshold())
+                StartCoroutine(WaitAndReset());
         }
 
-        private void Update()
+        private System.Collections.IEnumerator WaitAndReset()
         {
-            if (_rt == null)
-                return;
+            _isWaiting = true;
+            _image.enabled = false; 
+            _rt.anchoredPosition = new Vector2(-9999, -9999);
 
-            if (Time.unscaledTime < _cooldownUntilUnscaled)
-                return;
-
-            _rt.anchoredPosition += _moveDir * (_currentSpeed * Time.unscaledDeltaTime);
-
-            if (HasExitedScreen(_rt.anchoredPosition))
-                Respawn();
+            yield return new WaitForSecondsRealtime(Random.Range(minWaitTime, maxWaitTime));
+    
+            ResetObject();
+            _image.enabled = true;
+            _isWaiting = false;
         }
 
-        private bool HasExitedScreen(Vector2 anchoredPos)
+        private void CalculateVelocity()
         {
-            float halfW = Screen.width * 0.5f;
-            float halfH = Screen.height * 0.5f;
+            float finalAngle = movementAngle;
 
-            float left = -halfW - offscreenMargin;
-            float right = halfW + offscreenMargin;
-            float bottom = -halfH - offscreenMargin;
-            float top = halfH + offscreenMargin;
-
-            return anchoredPos.x < left || anchoredPos.x > right || anchoredPos.y < bottom || anchoredPos.y > top;
-        }
-
-        private void Respawn()
-        {
-            float halfW = Screen.width * 0.5f;
-            float halfH = Screen.height * 0.5f;
-
-            float spawnX;
-            if (_moveDir.x >= 0f)
-                spawnX = -halfW - offscreenMargin;
-            else
-                spawnX = halfW + offscreenMargin;
-
-            float spawnY;
-            if (randomizeVerticalSpawn)
-                spawnY = Random.Range(spawnYRange.x, spawnYRange.y);
-            else
-                spawnY = _rt.anchoredPosition.y;
-
-            float minY = -halfH - offscreenMargin;
-            float maxY = halfH + offscreenMargin;
-            spawnY = Mathf.Clamp(spawnY, minY, maxY);
-
-            _rt.anchoredPosition = new Vector2(spawnX, spawnY);
-            ApplyRandomSpeed();
-
-            if (useRandomCooldown)
+            // Apply preset angles
+            switch (directionPreset)
             {
-                float lo = Mathf.Min(cooldownSecondsRange.x, cooldownSecondsRange.y);
-                float hi = Mathf.Max(cooldownSecondsRange.x, cooldownSecondsRange.y);
-                _cooldownUntilUnscaled = Time.unscaledTime + Random.Range(lo, hi);
+                case DriftPreset.HorizontalRight:   finalAngle = 0f;   break;
+                case DriftPreset.HorizontalLeft:    finalAngle = 180f; break;
+                case DriftPreset.DiagonalDownRight: finalAngle = 315f; break;
+                case DriftPreset.DiagonalDownLeft:  finalAngle = 225f; break;
+                case DriftPreset.StraightDown:      finalAngle = 270f; break;
+                // case Custom: uses movementAngle slider
             }
-            else
-                _cooldownUntilUnscaled = 0f;
+
+            float radians = finalAngle * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(radians), Mathf.Sin(radians));
+            _velocity = dir * speed;
         }
 
-        private void ApplyRandomSpeed()
+        private bool HasPassedThreshold()
         {
-            if (randomizeSpeed)
-                _currentSpeed = Mathf.Max(1f, Random.Range(speedRange.x, speedRange.y));
-            else
-                _currentSpeed = Mathf.Max(1f, speed);
+            // Past X check
+            bool pastX = (_velocity.x > 0) ? (_rt.anchoredPosition.x > resetThreshold.x) : (_rt.anchoredPosition.x < resetThreshold.x);
+            // Past Y check
+            bool pastY = (_velocity.y > 0) ? (_rt.anchoredPosition.y > resetThreshold.y) : (_rt.anchoredPosition.y < resetThreshold.y);
+            
+            // Logic: if we aren't moving much in one axis, don't let that axis trigger the reset.
+            bool significantX = Mathf.Abs(_velocity.x) > 0.1f;
+            bool significantY = Mathf.Abs(_velocity.y) > 0.1f;
+
+            if (significantX && significantY) return pastX || pastY;
+            if (significantX) return pastX;
+            return pastY;
+        }
+
+        private void ResetObject()
+        {
+            float randomY = Random.Range(-verticalRandomness, verticalRandomness);
+            _rt.anchoredPosition = new Vector2(startPosition.x, startPosition.y + randomY);
+            CalculateVelocity(); 
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(transform.position, 20f);
         }
     }
 }

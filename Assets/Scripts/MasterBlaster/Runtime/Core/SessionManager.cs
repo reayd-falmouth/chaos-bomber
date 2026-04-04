@@ -198,6 +198,22 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         }
 
         /// <summary>
+        /// Returns the playerId currently mapped to <paramref name="deviceIndex"/> (1+), or null if none.
+        /// Useful for restoring controller ownership after temporary UI flows (e.g. Shop).
+        /// </summary>
+        public int? GetPlayerIdAssignedToDevice(int deviceIndex)
+        {
+            if (deviceIndex < 1)
+                return null;
+            foreach (var kvp in _playerDeviceIndex)
+            {
+                if (kvp.Value == deviceIndex)
+                    return kvp.Key;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Called by Shop when leaving the shop so the controller keeps driving the last shop-selected player
         /// after returning to the arena.
         /// </summary>

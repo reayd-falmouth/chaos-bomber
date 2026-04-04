@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
 {
-    public class PrologueController : MonoBehaviour
+    public class PrologueController : MonoBehaviour, IFlowScreen
     {
         [Header("Crawl")]
         [Tooltip("UI units per second (anchoredPosition.y increases upward).")]
@@ -17,6 +17,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         [SerializeField] private float crawlStartVerticalOffset = 0f;
         [HideInInspector] [SerializeField] private float crawlEndAnchoredY = 0f;
 
+        [Header("Crawl Text Appearance")]
+        [Tooltip("Additional local Z rotation applied to the crawl text when presented (Star Wars-style slant).")]
+        [SerializeField] private float crawlTextLocalZRotationOffsetDegrees = -12f;
+
+        private Quaternion _prologueTextInitialLocalRotation;
+
         [Header("Scene References")]
         [SerializeField] private GameObject prologuePanel;
         [SerializeField] private RectTransform prologueText;
@@ -25,6 +31,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         private bool _skipped;
         private Coroutine _routine;
         private float _ignoreSkipUntilUnscaledTime;
+
+        private void Awake()
+        {
+            if (prologueText != null)
+                _prologueTextInitialLocalRotation = prologueText.localRotation;
+        }
 
         [Header("Skip")]
         [Tooltip("Ignore skip input for a short time after enabling (prevents accidental skip from the click/key that started Play mode or advanced the previous screen).")]
@@ -70,6 +82,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         {
             float t = Mathf.InverseLerp(viewportCenterY, viewportYMax, contentBottomY);
             return 1f - Mathf.Clamp01(t);
+        }
+
+        public static Quaternion ComputeCrawlTextLocalRotation(Quaternion initialLocalRotation, float zRotationOffsetDegrees)
+        {
+            return initialLocalRotation * Quaternion.Euler(0f, 0f, zRotationOffsetDegrees);
         }
 
         private RectTransform GetViewportRectTransform()
@@ -133,18 +150,31 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             prologueText.anchoredPosition = pos;
         }
 
-        void OnEnable()
+        public void OnFlowPresented()
         {
             _skipped = false;
             _ignoreSkipUntilUnscaledTime = Time.unscaledTime + Mathf.Max(0f, skipGraceSeconds);
-            AgentLog("pre-fix-1", "E", "PrologueController.cs:OnEnable", "enabled", new { hasPanel = prologuePanel != null, hasText = prologueText != null, scrollSpeedUnitsPerSecond });
+            AgentLog("pre-fix-1", "E", "PrologueController.cs:OnFlowPresented", "presented", new { hasPanel = prologuePanel != null, hasText = prologueText != null, scrollSpeedUnitsPerSecond });
+
+            if (prologueText != null)
+                prologueText.localRotation = ComputeCrawlTextLocalRotation(_prologueTextInitialLocalRotation, crawlTextLocalZRotationOffsetDegrees);
 
             if (_routine != null)
                 StopCoroutine(_routine);
             _routine = StartCoroutine(Run());
         }
 
+        public void OnFlowDismissed()
+        {
+            StopPrologueRoutine();
+        }
+
         void OnDisable()
+        {
+            StopPrologueRoutine();
+        }
+
+        private void StopPrologueRoutine()
         {
             if (_routine != null)
             {

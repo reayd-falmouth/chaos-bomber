@@ -74,6 +74,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
         private void Update()
         {
+            if (SceneFlowManager.I != null && SceneFlowManager.I.IsTransitioning)
+                return;
+
             if (_moveAction == null || _submitAction == null)
                 return;
 
@@ -123,12 +126,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
                 return;
             }
 
+            // Last option is reserved for "BACK" (return to Title).
+            if (options != null && options.Length > 0 && selectedIndex == options.Length - 1)
+            {
+                SavePrefs();
+                SceneFlowManager.I.GoTo(FlowState.Title);
+                return;
+            }
+
             SavePrefs();
             SceneFlowManager.I.SignalMenuStart();
         }
 
         private void ChangeOption(bool rightArrow)
         {
+            // Don't allow changing values on the BACK row.
+            if (options != null && options.Length > 0 && selectedIndex == options.Length - 1)
+                return;
+
             switch (selectedIndex)
             {
                 case 0:
@@ -160,6 +175,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
         private void UpdateMenuText()
         {
+            // Settings rows (fixed): indices 0..7. Additional rows (e.g. BACK) have no value label.
+            if (options == null || options.Length < 8)
+                return;
+
             options[0].valueLabel.text = winsNeeded.ToString();
             options[1].valueLabel.text = players.ToString();
             options[2].valueLabel.text = shop ? "ON" : "OFF";
@@ -168,8 +187,6 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
             options[5].valueLabel.text = startMoney ? "ON" : "OFF";
             options[6].valueLabel.text = normalLevel ? "YES" : "NO";
             options[7].valueLabel.text = gambling ? "YES" : "NO";
-            if (options.Length > 8)
-                options[8].valueLabel.text = quickRestart ? "ON" : "OFF";
         }
 
         private void UpdatePointers()

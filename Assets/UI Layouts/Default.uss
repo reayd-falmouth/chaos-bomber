@@ -1,0 +1,54 @@
+.header {
+    -unity-font-definition: url("project://database/Assets/Art/MasterBlaster/Fonts/m6x11plus.ttf?fileID=12800000&guid=9509e1a5b0ba7de4d8335710d5a5158f&type=3#m6x11plus");
+    font-size: 24px;
+    -unity-text-align: middle-center;
+    color: rgb(0, 78, 255);
+    -unity-font-style: normal;
+    letter-spacing: 26px;
+}
+
+.avatar {
+    -unity-background-scale-mode: scale-to-fit;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 50px;
+    height: 32px;
+    background-image: url("project://database/Assets/Art/MasterBlaster/Textures/player.png?fileID=1267943911&guid=8642032d1ae8ee746a36f32ba6b71c8c&type=3#player_0");
+}
+
+.standings-player-row {
+    height: 10px;
+}
+
+.trophy {
+    -unity-background-scale-mode: scale-to-fit;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 21px;
+    height: 21px;
+    background-image: url("project://database/Assets/Art/MasterBlaster/Sprites/ExportedSprites/trophy_13.png?fileID=2800000&guid=b1d034e71b5cc5e4d8ce547882cc49fe&type=3#trophy_13");
+    background-color: rgba(255, 255, 255, 0);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    top: 1px;
+}
+
+.pointer {
+    -unity-font-definition: url("project://database/Assets/Art/MasterBlaster/Fonts/m6x11plus.ttf?fileID=12800000&guid=9509e1a5b0ba7de4d8335710d5a5158f&type=3#m6x11plus");
+    color: rgb(85, 0, 187);
+    font-size: 18px;
+    -unity-font-style: bold;
+    top: -3px;
+}
+
+.wheel-row {
+    flex-grow: 1;
+    align-self: flex-end;
+    flex-direction: row;
+    align-items: center;
+}
+
+.menu-item {
+    -unity-font-definition: url("project://database/Assets/Art/MasterBlaster/Fonts/MasterBlaster.fontsettings?fileID=12800000&guid=8d22e2817713f45499af9f7d75b1c137&type=2#MasterBlaster");
+    color: rgb(247, 247, 250);
+    align-self: flex-end;
+}

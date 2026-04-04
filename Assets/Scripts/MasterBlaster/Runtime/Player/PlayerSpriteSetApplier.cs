@@ -91,8 +91,18 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             ApplyDirectional(_dual.spriteLeft, Slice(sprites, baseIndex + 6, 3));
             ApplyDirectional(_dual.spriteUp, Slice(sprites, baseIndex + 9, 3));
 
-            // 12–20: death (9 frames)
-            ApplyAnimOnly(_dual.spriteDeath, Slice(sprites, baseIndex + 12, 9));
+            // 12–20: death (9 frames) + 1 blank frame at the end
+            var originalDeathFrames = Slice(sprites, baseIndex + 12, 9);
+            var deathWithBlank = new Sprite[10]; // Create space for 10 frames instead of 9
+
+            // Copy the original 9 frames into the first 9 slots
+            Array.Copy(originalDeathFrames, deathWithBlank, 9);
+
+            // The 10th slot (index 9) is automatically 'null' because it's a new array.
+            // In Unity, a null sprite in a SpriteRenderer makes the object invisible.
+            deathWithBlank[9] = null; 
+
+            ApplyAnimOnly(_dual.spriteDeath, deathWithBlank);
 
             // 21–23: remote control (3 frames)
             ApplyDirectional(_dual.spriteRemoteBomb, Slice(sprites, baseIndex + 21, 3));

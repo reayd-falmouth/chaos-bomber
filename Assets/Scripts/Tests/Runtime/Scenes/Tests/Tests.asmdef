@@ -2,6 +2,8 @@
     "name": "Scenes.Tests",
     "references": [
         "HybridGame",
+        "Unity.InputSystem",
+        "Unity.InputSystem.TestFramework",
         "Unity.Netcode.Runtime",
         "fps.Game"
     ],

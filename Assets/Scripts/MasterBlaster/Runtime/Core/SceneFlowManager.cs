@@ -26,9 +26,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         Quote,
         Settings,
         AvatarSelect,
-        LevelSelectOnline,
-        SearchingOnline,
-        LevelSelectLocal
+        LevelSelect,
     }
 
     public class SceneFlowManager : PersistentSingleton<SceneFlowManager>
@@ -89,14 +87,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         string avatarSelectScene = "AvatarSelect";
 
         [SerializeField]
-        string levelSelectOnlineScene = "LevelSelectOnline";
-
-        [SerializeField]
-        string searchingOnlineScene = "SearchingOnline";
-
-        [SerializeField]
-        string levelSelectLocalScene = "LevelSelectLocal";
-
+        string levelSelectScene = "LevelSelect";
+        
         FlowState state;
 
         [Header("Start State Override")]
@@ -377,9 +369,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             TryAttachRootFromFirstController<Scenes.Shop.ShopController>(FlowState.Shop);
             TryAttachRootFromFirstController<Scenes.GameOver.WinnerController>(FlowState.Overs);
             TryAttachRootFromFirstController<Scenes.AvatarSelect.AvatarSelectController>(FlowState.AvatarSelect);
-            TryAttachRootFromFirstController<Scenes.OnlineLevelSelect.OnlineLevelSelectController>(FlowState.LevelSelectOnline);
-            TryAttachRootFromFirstController<Scenes.SearchingOnline.SearchingOnlineController>(FlowState.SearchingOnline);
-            TryAttachRootFromFirstController<Scenes.LevelSelectLocal.LevelSelectController>(FlowState.LevelSelectLocal);
+            // TryAttachRootFromFirstController<Scenes.LevelSelect.LevelSelectController>(FlowState.LevelSelect);
         }
 
         private void TryAutoAttachFromNameMatchingForMissingStates()
@@ -1404,9 +1394,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 Menu = menuScene,
                 Settings = settingsScene,
                 AvatarSelect = avatarSelectScene,
-                LevelSelectOnline = levelSelectOnlineScene,
-                SearchingOnline = searchingOnlineScene,
-                LevelSelectLocal = levelSelectLocalScene,
+                LevelSelect = levelSelectScene,
                 Countdown = countdownScene,
                 Game = gameScene,
                 Standings = standingsScene,

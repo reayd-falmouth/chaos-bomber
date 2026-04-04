@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -56,6 +57,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
         private void Update()
         {
+            // Not a *Controller: FlowCanvasRoot does not disable this behaviour. Skip work off Title in single-scene flow.
+            var flow = SceneFlowManager.I;
+            if (flow != null && flow.IsSingleSceneMode && flow.CurrentState != FlowState.Title)
+                return;
+
             if (_targets == null || _targets.Length == 0)
                 return;
 

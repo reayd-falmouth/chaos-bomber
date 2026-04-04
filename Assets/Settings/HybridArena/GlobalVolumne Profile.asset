@@ -26,34 +26,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96468967439741488ad1b1af1ab44b9b, type: 3}
   m_Name: ScanlinesVol
   m_EditorClassIdentifier: VolFx::VolFx.ScanlinesVol
-  active: 0
+  active: 1
   m_Intensity:
     m_OverrideState: 1
-    m_Value: 0.57
+    m_Value: 0.555
   m_Count:
     m_OverrideState: 1
     m_Value: 1000
   m_Speed:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: -0.35
   m_Color:
     m_OverrideState: 1
-    m_Value: 0.29
+    m_Value: 0.389
   m_Flicker:
     m_OverrideState: 1
-    m_Value: 0.049
+    m_Value: 0.056
   m_Grad:
     m_OverrideState: 1
-    m_Value: 0.501
+    m_Value: 1
   m_Animation:
     m_OverrideState: 1
-    m_Value: 0.061
+    m_Value: 0
   m_GradSpeed:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 1
   m_Flip:
     m_OverrideState: 1
     m_Value: 0
   m_GradColor:
     m_OverrideState: 1
-    m_Value: {r: 1, g: 1, b: 1, a: 0.07}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}

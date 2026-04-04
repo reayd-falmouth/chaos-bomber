@@ -86,6 +86,18 @@ namespace fps.Tests.EditMode
 
             Object.DestroyImmediate(go);
         }
+
+        [Test]
+        public void ComputeCrawlTextLocalRotation_ComposesInitialAndZOffset()
+        {
+            Quaternion initial = Quaternion.Euler(0f, 0f, 10f);
+            float offset = -12f;
+
+            Quaternion expected = initial * Quaternion.Euler(0f, 0f, offset);
+            Quaternion actual = PrologueController.ComputeCrawlTextLocalRotation(initial, offset);
+
+            Assert.Less(Quaternion.Angle(expected, actual), 0.001f);
+        }
     }
 }
 

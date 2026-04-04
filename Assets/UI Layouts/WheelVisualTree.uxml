@@ -1,0 +1,28 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Layouts/Default.uss?fileID=7433441132597879392&amp;guid=81f1e8d717bdf2f4ea75d27cdccfce9a&amp;type=3#Default"/>
+    <ui:VisualElement name="Container" style="flex-grow: 1; border-left-width: 0; border-left-color: rgb(255, 255, 255); border-right-width: 0; border-top-color: rgb(255, 255, 255); border-top-width: 0; border-bottom-width: 0; border-bottom-color: rgb(255, 255, 255); border-right-color: rgb(255, 255, 255); -unity-font-style: normal;">
+        <ui:Label text="WHEEL-O-FORTUNE" name="Header" class="header" style="height: 96px;"/>
+        <ui:VisualElement name="WheelContainer" style="flex-grow: 1; left: auto; right: 46%; bottom: 6%;">
+            <ui:VisualElement name="WheelRow" class="wheel-row">
+                <ui:Label name="Pointer" text="&gt;" class="pointer" style="-unity-text-align: upper-left; top: -2px;"/>
+                <ui:Image name="Avatar" class="avatar"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="WheelRow" class="wheel-row" style="flex-grow: 1; align-self: flex-end; flex-direction: row; align-items: center;">
+                <ui:Label name="Pointer" text="&gt;" class="pointer" style="-unity-text-align: upper-left;"/>
+                <ui:Image name="Avatar" class="avatar" style="background-image: url(&quot;project://database/Assets/Art/MasterBlaster/Textures/player.png?fileID=-1316832831&amp;guid=8642032d1ae8ee746a36f32ba6b71c8c&amp;type=3#player_30&quot;);"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="WheelRow" class="wheel-row" style="flex-grow: 1; align-self: flex-end; flex-direction: row; align-items: center;">
+                <ui:Label name="Pointer" text="&gt;" class="pointer" style="-unity-text-align: upper-left;"/>
+                <ui:Image name="Avatar" class="avatar" style="background-image: url(&quot;project://database/Assets/Art/MasterBlaster/Textures/player.png?fileID=-1161104255&amp;guid=8642032d1ae8ee746a36f32ba6b71c8c&amp;type=3#player_60&quot;);"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="WheelRow" class="wheel-row" style="flex-grow: 1; align-self: flex-end; flex-direction: row; align-items: center;">
+                <ui:Label name="Pointer" text="&gt;" class="pointer" style="-unity-text-align: upper-left;"/>
+                <ui:Image name="Avatar" class="avatar" style="background-image: url(&quot;project://database/Assets/Art/MasterBlaster/Textures/player.png?fileID=-1721454704&amp;guid=8642032d1ae8ee746a36f32ba6b71c8c&amp;type=3#player_90&quot;);"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="WheelRow" class="wheel-row" style="flex-grow: 1; align-self: flex-end; flex-direction: row; align-items: center;">
+                <ui:Label name="Pointer" text="&gt;" class="pointer" style="-unity-text-align: upper-left;"/>
+                <ui:Image name="Avatar" class="avatar" style="background-image: url(&quot;project://database/Assets/Art/MasterBlaster/Textures/player.png?fileID=-1656477654&amp;guid=8642032d1ae8ee746a36f32ba6b71c8c&amp;type=3#player_120&quot;);"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -19,8 +19,8 @@ TagManager:
   - Explosion3D
   - Bomb3D
   - Player
-  - 
-  - 
+  - CharacterPreview
+  - ArenaPreview
   - 
   - 
   - 

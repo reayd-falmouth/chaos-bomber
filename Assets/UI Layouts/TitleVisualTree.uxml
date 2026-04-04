@@ -1,0 +1,9 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Layouts/Default.uss?fileID=7433441132597879392&amp;guid=81f1e8d717bdf2f4ea75d27cdccfce9a&amp;type=3#Default"/>
+    <ui:VisualElement name="Container" style="flex-grow: 1; border-left-width: 0; border-left-color: rgb(255, 255, 255); border-right-width: 0; border-top-color: rgb(255, 255, 255); border-top-width: 0; border-bottom-width: 0; border-bottom-color: rgb(255, 255, 255); border-right-color: rgb(255, 255, 255); -unity-font-style: normal; align-self: flex-end; align-content: auto; top: 190px; left: auto; right: 116px;">
+        <ui:Label text="PLAY ONLINE" name="" class="menu-item" style="align-self: flex-end;"/>
+        <ui:Label text="Play Local" name="" class="menu-item"/>
+        <ui:Label text="Settings" class="menu-item"/>
+        <ui:Label text="Credits" class="menu-item"/>
+    </ui:VisualElement>
+</ui:UXML>

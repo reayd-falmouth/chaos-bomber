@@ -1,9 +1,18 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Core
 {
+    public enum UiCanvasBackdropOverrideMode
+    {
+        None = 0,
+        CopyFromImage = 1,
+        ColorOnly = 2,
+        SpriteAndColor = 3
+    }
+
     /// <summary>Transition played when navigating <em>to</em> this flow state (destination wins).</summary>
     public enum FlowIncomingTransition
     {
@@ -24,6 +33,19 @@ namespace HybridGame.MasterBlaster.Scripts.Core
     {
         [Tooltip("Which flow state this root represents.")]
         public FlowState state;
+
+        [Header("UI Canvas backdrop override")]
+        [Tooltip("Optional override for the shared full-screen UI Canvas backdrop image.")]
+        [SerializeField] private UiCanvasBackdropOverrideMode uiCanvasBackdropOverrideMode = UiCanvasBackdropOverrideMode.None;
+
+        [Tooltip("Used by CopyFromImage mode. Sprite and color will be copied from this Image.")]
+        [SerializeField] private Image uiCanvasBackdropOverrideSourceImage;
+
+        [Tooltip("Used by SpriteAndColor mode. Clear this to intentionally set the backdrop sprite to 'None'.")]
+        [SerializeField] private Sprite uiCanvasBackdropOverrideSprite;
+
+        [Tooltip("Used by ColorOnly and SpriteAndColor modes.")]
+        [SerializeField] private Color uiCanvasBackdropOverrideColor = Color.black;
 
         [Header("Transition when entering this screen")]
         [Tooltip("Incoming transition when navigating to this state (destination wins).")]
@@ -47,6 +69,51 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         public FlowIncomingTransition IncomingTransition => incomingTransition;
 
         public bool UseGameObjectActivation => useGameObjectActivation;
+
+        /// <summary>
+        /// Applies an override to the shared full-screen UI Canvas backdrop Image.
+        /// </summary>
+        /// <remarks>
+        /// The <paramref name="defaultSprite"/>/<paramref name="defaultColor"/> values are captured from the scene-authored
+        /// backdrop at load time so Flow can reliably restore them when leaving an overriding screen.
+        /// </remarks>
+        public void ApplyUiCanvasBackdropOverride(Image sharedBackdrop, Sprite defaultSprite, Color defaultColor)
+        {
+            if (sharedBackdrop == null)
+                return;
+
+            switch (uiCanvasBackdropOverrideMode)
+            {
+                case UiCanvasBackdropOverrideMode.None:
+                    sharedBackdrop.sprite = defaultSprite;
+                    sharedBackdrop.color = defaultColor;
+                    break;
+
+                case UiCanvasBackdropOverrideMode.ColorOnly:
+                    sharedBackdrop.sprite = defaultSprite;
+                    sharedBackdrop.color = uiCanvasBackdropOverrideColor;
+                    break;
+
+                case UiCanvasBackdropOverrideMode.SpriteAndColor:
+                    // Always apply the override sprite even if it's intentionally cleared to null (sprite "None").
+                    sharedBackdrop.sprite = uiCanvasBackdropOverrideSprite;
+                    sharedBackdrop.color = uiCanvasBackdropOverrideColor;
+                    break;
+
+                case UiCanvasBackdropOverrideMode.CopyFromImage:
+                    if (uiCanvasBackdropOverrideSourceImage != null)
+                    {
+                        sharedBackdrop.sprite = uiCanvasBackdropOverrideSourceImage.sprite;
+                        sharedBackdrop.color = uiCanvasBackdropOverrideSourceImage.color;
+                    }
+                    else
+                    {
+                        sharedBackdrop.sprite = defaultSprite;
+                        sharedBackdrop.color = defaultColor;
+                    }
+                    break;
+            }
+        }
 
         /// <summary>Sets alpha, interactable, and blocksRaycasts for a flow screen.</summary>
         public static void ApplyCanvasGroupVisibility(CanvasGroup cg, bool visible)

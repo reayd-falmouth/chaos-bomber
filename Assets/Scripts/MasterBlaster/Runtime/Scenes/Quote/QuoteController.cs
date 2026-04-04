@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
 {
-    public class QuoteController : MonoBehaviour
+    public class QuoteController : MonoBehaviour, IFlowScreen
     {
         [Header("Quote Timing")]
         [Min(0f)] [SerializeField] private float quoteSeconds = 10f;
@@ -38,15 +38,25 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
         }
         // #endregion
 
-        void OnEnable()
+        public void OnFlowPresented()
         {
-            AgentLog("pre-fix-1", "D", "QuoteController.cs:OnEnable", "enabled", new { quoteSeconds, hasQuotePanel = quotePanel != null });
+            AgentLog("pre-fix-1", "D", "QuoteController.cs:OnFlowPresented", "presented", new { quoteSeconds, hasQuotePanel = quotePanel != null });
             if (_routine != null)
                 StopCoroutine(_routine);
             _routine = StartCoroutine(Run());
         }
 
+        public void OnFlowDismissed()
+        {
+            StopQuoteRoutine();
+        }
+
         void OnDisable()
+        {
+            StopQuoteRoutine();
+        }
+
+        private void StopQuoteRoutine()
         {
             if (_routine != null)
             {

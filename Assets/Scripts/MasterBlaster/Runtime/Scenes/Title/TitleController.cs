@@ -104,7 +104,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Title
                 // 1) Play Local
                 case 1:
                     PrepareNewLocalGameSessionFromPrefs();
-                    SceneFlowManager.I.GoTo(FlowState.LevelSelectLocal);
+                    SceneFlowManager.I.GoTo(FlowState.Menu);
                     break;
 
                 // 2) Settings (main menu)

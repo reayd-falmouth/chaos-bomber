@@ -3,7 +3,7 @@
     "rootNamespace": "HybridGame.Menus",
     "references": [
         "GUID:b56b5445694c9f64791db3dd23d40b11",
-        "HybridGame"
+        "GUID:51dcbfc9b53847f4f87a2d6716e0204f"
     ],
     "includePlatforms": [
         "Editor"

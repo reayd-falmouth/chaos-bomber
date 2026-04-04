@@ -24,6 +24,10 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
 
         [Tooltip("Drag the RetroTerminalStreamer component here.")]
         public RetroTerminalStreamer retroStreamer;
+
+        [Tooltip("Optional: top-down arena preview (RenderTexture). Assign after running HybridGame → Setup → Build Level Select Arena Preview Studio.")]
+        [SerializeField]
+        private LevelArenaPreviewRenderer arenaPreview;
         
         [Header("Input Setup")]
         [Tooltip("Assign the UIMenus Input Action Asset in the Inspector.")]
@@ -63,6 +67,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
         {
             _moveAction?.Enable();
             _submitAction?.Enable();
+            RefreshArenaPreview();
         }
 
         private void OnDisable()
@@ -138,9 +143,17 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
             {
                 descriptionText.text = current.levelDescription;
             }
+
+            RefreshArenaPreview();
         
             // Reflects the "retro-reboot" identity mentioned in your doc
             Debug.Log("Loading Player Type: " + current.levelName);
+        }
+
+        void RefreshArenaPreview()
+        {
+            if (arenaPreview != null && levels != null && levels.Length > 0)
+                arenaPreview.SetPreviewIndex(currentIndex);
         }
 
         protected virtual void AdvanceToNextFlowState()
