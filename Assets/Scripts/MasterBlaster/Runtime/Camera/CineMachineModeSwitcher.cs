@@ -183,28 +183,15 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
         private void SyncCameraPriority(CinemachineCamera cam, GameModeManager.GameMode mode)
         {
             bool isPlayerCamera = IsPlayerCamera(cam);
-
-            if (mode == GameModeManager.GameMode.FPS)
-            {
-                cam.Priority = isPlayerCamera ? activePriority : inactivePriority;
-                return;
-            }
-
-            if (mode == GameModeManager.GameMode.ArenaPerspective)
-            {
-                if (!HasAnyArenaPerspectiveCamera())
-                {
-                    cam.Priority = !isPlayerCamera ? activePriority : inactivePriority;
-                    return;
-                }
-
-                bool marked = cam.GetComponent<ArenaPerspectiveCinemachineCamera>() != null;
-                cam.Priority = marked ? activePriority : inactivePriority;
-                return;
-            }
-
-            // Bomberman: standalone arena camera, not the FPS rig on the player.
-            cam.Priority = !isPlayerCamera ? activePriority : inactivePriority;
+            bool hasArenaMarker = HasAnyArenaPerspectiveCamera();
+            bool thisMarked = cam.GetComponent<ArenaPerspectiveCinemachineCamera>() != null;
+            cam.Priority = CinemachineModePriorityLogic.Compute(
+                mode,
+                isPlayerCamera,
+                hasArenaMarker,
+                thisMarked,
+                activePriority,
+                inactivePriority);
         }
 
         private bool HasAnyArenaPerspectiveCamera()
