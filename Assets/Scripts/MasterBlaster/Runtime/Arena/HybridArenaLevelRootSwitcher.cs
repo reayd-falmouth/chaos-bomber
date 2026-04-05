@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Scripts.Debug;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
 
@@ -124,6 +125,15 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
             if (rebindBaselineForRuntime)
                 _grid.RecaptureBaselineAndRestoreLayout();
+
+            // #region agent log
+            AgentDebugNdjson_a63d36.Log(
+                "H_apply",
+                "HybridArenaLevelRootSwitcher.ApplyArenaIndex",
+                "applied",
+                "{\"requested\":" + index + ",\"effective\":" + idx + ",\"pairCount\":" +
+                (levelWallRoots != null ? levelWallRoots.Length : 0) + "}");
+            // #endregion
         }
     }
 }

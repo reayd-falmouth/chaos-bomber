@@ -1,4 +1,5 @@
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Debug;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -219,6 +220,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
             PlayerPrefs.SetInt("GiveStartMoneyNextArena", 1);
             PlayerPrefs.Save();
+
+            // #region agent log
+            AgentDebugNdjson_a63d36.Log(
+                "H_save",
+                "MainMenuController.SavePrefs",
+                "wrote_prefs",
+                "{\"normalLevelBool\":" + (normalLevel ? "true" : "false") +
+                ",\"arenaIndex\":" + LevelSelectionPrefs.ArenaIndexFromNormalLevel(normalLevel) + "}");
+            // #endregion
         }
 
         private void LoadPrefs()

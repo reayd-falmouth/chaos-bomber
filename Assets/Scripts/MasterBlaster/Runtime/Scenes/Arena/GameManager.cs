@@ -194,6 +194,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 Instance = this;
         }
 
+        /// <summary>
+        /// <see cref="GameManager"/> is often a sibling of <see cref="HybridArenaLevelRootSwitcher"/>
+        /// (e.g. both under Arena). Search descendants first, then parents so arena reapply hooks still run.
+        /// </summary>
+        private T FindArenaScopedComponent<T>() where T : Component
+        {
+            var c = GetComponentInChildren<T>(true);
+            if (c != null)
+                return c;
+            return transform.GetComponentInParent<T>();
+        }
+
         private void OnDisable()
         {
             CancelInvoke(); // Cancel pending round-end transitions (e.g. Standings after 3s delay).
@@ -311,13 +323,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
             // In single-scene mode we toggle the Game root, so Unity won't re-run MapSelector.Awake/Start.
             // Re-apply dynamic level prefab (if any) and/or the normal/alt map variant every time we enter Game.
-            var selectedLoader = GetComponentInChildren<SelectedLevelLoader>(true);
+            var selectedLoader = FindArenaScopedComponent<SelectedLevelLoader>();
             selectedLoader?.ReapplyFromPrefs();
 
-            var arenaLevelSwitcher = GetComponentInChildren<HybridArenaLevelRootSwitcher>(true);
+            var childSwitcher = GetComponentInChildren<HybridArenaLevelRootSwitcher>(true);
+            var arenaLevelSwitcher = FindArenaScopedComponent<HybridArenaLevelRootSwitcher>();
+            // #region agent log
+            AgentDebugNdjson_a63d36.Log(
+                "H_switcher",
+                "GameManager.OnEnable",
+                "arena_level_switcher_resolve",
+                "{\"found\":" + (arenaLevelSwitcher != null ? "true" : "false") +
+                ",\"via\":\"" + (childSwitcher != null ? "child" : (arenaLevelSwitcher != null ? "parent" : "none")) + "\"" +
+                ",\"selectedArenaIndex\":" + PlayerPrefs.GetInt(LevelSelectionPrefs.SelectedArenaIndexKey, 0) +
+                ",\"normalLevelInt\":" + PlayerPrefs.GetInt("NormalLevel", 1) + "}");
+            // #endregion
             arenaLevelSwitcher?.ReapplyFromPrefs();
 
-            var mapSelector = GetComponentInChildren<MapSelector>(true);
+            var mapSelector = FindArenaScopedComponent<MapSelector>();
             if (!SelectedLevelLoader.SuppressDefaultMapSelector)
                 mapSelector?.Apply(normalLevel);
             else
