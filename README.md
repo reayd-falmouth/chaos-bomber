@@ -78,6 +78,7 @@ Used when the hybrid player is in FPS mode (`PlayerDualModeController` enables t
 
 | Package | Version |
 |---------|---------|
+| com.rmc.rmc-readme | 1.2.2 (in-editor Read Me — npm scoped registry) |
 | com.coplaydev.unity-mcp | Git `main` (MCPForUnity) |
 | com.unity.2d.sprite | 1.0.0 |
 | com.unity.ai.navigation | 2.0.12 |
@@ -114,4 +115,4 @@ Also **com.unity.modules.*** entries (engine modules) — see `manifest.json` fo
 
 ---
 
-*Coursework-oriented copy also lives in the Unity asset **Project Readme** ([`Assets/Documentation/ProjectArchitectureReadme.asset`](Assets/Documentation/ProjectArchitectureReadme.asset)). It auto-selects once per machine when the editor finishes loading (Inspector shows the custom UI). Reopen anytime via **Tools → MasterBlaster → Open Project Readme (Documentation)**. To test first-open again, use **Tools → MasterBlaster → Reset “show readme on first open” flag**.*
+*In-editor welcome (RMC pattern, like [unity-project-template-uitoolkit](https://github.com/SamuelAsherRivello/unity-project-template-uitoolkit)): [`Assets/Documentation/ReadMe.asset`](Assets/Documentation/ReadMe.asset) uses **com.rmc.rmc-readme**; it is selected on editor load (see `ReadMeInitializeOnLoad`). Reopen via **Window → MasterBlaster → Documentation → Open ReadMe**. Extended coursework + architecture content (Mermaid, extra fields) remains on [`ProjectArchitectureReadme.asset`](Assets/Documentation/ProjectArchitectureReadme.asset) — **Tools → MasterBlaster → Open Project Readme (Documentation)**.*
