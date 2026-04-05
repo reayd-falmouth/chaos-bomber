@@ -738,6 +738,30 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         }
 
         /// <summary>
+        /// Finds the flow <c>UI Canvas</c> root (same search order as <see cref="ResolveUiCanvasRootImage"/> before requiring an <see cref="Image"/>).
+        /// Used to parent <see cref="FlowTransitionOverlay"/> when the backdrop image lives on a child.
+        /// </summary>
+        private GameObject TryFindUiCanvasGameObject()
+        {
+            var go = GameObject.Find("UI Canvas");
+            if (go != null)
+                return go;
+
+            var canvases = FindObjectsByType<Canvas>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None
+            );
+            for (int i = 0; i < canvases.Length; i++)
+            {
+                var c = canvases[i];
+                if (c != null && c.gameObject.name == "UI Canvas")
+                    return c.gameObject;
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Resolves the full-screen backdrop uGUI <see cref="Image"/>.
         /// </summary>
         /// <remarks>
@@ -808,6 +832,16 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (img == null)
                 return;
             img.raycastTarget = false;
+
+            // Full-screen flow backdrop must not cover the 3D arena; Game uses None override which would restore opaque menu defaults.
+            if (root != null && root.state == FlowState.Game)
+            {
+                var c = _hasCachedUiCanvasRootDefaults ? _cachedUiCanvasRootDefaultColor : img.color;
+                c.a = 0f;
+                img.sprite = _hasCachedUiCanvasRootDefaults ? _cachedUiCanvasRootDefaultSprite : img.sprite;
+                img.color = c;
+                return;
+            }
 
             // Restore scene-authored defaults when leaving an overriding flow root (e.g. Quote -> Prologue).
             var defaultSprite = _hasCachedUiCanvasRootDefaults ? _cachedUiCanvasRootDefaultSprite : img.sprite;
@@ -1004,6 +1038,11 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
             var backdrop = ResolveUiCanvasRootImage();
             var parent = backdrop != null ? backdrop.transform : null;
+            if (parent == null)
+            {
+                var uiCanvasGo = TryFindUiCanvasGameObject();
+                parent = uiCanvasGo != null ? uiCanvasGo.transform : null;
+            }
             if (parent == null)
             {
                 var anyCanvas = FindAnyObjectByType<Canvas>();
