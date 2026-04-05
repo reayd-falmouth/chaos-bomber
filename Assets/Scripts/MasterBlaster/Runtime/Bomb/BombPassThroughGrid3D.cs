@@ -16,7 +16,7 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         public void Init(Transform placer)
         {
             m_Placer = placer;
-            m_Box = GetComponent<BoxCollider>();
+            m_Box = GetComponent<BoxCollider>() ?? GetComponentInChildren<BoxCollider>(true);
             if (m_Box != null)
                 m_Box.isTrigger = true;
         }
