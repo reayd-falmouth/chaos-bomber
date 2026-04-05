@@ -4,10 +4,12 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.Scripts.Player
 {
     /// <summary>
-    /// Pure helpers for <see cref="BillboardSprite"/> grid vs perspective pitch (unit-tested).
+    /// Pure helpers for <see cref="BillboardSprite"/> grid pitch and FPS billboarding (unit-tested).
     /// </summary>
     public static class BillboardSpriteOrientationMath
     {
+        private const float MinDirSqrMag = 0.001f;
+
         /// <summary>
         /// When true, use fixed <c>bombermanEulerAngles</c> (ortho top-down or Bomberman mode).
         /// When false, apply camera pitch compensation in ArenaPerspective with a perspective MainCamera.
@@ -38,6 +40,26 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 bombermanEulerAngles.x - normalizedCameraEulerX,
                 bombermanEulerAngles.y,
                 bombermanEulerAngles.z);
+        }
+
+        /// <summary>
+        /// FPS: align transform +Z (SpriteRenderer front) toward the camera. Full pitch + yaw from 3D direction.
+        /// </summary>
+        public static bool TryComputeFpsBillboardRotation(
+            Vector3 spriteWorldPosition,
+            Vector3 cameraWorldPosition,
+            Vector3 worldUp,
+            out Quaternion rotation)
+        {
+            Vector3 dirToCamera = cameraWorldPosition - spriteWorldPosition;
+            if (dirToCamera.sqrMagnitude <= MinDirSqrMag)
+            {
+                rotation = Quaternion.identity;
+                return false;
+            }
+
+            rotation = Quaternion.LookRotation(dirToCamera.normalized, worldUp);
+            return true;
         }
     }
 }

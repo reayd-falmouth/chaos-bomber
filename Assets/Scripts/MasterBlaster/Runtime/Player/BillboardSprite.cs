@@ -15,7 +15,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// ArenaPerspective — same scale as grid; if MainCamera is perspective, pitch follows the camera
     ///                    (see <see cref="BillboardSpriteOrientationMath"/>).
     ///
-    /// FPS        — sprite billboards toward Camera.main in 3D; scale reset to (1,1,1).
+    /// FPS        — +Z faces Camera.main (pitch + yaw); scale reset to (1,1,1).
     /// </summary>
     public class BillboardSprite : MonoBehaviour
     {
@@ -61,13 +61,13 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            // FPS mode: billboard to face the active camera (full 3D direction).
+            // FPS: +Z toward camera (do not negate dir — that aims the back of the quad at the camera).
             transform.localScale = Vector3.one;
             var fpsCam = UnityEngine.Camera.main;
             if (fpsCam == null) return;
-            Vector3 dirToCamera = fpsCam.transform.position - transform.position;
-            if (dirToCamera.sqrMagnitude > 0.001f)
-                transform.rotation = Quaternion.LookRotation(-dirToCamera.normalized, Vector3.up);
+            if (BillboardSpriteOrientationMath.TryComputeFpsBillboardRotation(
+                    transform.position, fpsCam.transform.position, Vector3.up, out var fpsRot))
+                transform.rotation = fpsRot;
         }
 
         private void ComputeBombermanScale()

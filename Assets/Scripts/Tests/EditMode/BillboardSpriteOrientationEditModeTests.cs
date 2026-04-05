@@ -57,5 +57,25 @@ namespace fps.Tests.EditMode
             var result = BillboardSpriteOrientationMath.ComputePerspectiveGridEuler(baseEuler, 60f);
             Assert.AreEqual(new Vector3(30f, 0f, 0f), result);
         }
+
+        [Test]
+        public void TryComputeFpsBillboardRotation_ForwardPointsAtCamera()
+        {
+            var sprite = new Vector3(0f, 0f, 0f);
+            var cam = new Vector3(3f, 2f, 0f);
+            Assert.IsTrue(BillboardSpriteOrientationMath.TryComputeFpsBillboardRotation(
+                sprite, cam, Vector3.up, out var q));
+            var forward = q * Vector3.forward;
+            var want = (cam - sprite).normalized;
+            Assert.Less(Vector3.Angle(forward, want), 0.05f);
+        }
+
+        [Test]
+        public void TryComputeFpsBillboardRotation_TooClose_ReturnsFalse()
+        {
+            var p = Vector3.zero;
+            Assert.IsFalse(BillboardSpriteOrientationMath.TryComputeFpsBillboardRotation(
+                p, p + new Vector3(0.01f, 0f, 0f), Vector3.up, out _));
+        }
     }
 }
