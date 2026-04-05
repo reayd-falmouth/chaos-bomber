@@ -10,6 +10,7 @@ using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
 using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player.AI;
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using Unity.FPS.Game;
 using Unity.Netcode;
@@ -294,6 +295,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 PlayerPrefs.Save();
                 ResetPlayersForNewGame(playerCount);
                 HybridArenaGrid.Instance?.RestoreDestructiblesFromBaselineThenRethinAndRebuild();
+                ApplyAvatarStartingPerkForNewGame();
             }
 
             // 🔹 Force upgrades and wins to be reapplied every new game round (only for players in this game)
@@ -496,6 +498,32 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 // Health reset (in case there is no PlayerDualModeController on some player variants)
                 var health = playerObj.GetComponent<Unity.FPS.Game.Health>();
                 health?.ResetToFullHealth();
+            }
+        }
+
+        /// <summary>
+        /// Applies avatar-selected starting perk to player 1 hybrid player once per new session (PlayerPrefs).
+        /// </summary>
+        private void ApplyAvatarStartingPerkForNewGame()
+        {
+            int stored = PlayerPrefs.GetInt(AvatarSelectionPrefs.AvatarStartingPerkKey, 0);
+            var perk = (AvatarStartingPerk)stored;
+            if (!AvatarSelectionPrefs.TryMapPerkToItemType(perk, out var itemType))
+                return;
+
+            if (players == null)
+                return;
+
+            for (int i = 0; i < players.Length; i++)
+            {
+                var go = players[i];
+                if (go == null)
+                    continue;
+                var dual = go.GetComponent<PlayerDualModeController>();
+                if (dual == null || dual.playerId != 1)
+                    continue;
+                ItemPickup3D.ApplyTo3DPlayer(go, itemType, null);
+                return;
             }
         }
 
@@ -868,7 +896,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                         if (SessionManager.Instance != null)
                             SessionManager.Instance.SetMatchWinner(
                                 winnerId,
-                                lastAlive.name
+                                AvatarSelectionPrefs.ResolveMatchDisplayName(winnerId, lastAlive.name)
                             );
                         ClearMatchTransientObjects();
                         if (IsNetworked)

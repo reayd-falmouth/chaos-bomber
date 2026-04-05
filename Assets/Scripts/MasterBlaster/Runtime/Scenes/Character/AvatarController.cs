@@ -14,6 +14,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         [Tooltip("Optional 3D root for Avatar Select RenderTexture preview. Run HybridGame → Setup → Build Avatar Preview Studio after assigning.")]
         public GameObject previewPrefab;
+
+        [Tooltip("Granted once when starting a new game session (hybrid 3D player / player 1).")]
+        public AvatarStartingPerk startingPerk;
     }
 
     public class AvatarController : MonoBehaviour
@@ -21,6 +24,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         [Header("UI References")]
         public Image displayImage;
         public Text descriptionText;
+
+        [Tooltip("Legacy UI Text for the player's display name (saved on Select). When empty after a character change, defaults to that character's name.")]
+        public Text nameInputText;
 
         [Tooltip("Drag the RetroTerminalStreamer component here.")]
         public RetroTerminalStreamer retroStreamer;
@@ -39,6 +45,29 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         /// <summary>Index into <see cref="characters"/>; used when <see cref="AvatarSelectMenuController"/> has avatar persistence enabled.</summary>
         public int CurrentIndex => currentIndex;
+
+        /// <summary>Trimmed display name for PlayerPrefs, or current character default if the name field is blank.</summary>
+        public string GetDisplayNameForPersistence()
+        {
+            if (nameInputText != null && !string.IsNullOrWhiteSpace(nameInputText.text))
+                return nameInputText.text.Trim();
+
+            if (characters != null && characters.Length > 0 && currentIndex >= 0 && currentIndex < characters.Length)
+            {
+                string n = characters[currentIndex].characterName;
+                return string.IsNullOrWhiteSpace(n) ? "Player" : n.Trim();
+            }
+
+            return "Player";
+        }
+
+        /// <summary>Starting perk for the highlighted character (persisted on Select).</summary>
+        public AvatarStartingPerk GetCurrentStartingPerk()
+        {
+            if (characters == null || characters.Length == 0 || currentIndex < 0 || currentIndex >= characters.Length)
+                return AvatarStartingPerk.None;
+            return characters[currentIndex].startingPerk;
+        }
 
         private InputAction _moveAction;
         private Vector2 _lastMoveInput;
@@ -137,7 +166,13 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             }
 
             RefreshAvatarPreview();
-        
+
+            if (nameInputText != null && string.IsNullOrWhiteSpace(nameInputText.text))
+            {
+                string def = current.characterName;
+                nameInputText.text = string.IsNullOrEmpty(def) ? "" : def;
+            }
+
             // Reflects the "retro-reboot" identity mentioned in your doc
             Debug.Log("Loading Player Type: " + current.characterName);
         }
