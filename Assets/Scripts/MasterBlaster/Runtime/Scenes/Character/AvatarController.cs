@@ -31,7 +31,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         public Image displayImage;
         public Text descriptionText;
 
-        [Tooltip("Legacy UI Text for the player's display name (saved on Select). When empty after a character change, defaults to that character's name.")]
+        [Tooltip("Legacy UI Text for the player's display name (saved on Select). Shows the current carousel character's default name and updates when the selection changes; non-empty text is used by GetDisplayNameForPersistence on Select.")]
         public Text nameInputText;
 
         [Tooltip("Optional legacy UI Image for the current character's starting perk icon (perkIconSprite).")]
@@ -185,7 +185,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
             RefreshAvatarPreview();
 
-            if (nameInputText != null && string.IsNullOrWhiteSpace(nameInputText.text))
+            if (nameInputText != null)
             {
                 string def = current.characterName;
                 nameInputText.text = string.IsNullOrEmpty(def) ? "" : def;

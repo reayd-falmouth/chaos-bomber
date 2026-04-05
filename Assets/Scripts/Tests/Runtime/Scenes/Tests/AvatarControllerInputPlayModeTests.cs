@@ -20,10 +20,15 @@ namespace HybridGame.MasterBlaster.Tests
             var descText = descTextGo.AddComponent<Text>();
             descTextGo.transform.SetParent(go.transform, false);
 
+            var nameTextGo = new GameObject("NameText");
+            var nameText = nameTextGo.AddComponent<Text>();
+            nameTextGo.transform.SetParent(go.transform, false);
+
             go.SetActive(false);
             var controller = go.AddComponent<AvatarController>();
             controller.displayImage = image;
             controller.descriptionText = descText;
+            controller.nameInputText = nameText;
 
             controller.characters = new[]
             {
@@ -58,6 +63,7 @@ namespace HybridGame.MasterBlaster.Tests
             var keyboard = InputSystem.AddDevice<Keyboard>();
 
             Assert.That(controller.displayImage.sprite, Is.EqualTo(controller.characters[0].characterSprite));
+            Assert.That(nameText.text, Is.EqualTo("A"));
 
             Press(keyboard.rightArrowKey);
             yield return null;
@@ -65,12 +71,14 @@ namespace HybridGame.MasterBlaster.Tests
             yield return null;
 
             Assert.That(controller.displayImage.sprite, Is.EqualTo(controller.characters[1].characterSprite));
+            Assert.That(nameText.text, Is.EqualTo("B"));
 
             Press(keyboard.leftArrowKey);
             yield return null;
             Release(keyboard.leftArrowKey);
             yield return null;
             Assert.That(controller.displayImage.sprite, Is.EqualTo(controller.characters[0].characterSprite));
+            Assert.That(nameText.text, Is.EqualTo("A"));
 
             Press(keyboard.spaceKey);
             yield return null;
