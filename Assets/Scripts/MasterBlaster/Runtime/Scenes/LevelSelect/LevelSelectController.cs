@@ -71,23 +71,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
             _submitAction?.Enable();
             RefreshArenaPreview();
 
-            var portraitBar = GetComponentInChildren<LevelSelectAvatarPortraits>(true);
-            if (portraitBar != null)
-            {
-                portraitBar.Apply();
-                // #region agent log
-                try
-                {
-                    int mask = PlayerPrefs.GetInt(AvatarPortraitUnlockPersistence.MaskPrefsKey, 0);
-                    var sb = new StringBuilder(180);
-                    sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H3\",\"location\":\"LevelSelectController.OnEnable\",");
-                    sb.Append("\"message\":\"portrait_apply\",\"data\":{\"unlockMask\":").Append(mask).Append("},\"timestamp\":");
-                    sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
-                    File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
-                }
-                catch { }
-                // #endregion
-            }
+            RefreshAvatarPortraitBar();
         }
 
         private void OnDisable()
@@ -165,9 +149,31 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
             }
 
             RefreshArenaPreview();
-        
+            RefreshAvatarPortraitBar();
+
             // Reflects the "retro-reboot" identity mentioned in your doc
             Debug.Log("Loading Player Type: " + current.levelName);
+        }
+
+        void RefreshAvatarPortraitBar()
+        {
+            var portraitBar = GetComponentInChildren<LevelSelectAvatarPortraits>(true);
+            if (portraitBar == null)
+                return;
+            portraitBar.Apply(currentIndex);
+            // #region agent log
+            try
+            {
+                int mask = PlayerPrefs.GetInt(AvatarPortraitUnlockPersistence.MaskKeyForArena(currentIndex), 0);
+                var sb = new StringBuilder(220);
+                sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H3\",\"location\":\"LevelSelectController.RefreshAvatarPortraitBar\",");
+                sb.Append("\"message\":\"portrait_apply\",\"data\":{\"arenaIndex\":").Append(currentIndex).Append(",\"unlockMask\":");
+                sb.Append(mask).Append("},\"timestamp\":");
+                sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
+                File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
+            }
+            catch { }
+            // #endregion
         }
 
         void RefreshArenaPreview()

@@ -5,7 +5,8 @@ using UnityEngine.UI;
 namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
 {
     /// <summary>
-    /// Tints level-select avatar portrait <see cref="Image"/>s from <see cref="AvatarPortraitUnlockPersistence"/>.
+    /// Tints level-select avatar portrait <see cref="Image"/>s from per-arena unlock data in
+    /// <see cref="AvatarPortraitUnlockPersistence"/> (must match the highlighted level row index).
     /// </summary>
     public class LevelSelectAvatarPortraits : MonoBehaviour
     {
@@ -22,12 +23,8 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
         [SerializeField]
         Color lockedColor = Color.black;
 
-        void OnEnable()
-        {
-            Apply();
-        }
-
-        public void Apply()
+        /// <param name="arenaLevelIndex">0-based index of the level row in level select (same as <see cref="LevelSelectionPrefs.SelectedArenaIndexKey"/> when starting a match).</param>
+        public void Apply(int arenaLevelIndex)
         {
             if (portraits == null)
                 return;
@@ -42,7 +39,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
                 if (avatarIds != null && i < avatarIds.Length)
                     id = avatarIds[i];
 
-                img.color = AvatarPortraitUnlockPersistence.IsUnlocked(id) ? unlockedColor : lockedColor;
+                img.color = AvatarPortraitUnlockPersistence.IsUnlockedForArena(arenaLevelIndex, id)
+                    ? unlockedColor
+                    : lockedColor;
             }
         }
     }

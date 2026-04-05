@@ -892,19 +892,21 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                             PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey, 0),
                             0,
                             AvatarPortraitUnlockPersistence.MaxSupportedAvatarId);
+                        int arenaForUnlock = PlayerPrefs.GetInt(LevelSelectionPrefs.SelectedArenaIndexKey, 0);
                         // #region agent log
                         try
                         {
-                            var sb = new StringBuilder(220);
+                            var sb = new StringBuilder(260);
                             sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H4\",\"location\":\"GameManager.CheckWinState\",");
                             sb.Append("\"message\":\"portrait_unlock\",\"data\":{\"winnerId\":").Append(winnerId).Append(",\"avatarId\":");
-                            sb.Append(avatarIdForUnlock).Append(",\"snapshotId\":").Append(_matchAvatarIdForPlayer1).Append("},\"timestamp\":");
+                            sb.Append(avatarIdForUnlock).Append(",\"arenaIndex\":").Append(arenaForUnlock).Append(",\"snapshotId\":");
+                            sb.Append(_matchAvatarIdForPlayer1).Append("},\"timestamp\":");
                             sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
                             File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
                         }
                         catch { }
                         // #endregion
-                        AvatarPortraitUnlockPersistence.Unlock(avatarIdForUnlock);
+                        AvatarPortraitUnlockPersistence.UnlockForArena(arenaForUnlock, avatarIdForUnlock);
                     }
 
                     // Defensive: re-check from SessionManager in case we were given stale wins

@@ -12,6 +12,8 @@ namespace fps.Tests.EditMode
         public void TearDown()
         {
             PlayerPrefs.DeleteKey(Key);
+            for (int i = 0; i < 16; i++)
+                PlayerPrefs.DeleteKey(AvatarPortraitUnlockPersistence.MaskKeyForArena(i));
             PlayerPrefs.Save();
         }
 
@@ -56,6 +58,25 @@ namespace fps.Tests.EditMode
             AvatarPortraitUnlockPersistence.Unlock(-1);
             AvatarPortraitUnlockPersistence.Unlock(AvatarPortraitUnlockPersistence.MaxSupportedAvatarId + 1);
             Assert.IsFalse(PlayerPrefs.HasKey(Key));
+        }
+
+        [Test]
+        public void UnlockForArena_OnlyAffectsThatArena()
+        {
+            AvatarPortraitUnlockPersistence.UnlockForArena(0, 2);
+            AvatarPortraitUnlockPersistence.UnlockForArena(3, 1);
+            Assert.IsTrue(AvatarPortraitUnlockPersistence.IsUnlockedForArena(0, 2));
+            Assert.IsFalse(AvatarPortraitUnlockPersistence.IsUnlockedForArena(1, 2));
+            Assert.IsTrue(AvatarPortraitUnlockPersistence.IsUnlockedForArena(3, 1));
+            Assert.IsFalse(AvatarPortraitUnlockPersistence.IsUnlockedForArena(3, 2));
+        }
+
+        [Test]
+        public void MaskKeyForArena_NegativeIndex_ClampsToZero()
+        {
+            string kNeg = AvatarPortraitUnlockPersistence.MaskKeyForArena(-5);
+            string kZero = AvatarPortraitUnlockPersistence.MaskKeyForArena(0);
+            Assert.AreEqual(kZero, kNeg);
         }
     }
 }
