@@ -1,4 +1,5 @@
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -204,6 +205,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
             PlayerPrefs.SetInt("FastIgnition", fastIgnition ? 1 : 0);
             PlayerPrefs.SetInt("StartMoney", startMoney ? 1 : 0);
             PlayerPrefs.SetInt("NormalLevel", normalLevel ? 1 : 0);
+            PlayerPrefs.SetInt(
+                LevelSelectionPrefs.SelectedArenaIndexKey,
+                LevelSelectionPrefs.ArenaIndexFromNormalLevel(normalLevel));
             PlayerPrefs.SetInt("Gambling", gambling ? 1 : 0);
             PlayerPrefs.SetInt("QuickRestart", quickRestart ? 1 : 0);
 

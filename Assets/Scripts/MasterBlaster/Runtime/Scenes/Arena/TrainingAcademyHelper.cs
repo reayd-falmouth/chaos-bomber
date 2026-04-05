@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Scripts.Levels;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Bomb;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player.AI;
@@ -70,6 +71,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
             // Write settings to PlayerPrefs before MapSelector (-500) and GameManager read them
             PlayerPrefs.SetInt("NormalLevel", useNormalLevel ? 1 : 0);
+            PlayerPrefs.SetInt(
+                LevelSelectionPrefs.SelectedArenaIndexKey,
+                LevelSelectionPrefs.ArenaIndexFromNormalLevel(useNormalLevel));
             PlayerPrefs.SetInt("Players", playerCount);
             PlayerPrefs.Save();
         }
