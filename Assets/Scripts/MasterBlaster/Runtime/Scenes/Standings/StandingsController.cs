@@ -76,6 +76,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
                 {
                     var trophyGO = new GameObject("Trophy", typeof(Image));
                     trophyGO.transform.SetParent(trophyContainer, false);
+                    trophyGO.layer = trophyContainer.gameObject.layer;
 
                     var rt = trophyGO.GetComponent<RectTransform>();
                     rt.sizeDelta = new Vector2(32, 32);
