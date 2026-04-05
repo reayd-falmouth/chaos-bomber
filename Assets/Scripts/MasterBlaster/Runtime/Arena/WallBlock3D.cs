@@ -153,7 +153,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
             if (IsSpawned && !IsServer)
             {
-                RequestDestroyFromExplosionServerRpc();
+                RequestDestroyFromExplosionRpc();
                 return;
             }
 
@@ -183,8 +183,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             }
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        private void RequestDestroyFromExplosionServerRpc()
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void RequestDestroyFromExplosionRpc()
         {
             DestroyBlockAuthoritative();
         }
@@ -200,7 +200,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
             if (IsSpawned && !IsServer)
             {
-                ApplyProjectileDamageServerRpc(amount);
+                ApplyProjectileDamageRpc(amount);
                 return;
             }
 
@@ -232,8 +232,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             }
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        private void ApplyProjectileDamageServerRpc(float amount)
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+        private void ApplyProjectileDamageRpc(float amount)
         {
             ApplyProjectileDamageAuthoritative(amount);
         }

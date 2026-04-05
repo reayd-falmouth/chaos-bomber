@@ -172,9 +172,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
-        protected void OnDestroy()
+        protected override void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            base.OnDestroy();
         }
 
         private void Start() { }

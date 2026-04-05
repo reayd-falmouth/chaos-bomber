@@ -2,6 +2,8 @@ using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections.Generic;
 using System.Collections;
+using System.IO;
+using System;
 using HybridGame.MasterBlaster.Scripts.Core;
 using Unity.FPS.Gameplay; // To check for Player components
 
@@ -107,14 +109,24 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
                 var initial = ResolveInitialBombermanCamera();
                 if (initial != null)
                 {
+                    // #region agent log
+                    AgentCamDbg("A", "StartupResyncNextFrame", "before_ApplySpecific",
+                        "{\"mode\":\"" + mode + "\",\"initial\":\"" + SafeName(initial) + "\",\"policy\":\"" + initialBombermanCameraPolicy + "\"}");
+                    // #endregion
                     ApplySpecificCameraSelection(initial);
                     if (startOnNextRegisteredCamera)
                         SelectNextCamera();
+                    // #region agent log
+                    AgentCamDbg("A", "StartupResyncNextFrame", "after_ApplySpecific", "{\"priorities\":" + BuildPriorityJson() + "}");
+                    // #endregion
                     yield break;
                 }
             }
 
             UpdateAllCameras(mode);
+            // #region agent log
+            AgentCamDbg("B", "StartupResyncNextFrame", "fallback_UpdateAll", "{\"mode\":\"" + mode + "\",\"priorities\":" + BuildPriorityJson() + "}");
+            // #endregion
         }
 
         private void HandleModeChanged(GameModeManager.GameMode mode)
@@ -122,6 +134,10 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
             m_LastMode = mode;
             DiscoverSceneCameras();
             UpdateAllCameras(mode);
+            // #region agent log
+            AgentCamDbg("C", "HandleModeChanged", "after_UpdateAll",
+                "{\"mode\":\"" + mode + "\",\"priorities\":" + BuildPriorityJson() + "}");
+            // #endregion
         }
 
         private void DiscoverSceneCameras()
@@ -205,5 +221,39 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
 
             return false;
         }
+
+        // #region agent log
+        private static string SafeName(UnityEngine.Object o) => o != null ? o.name.Replace("\"", "'") : "null";
+
+        private string BuildPriorityJson()
+        {
+            var parts = new List<string>(registeredCameras.Count);
+            for (int i = 0; i < registeredCameras.Count; i++)
+            {
+                var c = registeredCameras[i];
+                if (c == null) continue;
+                int p = c.Priority;
+                bool marked = c.GetComponent<ArenaPerspectiveCinemachineCamera>() != null;
+                parts.Add("{\"n\":\"" + SafeName(c.gameObject) + "\",\"p\":" + p + ",\"player\":" + (IsPlayerCamera(c) ? "true" : "false") + ",\"apMark\":" + (marked ? "true" : "false") + "}");
+            }
+
+            return "[" + string.Join(",", parts) + "]";
+        }
+
+        private static void AgentCamDbg(string hypothesisId, string location, string message, string dataJson)
+        {
+            try
+            {
+                var path = Path.Combine(Application.dataPath, "..", "debug-6efe26.log");
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var line = "{\"sessionId\":\"6efe26\",\"hypothesisId\":\"" + hypothesisId + "\",\"location\":\"" + location + "\",\"message\":\"" + message + "\",\"data\":" + dataJson + ",\"timestamp\":" + ts + "}\n";
+                File.AppendAllText(path, line);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+        // #endregion
     }
 }

@@ -150,27 +150,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private object _activeFlipParam;
         private float _activeFlipOriginalValue;
 
-        // #region agent log
-        private static void AgentLog(string runId, string hypothesisId, string location, string message, object data = null)
-        {
-            try
-            {
-                var payload = new
-                {
-                    sessionId = "d5eb48",
-                    runId,
-                    hypothesisId,
-                    location,
-                    message,
-                    data,
-                    timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                };
-                System.IO.File.AppendAllText("debug-d5eb48.log", UnityEngine.JsonUtility.ToJson(payload) + "\n");
-            }
-            catch { }
-        }
-        // #endregion
-
         /// <summary>
         /// Current flow state (used by ContinueOnAnyInput to decide if any key should advance).
         /// </summary>
@@ -938,7 +917,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (_singleSceneMode)
             {
                 var transitionKind = GetTransitionKindForDestination(next);
-                AgentLog("pre-fix-1", "A", "SceneFlowManager.cs:GoTo", "GoTo(single-scene)", new { previous = previous.ToString(), next = next.ToString(), transitionKind = transitionKind.ToString() });
                 if (transitionKind != TransitionKind.None)
                 {
                     if (_transitionRoutine != null)
@@ -1058,12 +1036,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private IEnumerator TransitionFadeThroughBlack(FlowState previous, FlowState next, float durationSeconds)
         {
             _isTransitioning = true;
-            AgentLog("pre-fix-1", "B", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Transition start", new { previous = previous.ToString(), next = next.ToString(), durationSeconds });
             var overlay = GetOrCreateTransitionOverlay();
             if (overlay == null)
             {
                 // Fallback if we couldn't create the overlay
-                AgentLog("pre-fix-1", "B", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Overlay null; activating next root directly", new { next = next.ToString() });
                 ApplyFlowState(next);
                 _isTransitioning = false;
                 yield break;
@@ -1083,7 +1059,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             overlay.alpha = 1f;
 
             // Switch state root while fully black
-            AgentLog("pre-fix-1", "C", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Switching root while black", new { next = next.ToString() });
             ApplyFlowState(next);
             ForceLayoutForStateRoot(next);
             yield return null; // allow one frame for UI settle before showing
@@ -1098,19 +1073,10 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
             _transitionRoutine = null;
             _isTransitioning = false;
-            AgentLog("pre-fix-1", "C", "SceneFlowManager.cs:TransitionFadeThroughBlack", "Transition end", new { next = next.ToString() });
         }
 
         private IEnumerator TransitionPrologueToTitleCrtFlipPulse(FlowState previous, FlowState next, float durationSeconds)
         {
-            AgentLog(
-                "pre-fix-1",
-                "F",
-                "SceneFlowManager.cs:TransitionPrologueToTitleCrtFlipPulse",
-                "Transition start",
-                new { previous = previous.ToString(), next = next.ToString(), durationSeconds }
-            );
-
             CancelActiveTransitionEffects();
 
             _isTransitioning = true;
@@ -1119,13 +1085,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             var flipParam = GetOrTryCreateScanlinesFlipParam(out float originalValue);
             if (flipParam == null)
             {
-                AgentLog(
-                    "pre-fix-1",
-                    "F",
-                    "SceneFlowManager.cs:TransitionPrologueToTitleCrtFlipPulse",
-                    "No flip parameter found; switching root directly",
-                    new { next = next.ToString() }
-                );
                 ApplyFlowState(next);
                 ForceLayoutForStateRoot(next);
                 _transitionRoutine = null;
@@ -1189,13 +1148,6 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
             _transitionRoutine = null;
             _isTransitioning = false;
-            AgentLog(
-                "pre-fix-1",
-                "F",
-                "SceneFlowManager.cs:TransitionPrologueToTitleCrtFlipPulse",
-                "Transition end",
-                new { next = next.ToString() }
-            );
         }
 
         private void CancelActiveTransitionEffects()
