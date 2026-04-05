@@ -75,9 +75,9 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _GlowIntensity: 10
-    - _GlowSoftness: 1.83
-    - _GlowWidth: 36.1
+    - _GlowIntensity: 4.76
+    - _GlowSoftness: 4.88
+    - _GlowWidth: 50
     - _GlowWidthPixels: 15.44
     - _Metallic: 0
     - _Mode: 0

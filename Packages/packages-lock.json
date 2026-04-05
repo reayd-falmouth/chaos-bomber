@@ -10,6 +10,13 @@
       },
       "hash": "3dd5ac77428608ce09015c88054bc103bb80eba9"
     },
+    "com.rmc.rmc-readme": {
+      "version": "1.2.2",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://registry.npmjs.org"
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
