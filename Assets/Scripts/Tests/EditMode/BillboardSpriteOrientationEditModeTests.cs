@@ -59,23 +59,34 @@ namespace fps.Tests.EditMode
         }
 
         [Test]
-        public void TryComputeFpsBillboardRotation_ForwardPointsAtCamera()
+        public void TryComputeFpsCylindricalBillboardRotation_FixedPitchNeg90_ZeroRoll_CameraEast()
         {
-            var sprite = new Vector3(0f, 0f, 0f);
-            var cam = new Vector3(3f, 2f, 0f);
-            Assert.IsTrue(BillboardSpriteOrientationMath.TryComputeFpsBillboardRotation(
-                sprite, cam, Vector3.up, out var q));
-            var forward = q * Vector3.forward;
-            var want = (cam - sprite).normalized;
-            Assert.Less(Vector3.Angle(forward, want), 0.05f);
+            var sprite = Vector3.zero;
+            var cam = new Vector3(5f, 10f, 0f);
+            Assert.IsTrue(BillboardSpriteOrientationMath.TryComputeFpsCylindricalBillboardRotation(
+                sprite, cam, out var q));
+            var e = q.eulerAngles;
+            Assert.Less(
+                Mathf.Abs(BillboardSpriteOrientationMath.NormalizeEulerX(e.x) - -90f),
+                1f,
+                "X pitch should be -90° (vertical sprite plane).");
+            Assert.Less(Mathf.Abs(Mathf.DeltaAngle(e.z, 0f)), 1f, "Roll Z should be 0.");
+            Assert.Less(Mathf.Abs(Mathf.DeltaAngle(e.y, 90f)), 1f, "Yaw should face +X (camera east).");
         }
 
         [Test]
-        public void TryComputeFpsBillboardRotation_TooClose_ReturnsFalse()
+        public void TryComputeFpsCylindricalBillboardRotation_TooCloseHorizontal_ReturnsFalse()
         {
             var p = Vector3.zero;
-            Assert.IsFalse(BillboardSpriteOrientationMath.TryComputeFpsBillboardRotation(
-                p, p + new Vector3(0.01f, 0f, 0f), Vector3.up, out _));
+            Assert.IsFalse(BillboardSpriteOrientationMath.TryComputeFpsCylindricalBillboardRotation(
+                p, p + new Vector3(0.01f, 0f, 0f), out _));
+        }
+
+        [Test]
+        public void TryComputeFpsCylindricalBillboardRotation_CameraDirectlyAbove_ReturnsFalse()
+        {
+            Assert.IsFalse(BillboardSpriteOrientationMath.TryComputeFpsCylindricalBillboardRotation(
+                Vector3.zero, new Vector3(0f, 5f, 0f), out _));
         }
     }
 }

@@ -43,22 +43,23 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         }
 
         /// <summary>
-        /// FPS: align transform +Z (SpriteRenderer front) toward the camera. Full pitch + yaw from 3D direction.
+        /// FPS: fixed pitch X = -90°, Z = 0°; Y yaw from horizontal direction to the camera (cylindrical billboard).
         /// </summary>
-        public static bool TryComputeFpsBillboardRotation(
+        public static bool TryComputeFpsCylindricalBillboardRotation(
             Vector3 spriteWorldPosition,
             Vector3 cameraWorldPosition,
-            Vector3 worldUp,
             out Quaternion rotation)
         {
-            Vector3 dirToCamera = cameraWorldPosition - spriteWorldPosition;
-            if (dirToCamera.sqrMagnitude <= MinDirSqrMag)
+            Vector3 dir = cameraWorldPosition - spriteWorldPosition;
+            dir.y = 0f;
+            if (dir.sqrMagnitude <= MinDirSqrMag)
             {
                 rotation = Quaternion.identity;
                 return false;
             }
 
-            rotation = Quaternion.LookRotation(dirToCamera.normalized, worldUp);
+            float yaw = Quaternion.LookRotation(dir.normalized, Vector3.up).eulerAngles.y;
+            rotation = Quaternion.Euler(-90f, yaw, 0f);
             return true;
         }
     }
