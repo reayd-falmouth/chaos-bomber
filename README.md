@@ -114,4 +114,4 @@ Also **com.unity.modules.*** entries (engine modules) — see `manifest.json` fo
 
 ---
 
-*Coursework-oriented copy also lives in the Unity asset **Project Architecture Readme** (`Assets/Editor/ProjectReadme/ProjectArchitectureReadme.asset`), which can auto-open once per machine when the project loads (or via **Tools → MasterBlaster → Open Architecture Readme**).*
+*Coursework-oriented copy also lives in the Unity asset **Project Readme** ([`Assets/Documentation/ProjectArchitectureReadme.asset`](Assets/Documentation/ProjectArchitectureReadme.asset)). It auto-selects once per machine when the editor finishes loading (Inspector shows the custom UI). Reopen anytime via **Tools → MasterBlaster → Open Project Readme (Documentation)**. To test first-open again, use **Tools → MasterBlaster → Reset “show readme on first open” flag**.*

@@ -5,48 +5,89 @@ namespace HybridGame.MasterBlaster.EditorDocs
 {
     public static class ProjectArchitectureReadmeMenu
     {
-        private const string ReadmeAssetPath = "Assets/Editor/ProjectReadme/ProjectArchitectureReadme.asset";
+        /// <summary>Course readme asset (Inspector shows custom coursework + architecture UI).</summary>
+        public const string ReadmeAssetPath = "Assets/Documentation/ProjectArchitectureReadme.asset";
+
         private const string AutoOpenPrefKey = "HybridGame.MasterBlaster.ProjectArchitectureReadme.AutoOpenedOnce";
 
-        [MenuItem("Tools/MasterBlaster/Open Architecture Readme", priority = 10)]
+        [MenuItem("Tools/MasterBlaster/Open Project Readme (Documentation)", priority = 10)]
         public static void OpenReadme()
         {
             var readme = AssetDatabase.LoadAssetAtPath<ProjectArchitectureReadme>(ReadmeAssetPath);
             if (readme == null)
             {
                 EditorUtility.DisplayDialog(
-                    "Architecture Readme not found",
+                    "Project Readme not found",
                     "Missing Readme asset at:\n\n" + ReadmeAssetPath + "\n\n" +
-                    "If it was deleted, recreate one via:\n" +
-                    "Assets > Create > HybridGame > MasterBlaster > Project Architecture Readme",
+                    "Recreate via Assets > Create > HybridGame > MasterBlaster > Project Architecture Readme",
                     "OK"
                 );
                 return;
             }
 
-            Selection.activeObject = readme;
-            EditorGUIUtility.PingObject(readme);
+            SelectReadmeAndFocusInspector(readme);
         }
 
-        [MenuItem("Tools/MasterBlaster/Open Architecture Readme", validate = true)]
+        [MenuItem("Tools/MasterBlaster/Open Project Readme (Documentation)", validate = true)]
         private static bool ValidateOpenReadme() => !EditorApplication.isCompiling;
+
+        [MenuItem("Tools/MasterBlaster/Reset “show readme on first open” flag", priority = 11)]
+        public static void ResetAutoOpenPref()
+        {
+            EditorPrefs.DeleteKey(AutoOpenPrefKey);
+            Debug.Log("[ProjectReadme] Cleared EditorPrefs key — the readme will auto-select on the next domain reload / editor start.");
+        }
 
         [InitializeOnLoadMethod]
         private static void AutoOpenOnceOnProjectLoad()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
-            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
-                return;
 
             if (EditorPrefs.GetBool(AutoOpenPrefKey, false))
                 return;
 
-            EditorPrefs.SetBool(AutoOpenPrefKey, true);
+            // Always defer: on load, isUpdating is often true; the old code returned early and never scheduled work.
+            EditorApplication.delayCall += TryAutoOpenWhenEditorReady;
+        }
 
-            // Defer selection until the editor is fully ready.
-            EditorApplication.delayCall += OpenReadme;
+        private static void TryAutoOpenWhenEditorReady()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                EditorApplication.delayCall += TryAutoOpenWhenEditorReady;
+                return;
+            }
+
+            var readme = AssetDatabase.LoadAssetAtPath<ProjectArchitectureReadme>(ReadmeAssetPath);
+            if (readme == null)
+                return;
+
+            SelectReadmeAndFocusInspector(readme);
+            EditorPrefs.SetBool(AutoOpenPrefKey, true);
+        }
+
+        private static void SelectReadmeAndFocusInspector(ProjectArchitectureReadme readme)
+        {
+            Selection.activeObject = readme;
+            EditorGUIUtility.PingObject(readme);
+
+            // Inspector sometimes does not get focus on the first frame; defer focus.
+            EditorApplication.delayCall += FocusInspectorWindow;
+
+            // Second deferred frame helps when Project window steals focus during import.
+            EditorApplication.delayCall += () => EditorApplication.delayCall += FocusInspectorWindow;
+        }
+
+        private static void FocusInspectorWindow()
+        {
+            // Unity 6 may split types across modules; resolve from the same assembly as Editor.
+            var inspectorType = typeof(Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+            if (inspectorType != null)
+                EditorWindow.GetWindow(inspectorType);
         }
     }
 }
-
