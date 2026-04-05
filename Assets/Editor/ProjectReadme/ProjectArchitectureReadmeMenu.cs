@@ -43,7 +43,8 @@ namespace HybridGame.MasterBlaster.EditorDocs
 
         private static void FocusInspectorWindow()
         {
-            var inspectorType = typeof(Editor).Assembly.GetType("UnityEditor.InspectorWindow");
+            // Qualify UnityEditor.Editor — unqualified `Editor` can resolve to the HybridGame.MasterBlaster.Editor namespace.
+            var inspectorType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.InspectorWindow");
             if (inspectorType != null)
                 EditorWindow.GetWindow(inspectorType);
         }
