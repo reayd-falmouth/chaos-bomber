@@ -65,6 +65,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("Shown while steering a 3D remote bomb (assign a child like MasterBlaster Player RemoteBomb).")]
         public AnimatedSpriteRenderer spriteRemoteBomb;
 
+        [Header("Walk sprite timing (grid)")]
+        [Tooltip("Movement speed at which walkAnimBaseFrameInterval matches the prefab-tuned per-frame delay (typically same as default bombermanSpeed).")]
+        [SerializeField] private float walkAnimReferenceSpeed = 5f;
+        [Tooltip("Seconds between walk sprite frames when movement speed equals walkAnimReferenceSpeed (e.g. 1/6 for 6 ticks per second).")]
+        [SerializeField] private float walkAnimBaseFrameInterval = 1f / 6f;
+
         // ── private state ──────────────────────────────────────────────────────────
         private CharacterController m_CC;
         private PlayerCharacterController m_FPSController;
@@ -281,6 +287,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 // Pure-FPS scene: lock cursor and let PlayerInputHandler.CanProcessInput() work.
                 OnModeChanged(GameModeManager.GameMode.FPS);
             }
+
+            RefreshDirectionalWalkAnimationIntervals();
         }
 
         private void OnEnable()
@@ -393,6 +401,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 EnableActions();
                 // Show idle sprite for current facing direction
                 SetSpriteDirection(m_LastDir, moving: false);
+                RefreshDirectionalWalkAnimationIntervals();
             }
             else
             {
@@ -869,7 +878,25 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         // ── Item upgrades ─────────────────────────────────────────────────────────
 
-        public void IncreaseSpeed() { bombermanSpeed += 1f; }
+        public void IncreaseSpeed()
+        {
+            bombermanSpeed += 1f;
+            RefreshDirectionalWalkAnimationIntervals();
+        }
+
+        /// <summary>Walk frame interval scaled for current <see cref="bombermanSpeed"/>; used by remote bomb billboards.</summary>
+        public float GetScaledWalkAnimationFrameInterval() =>
+            AnimatedSpriteRenderer.ComputeScaledFrameInterval(
+                walkAnimBaseFrameInterval, walkAnimReferenceSpeed, bombermanSpeed);
+
+        private void RefreshDirectionalWalkAnimationIntervals()
+        {
+            float t = GetScaledWalkAnimationFrameInterval();
+            spriteUp?.SetFrameInterval(t);
+            spriteDown?.SetFrameInterval(t);
+            spriteLeft?.SetFrameInterval(t);
+            spriteRight?.SetFrameInterval(t);
+        }
 
         /// <summary>Mystery / Random pickup: same flow as 2D <see cref="PlayerController.ApplyRandom"/>.</summary>
         public void ApplyRandom()

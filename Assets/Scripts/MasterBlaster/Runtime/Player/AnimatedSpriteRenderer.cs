@@ -9,6 +9,20 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     [RequireComponent(typeof(SpriteRenderer))]
     public class AnimatedSpriteRenderer : MonoBehaviour
     {
+        public const float MinMovementSpeedEpsilon = 0.01f;
+
+        /// <summary>
+        /// Per-frame delay at <paramref name="referenceSpeed"/> matching a tuned <paramref name="baseInterval"/>;
+        /// scales inversely with <paramref name="currentSpeed"/> so walk cycles keep similar coverage per grid cell.
+        /// </summary>
+        public static float ComputeScaledFrameInterval(float baseInterval, float referenceSpeed, float currentSpeed)
+        {
+            float b = Mathf.Max(baseInterval, 1e-4f);
+            float refS = Mathf.Max(referenceSpeed, MinMovementSpeedEpsilon);
+            float v = Mathf.Max(currentSpeed, MinMovementSpeedEpsilon);
+            return b * (refS / v);
+        }
+
         private SpriteRenderer spriteRenderer;
 
         public Sprite idleSprite;
@@ -77,6 +91,18 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             if (animating) return;
             animating = true;
+            InvokeRepeating(nameof(NextFrame), animationTime, animationTime);
+        }
+
+        /// <summary>
+        /// Updates <see cref="animationTime"/> and, if already animating, restarts <see cref="InvokeRepeating"/>
+        /// (may slightly reset phase).
+        /// </summary>
+        public void SetFrameInterval(float seconds)
+        {
+            animationTime = Mathf.Max(seconds, 1e-4f);
+            if (!animating) return;
+            CancelInvoke(nameof(NextFrame));
             InvokeRepeating(nameof(NextFrame), animationTime, animationTime);
         }
 

@@ -45,6 +45,7 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
             m_BaseY = transform.position.y;
 
             ResolveBillboardSprites();
+            SyncDirectionalWalkAnimationIntervals();
             m_MoveFeedbacks = GetComponentInChildren<MMF_Player>(true);
 
             if (m_Owner != null)
@@ -128,8 +129,21 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
                 ApplyDirectionalVisual(Vector2Int.zero, moving: false);
         }
 
+        private void SyncDirectionalWalkAnimationIntervals()
+        {
+            if (m_Owner == null) return;
+            float t = m_Owner.GetScaledWalkAnimationFrameInterval();
+            m_SpriteUp?.SetFrameInterval(t);
+            m_SpriteDown?.SetFrameInterval(t);
+            m_SpriteLeft?.SetFrameInterval(t);
+            m_SpriteRight?.SetFrameInterval(t);
+        }
+
         private void ApplyDirectionalVisual(Vector2Int dir, bool moving)
         {
+            if (moving)
+                SyncDirectionalWalkAnimationIntervals();
+
             void DeactivateAllDirectional()
             {
                 if (m_SpriteIdle)    m_SpriteIdle.gameObject.SetActive(false);
