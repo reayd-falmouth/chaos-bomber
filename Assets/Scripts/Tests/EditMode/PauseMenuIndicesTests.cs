@@ -7,6 +7,7 @@ namespace fps.Tests.EditMode
     /// <see cref="GlobalPauseMenuController"/> uses <c>options.Length == 6</c> for the full pause/settings menu:
     /// Master, SFX, Music, Scanlines, Show controls, Exit (value rows are indices 0–3).
     /// </summary>
+    [Category("PauseMenu")]
     public class PauseMenuIndicesTests
     {
         [Test]

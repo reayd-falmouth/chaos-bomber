@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
@@ -9,6 +10,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using UiCam = global::UnityEngine.Camera;
 
 namespace HybridGame.MasterBlaster.Scripts.Core
 {
@@ -87,6 +89,21 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             return (showControlsIndex, exitIndex, valueRowCount);
         }
 
+        /// <summary>
+        /// For tests and tooling: when <paramref name="menuPanelRoot"/> has a <see cref="Canvas"/> in
+        /// <see cref="RenderMode.ScreenSpaceCamera"/>, assigns <see cref="Canvas.worldCamera"/>.
+        /// </summary>
+        public static bool TryBindMenuPanelWorldCamera(GameObject menuPanelRoot, UiCam worldCamera)
+        {
+            if (menuPanelRoot == null || worldCamera == null)
+                return false;
+            var canvas = menuPanelRoot.GetComponent<Canvas>();
+            if (canvas == null || canvas.renderMode != global::UnityEngine.RenderMode.ScreenSpaceCamera)
+                return false;
+            canvas.worldCamera = worldCamera;
+            return true;
+        }
+
         // ── Core Unity Methods ────────────────────────────────────────────────
         void Awake()
         {
@@ -107,10 +124,15 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 if (menuPanel) menuPanel.SetActive(false);
                 if (controlsPanel) controlsPanel.SetActive(false);
             }
+
+            BindPauseMenuWorldCamera();
         }
 
         void OnEnable()
         {
+            GameModeManager.OnModeChanged += HandleGameModeChanged;
+            BindPauseMenuWorldCamera();
+
             // If this is acting as a Settings Menu, automatically open it when the GameObject is enabled
             if (!isPauseMenu)
             {
@@ -118,9 +140,24 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             }
         }
 
+        void OnDisable()
+        {
+            GameModeManager.OnModeChanged -= HandleGameModeChanged;
+        }
+
         void Start()
         {
             ApplyVolumes();
+            BindPauseMenuWorldCamera();
+        }
+
+        void HandleGameModeChanged(GameModeManager.GameMode _) => BindPauseMenuWorldCamera();
+
+        void BindPauseMenuWorldCamera()
+        {
+            var main = UiCam.main;
+            if (main != null && main.isActiveAndEnabled)
+                TryBindMenuPanelWorldCamera(menuPanel, main);
         }
 
         void Update()
@@ -145,6 +182,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             LoadPrefs();
             ApplyVolumes();
             ApplyScanlines();
+
+            BindPauseMenuWorldCamera();
 
             _active = true;
             if (menuPanel) menuPanel.SetActive(true);
