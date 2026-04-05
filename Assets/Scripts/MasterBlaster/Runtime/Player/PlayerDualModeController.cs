@@ -71,7 +71,14 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("Seconds between walk sprite frames when movement speed equals walkAnimReferenceSpeed (e.g. 1/6 for 6 ticks per second).")]
         [SerializeField] private float walkAnimBaseFrameInterval = 1f / 6f;
 
+        [Header("Billbox (hybrid sprite root)")]
+        [Tooltip("Local Y of the Billbox transform in Bomberman / ArenaPerspective (top-down or grid camera).")]
+        [SerializeField] private float billboxLocalYGrid = 2f;
+        [Tooltip("Local Y of the Billbox transform in FPS mode (eye-level billboard).")]
+        [SerializeField] private float billboxLocalYFps = 1f;
+
         // ── private state ──────────────────────────────────────────────────────────
+        private Transform m_BillboxRoot;
         private CharacterController m_CC;
         private PlayerCharacterController m_FPSController;
         private PlayerWeaponsManager m_WeaponsManager;
@@ -128,6 +135,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             m_Health = GetComponent<Health>();
             m_Superman = GetComponentInChildren<Superman>(true);
             CacheSupermanPushNetwork();
+            CacheBillboxRoot();
 
             // Hybrid: 2D tile BombController shares IPlayerInput.GetBombDown() and may have no tilemaps — disable so 3D bombs work.
             var bomb2d = GetComponent<BombController>();
@@ -139,6 +147,27 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
             SyncPlayerIdFromPlayerController();
             BindInputActions();
+        }
+
+        private void CacheBillboxRoot()
+        {
+            m_BillboxRoot = null;
+            foreach (var t in GetComponentsInChildren<Transform>(true))
+            {
+                if (t != null && t.name == "Billbox")
+                {
+                    m_BillboxRoot = t;
+                    return;
+                }
+            }
+        }
+
+        private void ApplyBillboxLocalYForPresentationMode(bool gridPresentationMode)
+        {
+            if (m_BillboxRoot == null) return;
+            var lp = m_BillboxRoot.localPosition;
+            lp.y = gridPresentationMode ? billboxLocalYGrid : billboxLocalYFps;
+            m_BillboxRoot.localPosition = lp;
         }
 
         private void CacheSupermanPushNetwork()
@@ -371,6 +400,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             
             bool useGrid = GameModeManager.IsGridPresentationMode(newMode);
             bool isFps = newMode == GameModeManager.GameMode.FPS;
+
+            ApplyBillboxLocalYForPresentationMode(useGrid);
 
             // FPS controller + weapons: enabled in FPS mode only
             if (m_FPSController != null)
