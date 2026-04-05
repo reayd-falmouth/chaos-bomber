@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
