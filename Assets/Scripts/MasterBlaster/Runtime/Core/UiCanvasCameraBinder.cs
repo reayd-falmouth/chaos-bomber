@@ -6,12 +6,11 @@ using UiCam = global::UnityEngine.Camera;
 namespace HybridGame.MasterBlaster.Scripts.Core
 {
     /// <summary>
-    /// Keeps all <see cref="Canvas"/> instances under this root in <see cref="RenderMode.ScreenSpaceCamera"/>
-    /// wired to the sibling camera on <c>UI Canvas</c>, so flow UI still renders after
-    /// <see cref="HybridGame.MasterBlaster.Scripts.Camera.HybridCameraManager"/> disables the gameplay main camera.
+    /// Keeps Screen Space - Camera canvases under <c>UI Canvas</c> using the active <see cref="UiCam.main"/> gameplay
+    /// camera (Base), not the URP Overlay camera on the same GameObject. Updates when <see cref="GameModeManager"/> mode changes.
     /// </summary>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(Canvas), typeof(UiCam))]
+    [RequireComponent(typeof(Canvas))]
     public sealed class UiCanvasCameraBinder : MonoBehaviour
     {
         private void Awake() => Bind();
@@ -29,10 +28,22 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         private void HandleGameModeChanged(GameModeManager.GameMode _) => Bind();
 
-        /// <summary>For tests and editor tooling: assign <paramref name="uiCamera"/> to every Screen Space Camera canvas under <paramref name="root"/>.</summary>
-        public static void ApplyUiCameraToSubtree(Canvas root, UiCam uiCamera)
+        /// <summary>Rebinds every <see cref="UiCanvasCameraBinder"/> in loaded scenes (e.g. after <see cref="HybridGame.MasterBlaster.Scripts.Camera.HybridCameraManager"/> updates <c>MainCamera</c>).</summary>
+        public static void RebindAll()
         {
-            if (root == null || uiCamera == null)
+            var binders = FindObjectsByType<UiCanvasCameraBinder>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < binders.Length; i++)
+            {
+                var b = binders[i];
+                if (b != null)
+                    b.Bind();
+            }
+        }
+
+        /// <summary>For tests: assign <paramref name="worldCamera"/> to every Screen Space Camera canvas under <paramref name="root"/>.</summary>
+        public static void ApplyUiCameraToSubtree(Canvas root, UiCam worldCamera)
+        {
+            if (root == null || worldCamera == null)
                 return;
 
             var canvases = root.GetComponentsInChildren<Canvas>(true);
@@ -40,17 +51,17 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             {
                 var c = canvases[i];
                 if (c != null && c.renderMode == RenderMode.ScreenSpaceCamera)
-                    c.worldCamera = uiCamera;
+                    c.worldCamera = worldCamera;
             }
         }
 
         public void Bind()
         {
-            var uiCam = GetComponent<UiCam>();
             var root = GetComponent<Canvas>();
-            if (uiCam == null || root == null)
+            var main = UiCam.main;
+            if (root == null || main == null)
                 return;
-            ApplyUiCameraToSubtree(root, uiCam);
+            ApplyUiCameraToSubtree(root, main);
         }
     }
 }

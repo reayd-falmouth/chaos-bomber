@@ -1,6 +1,8 @@
 using System.Collections;
 using HybridGame.MasterBlaster.Scripts;
+using HybridGame.MasterBlaster.Scripts.Core;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace HybridGame.MasterBlaster.Scripts.Camera
 {
@@ -101,6 +103,46 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
                 arenaPerspectiveCamera.gameObject.SetActive(useDedicatedPerspective);
                 arenaPerspectiveCamera.depth = useDedicatedPerspective ? 0 : -1;
             }
+
+            SyncUiOverlayOnBaseCamera(fpsCamera, isFPS);
+            SyncUiOverlayOnBaseCamera(arenaPerspectiveCamera, useDedicatedPerspective);
+
+            UiCanvasCameraBinder.RebindAll();
+        }
+
+        /// <summary>
+        /// Scene-authored bomberman base already lists the UI Canvas overlay in URP; FPS (and optional arena base) do not.
+        /// Add/remove the overlay on those bases so stacked UI renders and <see cref="UiCanvasCameraBinder"/> + <see cref="UnityEngine.Camera.main"/> stay consistent.
+        /// </summary>
+        static void SyncUiOverlayOnBaseCamera(UnityEngine.Camera baseCamera, bool stackShouldIncludeOverlay)
+        {
+            if (baseCamera == null)
+                return;
+
+            var overlay = ResolveUiCanvasOverlayCamera();
+            if (overlay == null)
+                return;
+
+            var data = baseCamera.GetUniversalAdditionalCameraData();
+            if (data == null)
+                return;
+
+            var stack = data.cameraStack;
+            if (stackShouldIncludeOverlay)
+            {
+                if (!stack.Contains(overlay))
+                    stack.Add(overlay);
+            }
+            else
+            {
+                stack.Remove(overlay);
+            }
+        }
+
+        static UnityEngine.Camera ResolveUiCanvasOverlayCamera()
+        {
+            var go = GameObject.Find("UI Canvas");
+            return go != null ? go.GetComponent<UnityEngine.Camera>() : null;
         }
 
         IEnumerator ResetFpsProjectionNextFrame()
