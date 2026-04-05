@@ -25,6 +25,10 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
                 return thisCameraHasArenaPerspectiveMarker ? activePriority : inactivePriority;
             }
 
+            // Bomberman: only classic arena vcams (not perspective-marked) may tie for high priority.
+            if (mode == GameModeManager.GameMode.Bomberman && thisCameraHasArenaPerspectiveMarker)
+                return inactivePriority;
+
             return !isPlayerCamera ? activePriority : inactivePriority;
         }
     }

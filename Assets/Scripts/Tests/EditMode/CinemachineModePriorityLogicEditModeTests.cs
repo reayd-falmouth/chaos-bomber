@@ -53,6 +53,15 @@ namespace fps.Tests.EditMode
                     thisCameraHasArenaPerspectiveMarker: false,
                     Active,
                     Inactive));
+            Assert.AreEqual(
+                Inactive,
+                CinemachineModePriorityLogic.Compute(
+                    GameModeManager.GameMode.Bomberman,
+                    isPlayerCamera: false,
+                    registryHasAnyArenaPerspectiveMarker: true,
+                    thisCameraHasArenaPerspectiveMarker: true,
+                    Active,
+                    Inactive));
         }
 
         [Test]
