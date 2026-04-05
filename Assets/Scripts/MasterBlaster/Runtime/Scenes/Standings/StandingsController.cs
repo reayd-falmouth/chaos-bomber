@@ -1,3 +1,4 @@
+using System.Collections;
 using System.IO;
 using System.Text;
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
@@ -11,7 +12,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
     public class StandingsController : MonoBehaviour
     {
         [Header("UI References")]
-        public Transform standingsPanel; // Vertical Layout
+        public Transform standingsPanel; // Parent uses GridLayoutGroup (see scene prefab)
         public GameObject playerRowPrefab; // Prefab with Avatar + TrophyContainer
         public Sprite trophySprite;
 
@@ -25,25 +26,31 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
         [Header("Feedbacks")]
         [SerializeField] private MMF_Player openingFeedbacks;
 
+        private Coroutine _populateRoutine;
+
         private void OnEnable()
         {
             openingFeedbacks?.PlayFeedbacks();
 
-            // 2. Clear out any old rows
-            foreach (Transform child in standingsPanel)
-            {
-                Destroy(child.gameObject);
-            }
+            if (_populateRoutine != null)
+                StopCoroutine(_populateRoutine);
+            _populateRoutine = StartCoroutine(PopulateStandingsRoutine());
+        }
 
-            // 3. Build rows for players
+        private IEnumerator PopulateStandingsRoutine()
+        {
+            foreach (Transform child in standingsPanel)
+                Destroy(child.gameObject);
+
+            // Destroy() is deferred; wait one frame so the grid is empty before we add new rows.
+            yield return null;
+
             int playerCount = PlayerPrefs.GetInt("Players", 2);
 
             for (int i = 1; i <= playerCount; i++)
             {
-                // Spawn row
                 GameObject row = Instantiate(playerRowPrefab, standingsPanel);
 
-                // Avatar
                 var avatarTr = row.transform.Find("Avatar");
                 var avatar = avatarTr != null ? avatarTr.GetComponent<Image>() : null;
                 int spriteIdx = AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(i);
@@ -51,7 +58,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
                 try
                 {
                     var sb = new StringBuilder(200);
-                    sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H1\",\"location\":\"StandingsController.OnEnable\",");
+                    sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H1\",\"location\":\"StandingsController.PopulateStandingsRoutine\",");
                     sb.Append("\"message\":\"row_avatar_sprite\",\"data\":{\"playerId\":").Append(i).Append(",\"spriteIdx\":").Append(spriteIdx);
                     sb.Append(",\"spritesLen\":").Append(avatarSprites != null ? avatarSprites.Length : -1).Append("},\"timestamp\":");
                     sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
@@ -62,36 +69,52 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
                 if (avatar != null && avatarSprites != null && spriteIdx >= 0 && spriteIdx < avatarSprites.Length)
                     avatar.sprite = avatarSprites[spriteIdx];
 
-                // Trophies
                 var trophyContainer = row.transform.Find("TrophyContainer");
-                foreach (Transform child in trophyContainer)
-                {
-                    Destroy(child.gameObject);
-                }
-
                 int wins = SessionManager.Instance != null ? SessionManager.Instance.GetWins(i) : 0;
                 UnityEngine.Debug.Log($"Player {i} wins = {wins}");
 
-                for (int t = 0; t < wins; t++)
+                if (trophyContainer != null)
                 {
-                    var trophyGO = new GameObject("Trophy", typeof(Image));
-                    trophyGO.transform.SetParent(trophyContainer, false);
-                    trophyGO.layer = trophyContainer.gameObject.layer;
+                    var hlg = trophyContainer.GetComponent<HorizontalLayoutGroup>();
+                    if (hlg != null)
+                        hlg.enabled = false;
 
-                    var rt = trophyGO.GetComponent<RectTransform>();
-                    rt.sizeDelta = new Vector2(32, 32);
+                    for (int c = trophyContainer.childCount - 1; c >= 0; c--)
+                        DestroyImmediate(trophyContainer.GetChild(c).gameObject);
 
-                    trophyGO.GetComponent<Image>().sprite = trophySprite;
+                    for (int t = 0; t < wins; t++)
+                    {
+                        var trophyGO = new GameObject("Trophy", typeof(Image));
+                        trophyGO.transform.SetParent(trophyContainer, false);
+                        trophyGO.layer = trophyContainer.gameObject.layer;
+
+                        var rt = trophyGO.GetComponent<RectTransform>();
+                        rt.sizeDelta = new Vector2(32, 32);
+
+                        trophyGO.GetComponent<Image>().sprite = trophySprite;
+                    }
+
+                    if (hlg != null)
+                        hlg.enabled = true;
+
+                    var trophyRt = trophyContainer.GetComponent<RectTransform>();
+                    if (trophyRt != null)
+                        LayoutRebuilder.ForceRebuildLayoutImmediate(trophyRt);
                 }
             }
 
-            // 4. Auto-advance after delay
+            _populateRoutine = null;
             Invoke(nameof(Advance), autoAdvanceDelay);
         }
 
         private void OnDisable()
         {
             CancelInvoke(nameof(Advance));
+            if (_populateRoutine != null)
+            {
+                StopCoroutine(_populateRoutine);
+                _populateRoutine = null;
+            }
         }
 
         private void Advance()
