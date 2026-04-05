@@ -17,6 +17,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         [Tooltip("Granted once when starting a new game session (hybrid 3D player / player 1).")]
         public AvatarStartingPerk startingPerk;
+
+        [Tooltip("Optional icon for avatar select UI; should match startingPerk for players.")]
+        public Sprite perkIconSprite;
     }
 
     public class AvatarController : MonoBehaviour
@@ -27,6 +30,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         [Tooltip("Legacy UI Text for the player's display name (saved on Select). When empty after a character change, defaults to that character's name.")]
         public Text nameInputText;
+
+        [Tooltip("Optional legacy UI Image for the current character's starting perk icon (perkIconSprite).")]
+        public Image perkIconImage;
 
         [Tooltip("Drag the RetroTerminalStreamer component here.")]
         public RetroTerminalStreamer retroStreamer;
@@ -172,6 +178,8 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
                 string def = current.characterName;
                 nameInputText.text = string.IsNullOrEmpty(def) ? "" : def;
             }
+
+            AvatarPerkIconUi.ApplyPerkIcon(perkIconImage, current.perkIconSprite);
 
             // Reflects the "retro-reboot" identity mentioned in your doc
             Debug.Log("Loading Player Type: " + current.characterName);
