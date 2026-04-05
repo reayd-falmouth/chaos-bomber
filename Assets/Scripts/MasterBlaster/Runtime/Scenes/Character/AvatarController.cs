@@ -20,6 +20,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         [Tooltip("Optional icon for avatar select UI; should match startingPerk for players.")]
         public Sprite perkIconSprite;
+
+        [Tooltip("Which 30-sprite block in PlayerSpriteSheet matches this avatar (0-based). Use -1 to fall back to the character's list index (only valid when sheet order matches the list).")]
+        public int spriteSheetBlockIndex = -1;
     }
 
     public class AvatarController : MonoBehaviour
@@ -73,6 +76,15 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             if (characters == null || characters.Length == 0 || currentIndex < 0 || currentIndex >= characters.Length)
                 return AvatarStartingPerk.None;
             return characters[currentIndex].startingPerk;
+        }
+
+        /// <summary>Sprite sheet block index for the highlighted character (persisted on Select for player 1).</summary>
+        public int GetCurrentSpriteSheetBlockIndex()
+        {
+            if (characters == null || characters.Length == 0 || currentIndex < 0 || currentIndex >= characters.Length)
+                return 0;
+            int b = characters[currentIndex].spriteSheetBlockIndex;
+            return b >= 0 ? b : currentIndex;
         }
 
         private InputAction _moveAction;

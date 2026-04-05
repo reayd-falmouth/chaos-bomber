@@ -216,6 +216,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             m_IsDead = false;
             stop = false;
 
+            var spriteApplier = GetComponent<PlayerSpriteSetApplier>();
+            if (spriteApplier != null)
+                spriteApplier.ApplyForPlayerId(playerId);
+
             if (m_Health != null)
                 m_Health.ResetToFullHealth();
 

@@ -240,6 +240,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             PlayerPrefs.SetInt(AvatarSelectController.SelectedAvatarPrefsKey, ac.CurrentIndex);
             PlayerPrefs.SetString(AvatarSelectionPrefs.PlayerDisplayNameKey, ac.GetDisplayNameForPersistence());
             PlayerPrefs.SetInt(AvatarSelectionPrefs.AvatarStartingPerkKey, (int)ac.GetCurrentStartingPerk());
+            PlayerPrefs.SetInt(AvatarSelectionPrefs.Player1SpriteBlockKey, ac.GetCurrentSpriteSheetBlockIndex());
             PlayerPrefs.Save();
         }
 

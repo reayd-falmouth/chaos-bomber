@@ -1,4 +1,7 @@
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Player.Abilities;
+using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
+using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using System;
 using System.IO;
 using System.Text;
@@ -62,7 +65,21 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            int baseIndex = (playerId - 1) * stride;
+            int baseIndex;
+            if (playerId == 1 && !TrainingMode.IsActive)
+            {
+                int block = PlayerPrefs.GetInt(
+                    AvatarSelectionPrefs.Player1SpriteBlockKey,
+                    PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey, 0));
+                int maxBlock = stride > 0 ? Mathf.Max(0, sprites.Length / stride - 1) : 0;
+                block = Mathf.Clamp(block, 0, maxBlock);
+                baseIndex = block * stride;
+            }
+            else
+            {
+                baseIndex = (playerId - 1) * stride;
+            }
+
             // #region agent log
             Log("run1", "H2", "PlayerSpriteSetApplier.cs:ApplyForPlayerId:computed",
                 $"{{\"go\":\"{Escape(name)}\",\"playerId\":{playerId},\"stride\":{stride},\"baseIndex\":{baseIndex},\"spritesLen\":{sprites.Length},\"sheet\":\"{Escape(spriteSheet.name)}\"}}");

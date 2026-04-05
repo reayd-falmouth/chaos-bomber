@@ -43,6 +43,7 @@ namespace HybridGame.MasterBlaster.Tests
             PlayerPrefs.DeleteKey(AvatarSelectController.SelectedAvatarPrefsKey);
             PlayerPrefs.DeleteKey(AvatarSelectionPrefs.PlayerDisplayNameKey);
             PlayerPrefs.DeleteKey(AvatarSelectionPrefs.AvatarStartingPerkKey);
+            PlayerPrefs.DeleteKey(AvatarSelectionPrefs.Player1SpriteBlockKey);
 
             var root = new GameObject("AvatarRoot");
             var image = root.AddComponent<Image>();
@@ -94,6 +95,7 @@ namespace HybridGame.MasterBlaster.Tests
             Assert.That(PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey), Is.EqualTo(1));
             Assert.That(PlayerPrefs.GetString(AvatarSelectionPrefs.PlayerDisplayNameKey), Is.EqualTo("B"));
             Assert.That(PlayerPrefs.GetInt(AvatarSelectionPrefs.AvatarStartingPerkKey), Is.EqualTo(0));
+            Assert.That(PlayerPrefs.GetInt(AvatarSelectionPrefs.Player1SpriteBlockKey), Is.EqualTo(1));
         }
 
         [UnityTest]
@@ -152,6 +154,7 @@ namespace HybridGame.MasterBlaster.Tests
             PlayerPrefs.DeleteKey(AvatarSelectController.SelectedAvatarPrefsKey);
             PlayerPrefs.DeleteKey(AvatarSelectionPrefs.PlayerDisplayNameKey);
             PlayerPrefs.DeleteKey(AvatarSelectionPrefs.AvatarStartingPerkKey);
+            PlayerPrefs.DeleteKey(AvatarSelectionPrefs.Player1SpriteBlockKey);
 
             var root = new GameObject("AvatarRoot");
             var image = root.AddComponent<Image>();
@@ -170,7 +173,8 @@ namespace HybridGame.MasterBlaster.Tests
                     characterName = "A",
                     characterDescription = "a",
                     characterSprite = CreateSprite(Color.red),
-                    startingPerk = AvatarStartingPerk.Ghost
+                    startingPerk = AvatarStartingPerk.Ghost,
+                    spriteSheetBlockIndex = 3
                 }
             };
             var inputAsset = CreateMenuInputAsset();
@@ -204,6 +208,7 @@ namespace HybridGame.MasterBlaster.Tests
             Assert.That(PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey), Is.EqualTo(0));
             Assert.That(PlayerPrefs.GetString(AvatarSelectionPrefs.PlayerDisplayNameKey), Is.EqualTo("A"));
             Assert.That(PlayerPrefs.GetInt(AvatarSelectionPrefs.AvatarStartingPerkKey), Is.EqualTo((int)AvatarStartingPerk.Ghost));
+            Assert.That(PlayerPrefs.GetInt(AvatarSelectionPrefs.Player1SpriteBlockKey), Is.EqualTo(3));
         }
 
         [UnityTest]
@@ -212,6 +217,7 @@ namespace HybridGame.MasterBlaster.Tests
             PlayerPrefs.DeleteKey(AvatarSelectController.SelectedAvatarPrefsKey);
             PlayerPrefs.DeleteKey(AvatarSelectionPrefs.PlayerDisplayNameKey);
             PlayerPrefs.DeleteKey(AvatarSelectionPrefs.AvatarStartingPerkKey);
+            PlayerPrefs.DeleteKey(AvatarSelectionPrefs.Player1SpriteBlockKey);
 
             var parent = new GameObject("MenuOnlyParent");
             var inputAsset = CreateMenuInputAsset();
@@ -241,6 +247,7 @@ namespace HybridGame.MasterBlaster.Tests
             Assert.That(PlayerPrefs.HasKey(AvatarSelectController.SelectedAvatarPrefsKey), Is.False);
             Assert.That(PlayerPrefs.HasKey(AvatarSelectionPrefs.PlayerDisplayNameKey), Is.False);
             Assert.That(PlayerPrefs.HasKey(AvatarSelectionPrefs.AvatarStartingPerkKey), Is.False);
+            Assert.That(PlayerPrefs.HasKey(AvatarSelectionPrefs.Player1SpriteBlockKey), Is.False);
         }
 
         static Sprite CreateSprite(Color c)

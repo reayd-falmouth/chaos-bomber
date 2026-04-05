@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
 using UnityEngine;
 
@@ -10,6 +11,9 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
 
         /// <summary>Serialized <see cref="AvatarStartingPerk"/> int; default 0 = <see cref="AvatarStartingPerk.None"/>.</summary>
         public const string AvatarStartingPerkKey = "AvatarStartingPerk";
+
+        /// <summary>0-based 30-sprite block in <see cref="PlayerSpriteSheet"/> for hybrid player 1 (menu → arena).</summary>
+        public const string Player1SpriteBlockKey = "Player1SpriteBlock";
 
         /// <summary>
         /// Resolves the name shown when the match ends (player 1 uses saved display name when set).

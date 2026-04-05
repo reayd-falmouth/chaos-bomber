@@ -8,6 +8,12 @@ namespace fps.Tests.EditMode
     public class AvatarSelectionPrefsEditModeTests
     {
         [Test]
+        public void Player1SpriteBlockKey_IsStable()
+        {
+            Assert.AreEqual("Player1SpriteBlock", AvatarSelectionPrefs.Player1SpriteBlockKey);
+        }
+
+        [Test]
         public void TryMapPerkToItemType_None_ReturnsFalse()
         {
             Assert.IsFalse(
