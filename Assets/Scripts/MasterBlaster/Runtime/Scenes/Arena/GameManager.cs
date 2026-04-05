@@ -12,6 +12,7 @@ using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player.AI;
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Levels;
+using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
 using Unity.FPS.Game;
 using Unity.Netcode;
 using UnityEngine;
@@ -114,6 +115,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
         /// <summary>Prevents AddWin and transition from running more than once per round (e.g. when multiple deaths trigger CheckWinState).</summary>
         private bool _roundEndProcessed;
+
+        /// <summary>Avatar id from prefs when the arena loaded (player 1); used when recording portrait unlocks.</summary>
+        private int _matchAvatarIdForPlayer1;
 
         // ── Online multiplayer ───────────────────────────────────────────────────────
         /// <summary>Maps NGO client IDs → arena player IDs. Host-only.</summary>
@@ -385,6 +389,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
             if (!TrainingMode.IsActive)
                 ResetArenaForNewRound();
+
+            _matchAvatarIdForPlayer1 = TrainingMode.IsActive
+                ? -1
+                : PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey, 0);
 
             if (applyHybridDestructibleThinningAfterLoad)
                 StartCoroutine(ApplyHybridSceneDestructibleThinningDeferred());
@@ -875,6 +883,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                     string levelId = PlayerPrefs.GetString(LevelSelectionPrefs.SelectedLevelIdKey, string.Empty);
                     if (!string.IsNullOrEmpty(levelId))
                         LevelWinPersistence.MarkPlayerWonLevel(levelId, winnerId);
+
+                    if (!TrainingMode.IsActive && winnerId == 1)
+                        AvatarPortraitUnlockPersistence.Unlock(_matchAvatarIdForPlayer1);
 
                     // Defensive: re-check from SessionManager in case we were given stale wins
                     int winsAfterThisRound =
