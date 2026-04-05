@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,12 +11,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.GameOver
         public Text winnerText;
 
         [Tooltip(
-            "Optional. Avatar image to show the winner. Set per-player sprites in playerAvatars (index by session match winner ID - 1)."
+            "Optional. Avatar image for the match winner. Sprites come from playerAvatars using the same rules as standings/wheel (P1 = menu avatar)."
         )]
         public Image avatarImage;
 
         [Tooltip(
-            "Optional. One sprite per player (1-based player ID). Index 0 = player 1, etc. If empty or out of range, avatar is left unchanged."
+            "Optional. One portrait per character slot, same order as avatar select. Player 1 uses the menu-selected avatar; other winners use slot order (index = playerId - 1). If empty or out of range, avatar is left unchanged."
         )]
         public Sprite[] playerAvatars;
 
@@ -36,9 +37,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.GameOver
                 winnerPlayerId = 1;
             if (avatarImage != null && playerAvatars != null && playerAvatars.Length > 0)
             {
-                int index = Mathf.Clamp(winnerPlayerId - 1, 0, playerAvatars.Length - 1);
-                if (playerAvatars[index] != null)
-                    avatarImage.sprite = playerAvatars[index];
+                int spriteIdx = AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(winnerPlayerId);
+                spriteIdx = Mathf.Clamp(spriteIdx, 0, playerAvatars.Length - 1);
+                if (playerAvatars[spriteIdx] != null)
+                    avatarImage.sprite = playerAvatars[spriteIdx];
             }
         }
     }
