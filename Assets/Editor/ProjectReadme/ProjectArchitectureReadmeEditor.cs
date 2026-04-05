@@ -57,6 +57,9 @@ namespace HybridGame.MasterBlaster.EditorDocs
             DrawHeader(readme);
             EditorGUILayout.Space(10);
 
+            DrawCourseworkDeliverables(readme);
+            EditorGUILayout.Space(10);
+
             DrawQuickActions(readme);
             EditorGUILayout.Space(12);
 
@@ -81,6 +84,88 @@ namespace HybridGame.MasterBlaster.EditorDocs
 
             if (!string.IsNullOrWhiteSpace(readme.shortDescription))
                 EditorGUILayout.LabelField(readme.shortDescription, _bodyStyle);
+        }
+
+        private void DrawCourseworkDeliverables(ProjectArchitectureReadme readme)
+        {
+            EditorGUILayout.LabelField("Prototype / coursework deliverables", _h2Style);
+            EditorGUILayout.HelpBox(
+                "Keep this in sync with README.md at the repo root. Replace placeholder URLs after you upload your Windows build and source zip.",
+                MessageType.Info
+            );
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Download links", EditorStyles.boldLabel);
+
+                EditorGUI.BeginChangeCheck();
+                var wUrl = EditorGUILayout.TextField("Windows build URL", readme.windowsBuildUrl ?? "");
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(readme, "Edit Windows build URL");
+                    readme.windowsBuildUrl = wUrl;
+                    EditorUtility.SetDirty(readme);
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUI.enabled = UriLooksHttp(readme.windowsBuildUrl);
+                    if (GUILayout.Button("Open in browser", GUILayout.MaxWidth(120)))
+                        UnityEngine.Application.OpenURL(readme.windowsBuildUrl.Trim());
+                    GUI.enabled = true;
+                }
+
+                EditorGUI.BeginChangeCheck();
+                var sUrl = EditorGUILayout.TextField("Source backup URL", readme.sourceZipUrl ?? "");
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(readme, "Edit source backup URL");
+                    readme.sourceZipUrl = sUrl;
+                    EditorUtility.SetDirty(readme);
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUI.enabled = UriLooksHttp(readme.sourceZipUrl);
+                    if (GUILayout.Button("Open in browser", GUILayout.MaxWidth(120)))
+                        UnityEngine.Application.OpenURL(readme.sourceZipUrl.Trim());
+                    GUI.enabled = true;
+                }
+            }
+
+            EditorGUILayout.Space(6);
+            DrawEditableCourseworkText("Control scheme", readme, r => r.controlSchemeNotes, (r, v) => r.controlSchemeNotes = v, 100);
+            EditorGUILayout.Space(4);
+            DrawEditableCourseworkText("Known bugs / issues", readme, r => r.knownIssuesNotes, (r, v) => r.knownIssuesNotes = v, 88);
+            EditorGUILayout.Space(4);
+            DrawEditableCourseworkText("Third-party assets (summary)", readme, r => r.thirdPartySummary, (r, v) => r.thirdPartySummary = v, 120);
+        }
+
+        private void DrawEditableCourseworkText(
+            string label,
+            ProjectArchitectureReadme readme,
+            Func<ProjectArchitectureReadme, string> getValue,
+            Action<ProjectArchitectureReadme, string> setValue,
+            float minHeight)
+        {
+            EditorGUILayout.LabelField(label, _h2Style);
+            EditorGUI.BeginChangeCheck();
+            var text = EditorGUILayout.TextArea(getValue(readme) ?? "", _codeStyle, GUILayout.MinHeight(minHeight));
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(readme, label);
+                setValue(readme, text);
+                EditorUtility.SetDirty(readme);
+            }
+        }
+
+        private static bool UriLooksHttp(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return false;
+            var t = url.Trim();
+            return t.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                   || t.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
         }
 
         private void DrawQuickActions(ProjectArchitectureReadme readme)

@@ -14,7 +14,23 @@ namespace HybridGame.MasterBlaster.EditorDocs
         [TextArea(2, 8)]
         public string shortDescription =
             "Hybrid Bomberman + FPS built on Unity FPS Microgame, with a single-scene flow option.\n" +
-            "Use the buttons below to jump to key scripts/scenes, and copy the Mermaid diagram into docs/issues.";
+            "Coursework deliverables (links, controls, bugs, third-party) are in the section below; use the buttons to jump to scripts/scenes and copy the Mermaid diagram for technical docs.";
+
+        [Header("Prototype / coursework deliverables")]
+        [Tooltip("Windows (or similar) playable build — replace after upload.")]
+        public string windowsBuildUrl = "https://REPLACE-WITH-YOUR-WINDOWS-BUILD-LINK.example.com";
+
+        [Tooltip("Project source archive — replace after upload.")]
+        public string sourceZipUrl = "https://REPLACE-WITH-YOUR-SOURCE-BACKUP-LINK.example.com";
+
+        [TextArea(8, 24)]
+        public string controlSchemeNotes;
+
+        [TextArea(6, 20)]
+        public string knownIssuesNotes;
+
+        [TextArea(10, 30)]
+        public string thirdPartySummary;
 
         [Header("Architecture")]
         [TextArea(10, 60)]
