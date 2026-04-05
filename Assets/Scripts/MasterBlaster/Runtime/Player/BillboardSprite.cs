@@ -12,7 +12,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     ///             Use <see cref="bombermanEulerAngles"/> per prefab (bombs use X = 90°).
     ///             Scale uses <see cref="targetWorldSize"/> or one cell when 0.
     ///
-    /// FPS        — sprite billboards to face Camera.main; scale reset to (1,1,1).
+    /// ArenaPerspective — same scale as grid; if MainCamera is perspective, pitch follows the camera
+    ///                    (see <see cref="BillboardSpriteOrientationMath"/>).
+    ///
+    /// FPS        — sprite billboards toward Camera.main in 3D; scale reset to (1,1,1).
     /// </summary>
     public class BillboardSprite : MonoBehaviour
     {
@@ -22,13 +25,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("Applied every LateUpdate in Bomberman mode (e.g. bombs: X = 90).")]
         [SerializeField] private Vector3 bombermanEulerAngles = new Vector3(0f, 0f, 0f);
 
-        private SpriteRenderer m_SR;
         private Vector3 m_BombermanScale = Vector3.one;
-
-        private void Awake()
-        {
-            m_SR = GetComponent<SpriteRenderer>();
-        }
 
         private void Start()
         {
@@ -41,22 +38,36 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         private void LateUpdate()
         {
-            if (GameModeManager.Instance == null ||
-                GameModeManager.IsGridPresentationMode(GameModeManager.Instance.CurrentMode))
+            if (GameModeManager.Instance == null)
+                return;
+
+            var mode = GameModeManager.Instance.CurrentMode;
+            if (GameModeManager.IsGridPresentationMode(mode))
             {
-                transform.rotation   = Quaternion.Euler(bombermanEulerAngles);
                 transform.localScale = m_BombermanScale;
+                var cam = UnityEngine.Camera.main;
+                if (cam == null ||
+                    BillboardSpriteOrientationMath.UseFixedTopDownStyle(mode, cam.orthographic))
+                {
+                    transform.rotation = Quaternion.Euler(bombermanEulerAngles);
+                }
+                else
+                {
+                    float camPitchX = BillboardSpriteOrientationMath.NormalizeEulerX(cam.transform.eulerAngles.x);
+                    var euler = BillboardSpriteOrientationMath.ComputePerspectiveGridEuler(bombermanEulerAngles, camPitchX);
+                    transform.rotation = Quaternion.Euler(euler);
+                }
+
                 return;
             }
 
-            // FPS mode: billboard to face the active camera.
+            // FPS mode: billboard to face the active camera (full 3D direction).
             transform.localScale = Vector3.one;
-            var cam = UnityEngine.Camera.main;
-            if (cam == null) return;
-            Vector3 dirToCamera = cam.transform.position - transform.position;
-            dirToCamera.y = 0f;
+            var fpsCam = UnityEngine.Camera.main;
+            if (fpsCam == null) return;
+            Vector3 dirToCamera = fpsCam.transform.position - transform.position;
             if (dirToCamera.sqrMagnitude > 0.001f)
-                transform.rotation = Quaternion.LookRotation(-dirToCamera, Vector3.up);
+                transform.rotation = Quaternion.LookRotation(-dirToCamera.normalized, Vector3.up);
         }
 
         private void ComputeBombermanScale()
