@@ -1,5 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using MoreMountains.Feedbacks;
 using UnityEngine;
@@ -99,8 +102,22 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
                 if (avatarTf != null)
                 {
                     var avatar = avatarTf.GetComponent<Image>();
-                    if (avatar != null && avatarSprites != null && avatarSprites.Length > i)
-                        avatar.sprite = avatarSprites[i];
+                    int spriteIdx = AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(i + 1);
+                    // #region agent log
+                    try
+                    {
+                        var sb = new StringBuilder(200);
+                        sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H1\",\"location\":\"WheelController.OnEnable\",");
+                        sb.Append("\"message\":\"row_avatar_sprite\",\"data\":{\"row\":").Append(i).Append(",\"playerId\":").Append(i + 1);
+                        sb.Append(",\"spriteIdx\":").Append(spriteIdx).Append(",\"spritesLen\":");
+                        sb.Append(avatarSprites != null ? avatarSprites.Length : -1).Append("},\"timestamp\":");
+                        sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
+                        File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
+                    }
+                    catch { }
+                    // #endregion
+                    if (avatar != null && avatarSprites != null && spriteIdx >= 0 && spriteIdx < avatarSprites.Length)
+                        avatar.sprite = avatarSprites[spriteIdx];
                 }
             }
 

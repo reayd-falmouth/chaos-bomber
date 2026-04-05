@@ -1,5 +1,6 @@
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
+using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -11,6 +12,24 @@ namespace fps.Tests.EditMode
         public void Player1SpriteBlockKey_IsStable()
         {
             Assert.AreEqual("Player1SpriteBlock", AvatarSelectionPrefs.Player1SpriteBlockKey);
+        }
+
+        [Test]
+        public void GetPortraitSpriteIndexForPlayer_Player1_UsesSelectedAvatar()
+        {
+            const string key = AvatarSelectController.SelectedAvatarPrefsKey;
+            PlayerPrefs.SetInt(key, 3);
+            PlayerPrefs.Save();
+            Assert.AreEqual(3, AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(1));
+            PlayerPrefs.DeleteKey(key);
+            PlayerPrefs.Save();
+        }
+
+        [Test]
+        public void GetPortraitSpriteIndexForPlayer_OtherPlayers_UseSlotOrder()
+        {
+            Assert.AreEqual(1, AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(2));
+            Assert.AreEqual(2, AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(3));
         }
 
         [Test]

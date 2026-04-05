@@ -1,3 +1,6 @@
+using System.IO;
+using System.Text;
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using MoreMountains.Feedbacks;
 using UnityEngine;
@@ -41,11 +44,23 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
                 GameObject row = Instantiate(playerRowPrefab, standingsPanel);
 
                 // Avatar
-                var avatar = row.transform.Find("Avatar").GetComponent<Image>();
-                if (avatarSprites != null && avatarSprites.Length >= i)
+                var avatarTr = row.transform.Find("Avatar");
+                var avatar = avatarTr != null ? avatarTr.GetComponent<Image>() : null;
+                int spriteIdx = AvatarSelectionPrefs.GetPortraitSpriteIndexForPlayer(i);
+                // #region agent log
+                try
                 {
-                    avatar.sprite = avatarSprites[i - 1];
+                    var sb = new StringBuilder(200);
+                    sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H1\",\"location\":\"StandingsController.OnEnable\",");
+                    sb.Append("\"message\":\"row_avatar_sprite\",\"data\":{\"playerId\":").Append(i).Append(",\"spriteIdx\":").Append(spriteIdx);
+                    sb.Append(",\"spritesLen\":").Append(avatarSprites != null ? avatarSprites.Length : -1).Append("},\"timestamp\":");
+                    sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
+                    File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
                 }
+                catch { }
+                // #endregion
+                if (avatar != null && avatarSprites != null && spriteIdx >= 0 && spriteIdx < avatarSprites.Length)
+                    avatar.sprite = avatarSprites[spriteIdx];
 
                 // Trophies
                 var trophyContainer = row.transform.Find("TrophyContainer");

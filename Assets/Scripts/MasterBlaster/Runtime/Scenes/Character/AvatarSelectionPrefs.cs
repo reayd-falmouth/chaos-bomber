@@ -1,5 +1,7 @@
+using HybridGame.MasterBlaster.Scripts.Levels;
 using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
+using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
 using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
@@ -28,6 +30,24 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             }
 
             return fallbackObjectName;
+        }
+
+        /// <summary>
+        /// 0-based index into parallel UI sprite arrays (wheel, standings). Player 1 uses the menu avatar list index; other players use slot order.
+        /// </summary>
+        public static int GetPortraitSpriteIndexForPlayer(int playerId)
+        {
+            if (playerId <= 0)
+                return 0;
+            if (playerId == 1)
+            {
+                return Mathf.Clamp(
+                    PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey, 0),
+                    0,
+                    AvatarPortraitUnlockPersistence.MaxSupportedAvatarId);
+            }
+
+            return playerId - 1;
         }
 
         /// <summary>

@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
@@ -68,6 +70,24 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
             _moveAction?.Enable();
             _submitAction?.Enable();
             RefreshArenaPreview();
+
+            var portraitBar = GetComponentInChildren<LevelSelectAvatarPortraits>(true);
+            if (portraitBar != null)
+            {
+                portraitBar.Apply();
+                // #region agent log
+                try
+                {
+                    int mask = PlayerPrefs.GetInt(AvatarPortraitUnlockPersistence.MaskPrefsKey, 0);
+                    var sb = new StringBuilder(180);
+                    sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H3\",\"location\":\"LevelSelectController.OnEnable\",");
+                    sb.Append("\"message\":\"portrait_apply\",\"data\":{\"unlockMask\":").Append(mask).Append("},\"timestamp\":");
+                    sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
+                    File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
+                }
+                catch { }
+                // #endregion
+            }
         }
 
         private void OnDisable()

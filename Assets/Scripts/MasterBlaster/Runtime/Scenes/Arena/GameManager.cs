@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Bomb;
 using HybridGame.MasterBlaster.Scripts.Debug;
@@ -885,7 +887,25 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                         LevelWinPersistence.MarkPlayerWonLevel(levelId, winnerId);
 
                     if (!TrainingMode.IsActive && winnerId == 1)
-                        AvatarPortraitUnlockPersistence.Unlock(_matchAvatarIdForPlayer1);
+                    {
+                        int avatarIdForUnlock = Mathf.Clamp(
+                            PlayerPrefs.GetInt(AvatarSelectController.SelectedAvatarPrefsKey, 0),
+                            0,
+                            AvatarPortraitUnlockPersistence.MaxSupportedAvatarId);
+                        // #region agent log
+                        try
+                        {
+                            var sb = new StringBuilder(220);
+                            sb.Append("{\"sessionId\":\"6c4413\",\"runId\":\"avatar-ui\",\"hypothesisId\":\"H4\",\"location\":\"GameManager.CheckWinState\",");
+                            sb.Append("\"message\":\"portrait_unlock\",\"data\":{\"winnerId\":").Append(winnerId).Append(",\"avatarId\":");
+                            sb.Append(avatarIdForUnlock).Append(",\"snapshotId\":").Append(_matchAvatarIdForPlayer1).Append("},\"timestamp\":");
+                            sb.Append(System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).Append("}\n");
+                            File.AppendAllText(Path.Combine(Application.dataPath, "..", "debug-6c4413.log"), sb.ToString());
+                        }
+                        catch { }
+                        // #endregion
+                        AvatarPortraitUnlockPersistence.Unlock(avatarIdForUnlock);
+                    }
 
                     // Defensive: re-check from SessionManager in case we were given stale wins
                     int winsAfterThisRound =
