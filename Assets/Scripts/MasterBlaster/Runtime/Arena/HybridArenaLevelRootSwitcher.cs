@@ -46,7 +46,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         }
 
         /// <summary>Picks the requested index, or the first slot with both roots assigned if that slot is incomplete.</summary>
-        private int ResolveEffectiveIndex(int requested)
+        private int ResolveEffectiveIndexWithFallback(int requested)
         {
             int idx = ResolveClampIndex(requested);
             if (levelWallRoots == null || levelWallRoots.Length == 0)
@@ -76,7 +76,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                 return;
 
             int idx = PlayerPrefs.GetInt(LevelSelectionPrefs.SelectedArenaIndexKey, 0);
-            ApplyArenaIndex(idx, rebindBaselineForRuntime: false);
+            ApplyArenaIndex(idx, rebindBaselineForRuntime: false, allowIncompleteSlotFallback: true);
         }
 
         /// <summary>
@@ -90,10 +90,11 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                 return;
 
             int idx = PlayerPrefs.GetInt(LevelSelectionPrefs.SelectedArenaIndexKey, 0);
-            ApplyArenaIndex(idx, rebindBaselineForRuntime: Application.isPlaying);
+            // Menu / level-select prefs must match the chosen index exactly; do not remap 0 → first “other” complete slot.
+            ApplyArenaIndex(idx, rebindBaselineForRuntime: Application.isPlaying, allowIncompleteSlotFallback: false);
         }
 
-        private void ApplyArenaIndex(int index, bool rebindBaselineForRuntime)
+        private void ApplyArenaIndex(int index, bool rebindBaselineForRuntime, bool allowIncompleteSlotFallback = true)
         {
             if (_grid.destructibleWallsLayoutPrefab != null
                 && levelWallRoots != null
@@ -105,8 +106,18 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                     + "Clear the prefab when using per-slot wall roots authored in the scene.");
             }
 
-            int idx = ResolveEffectiveIndex(index);
+            int idx = allowIncompleteSlotFallback
+                ? ResolveEffectiveIndexWithFallback(index)
+                : ResolveClampIndex(index);
             var active = levelWallRoots[idx];
+            if (active.destructibleWallsRoot == null || active.indestructibleWallsRoot == null)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[HybridArenaLevelRootSwitcher] Slot " + idx +
+                    " has missing wall roots; using legacy fallback. Fix levelWallRoots in the Inspector.");
+                idx = ResolveEffectiveIndexWithFallback(index);
+                active = levelWallRoots[idx];
+            }
 
             for (int i = 0; i < levelWallRoots.Length; i++)
             {
@@ -132,7 +143,17 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                 "HybridArenaLevelRootSwitcher.ApplyArenaIndex",
                 "applied",
                 "{\"requested\":" + index + ",\"effective\":" + idx + ",\"pairCount\":" +
-                (levelWallRoots != null ? levelWallRoots.Length : 0) + "}");
+                (levelWallRoots != null ? levelWallRoots.Length : 0) +
+                ",\"allowIncompleteSlotFallback\":" + (allowIncompleteSlotFallback ? "true" : "false") +
+                ",\"slot0DNull\":" +
+                (levelWallRoots != null && levelWallRoots.Length > 0 && levelWallRoots[0].destructibleWallsRoot == null
+                    ? "true"
+                    : "false") +
+                ",\"slot0INull\":" +
+                (levelWallRoots != null && levelWallRoots.Length > 0 && levelWallRoots[0].indestructibleWallsRoot == null
+                    ? "true"
+                    : "false") +
+                "}");
             // #endregion
         }
     }
