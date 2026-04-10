@@ -17,11 +17,6 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         public AnimatedSpriteRenderer spriteHorizontal;
         public AnimatedSpriteRenderer spriteVertical;
 
-        [Header("Charge burst (center detonation only)")]
-        [Tooltip("Child with ParticleSystems (e.g. ChargeExplosion prefab). Played from PlayExplosionSound; hidden for propagated rays.")]
-        [SerializeField]
-        private Transform chargeBurstRoot;
-
         [Header("Audio")]
         [SerializeField] private MMF_Player explosionFeedbacks;
 
@@ -42,7 +37,6 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         {
             // Center burst is for the bomb origin only — hide it at ray positions
             if (spriteCenter != null) spriteCenter.gameObject.SetActive(false);
-            if (chargeBurstRoot != null) chargeBurstRoot.gameObject.SetActive(false);
 
             bool horizontal = Mathf.Abs(direction.x) > 0.1f;
             if (spriteHorizontal != null)
@@ -57,45 +51,14 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
             }
         }
 
-        /// <summary>Plays the explosion feedbacks (call only on the central explosion).</summary>
         public void PlayExplosionSound()
         {
-            PlayChargeBurst();
             explosionFeedbacks?.PlayFeedbacks(transform.position);
-        }
-
-        private void PlayChargeBurst()
-        {
-            if (chargeBurstRoot == null) return;
-            foreach (var ps in chargeBurstRoot.GetComponentsInChildren<ParticleSystem>(true))
-            {
-                if (ps == null) continue;
-                DisableParticlePhysicsInteractions(ps);
-                ps.Play(true);
-            }
-        }
-
-        /// <summary>
-        /// ChargeExplosion assets may enable Collision (world/planes) with a broad layer mask,
-        /// which can hit pickups and other gameplay colliders. VFX should not participate in physics.
-        /// </summary>
-        private static void DisableParticlePhysicsInteractions(ParticleSystem ps)
-        {
-            var collision = ps.collision;
-            collision.enabled = false;
-            var trigger = ps.trigger;
-            trigger.enabled = false;
         }
 
         public void DestroyAfter(float seconds)
         {
-            // Do not extend lifetime from charge-burst particle duration — that kept billboard sprites
-            // visible long after the explosion clip should end. VFX cuts with the explosion timing.
-            float destroyAfter = seconds;
-            if (explosionFeedbacks != null)
-                destroyAfter = Mathf.Max(destroyAfter, explosionFeedbacks.TotalDuration);
-
-            Destroy(gameObject, destroyAfter);
+            Destroy(gameObject, seconds);
         }
     }
 }
