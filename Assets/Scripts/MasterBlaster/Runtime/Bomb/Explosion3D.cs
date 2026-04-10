@@ -17,6 +17,11 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         public AnimatedSpriteRenderer spriteHorizontal;
         public AnimatedSpriteRenderer spriteVertical;
 
+        [Header("Charge burst (center detonation only)")]
+        [Tooltip("Child with ParticleSystems (e.g. ChargeExplosion prefab). Played from PlayExplosionSound; hidden for propagated rays.")]
+        [SerializeField]
+        private Transform chargeBurstRoot;
+
         [Header("Audio")]
         [SerializeField] private MMF_Player explosionFeedbacks;
 
@@ -37,6 +42,7 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         {
             // Center burst is for the bomb origin only — hide it at ray positions
             if (spriteCenter != null) spriteCenter.gameObject.SetActive(false);
+            if (chargeBurstRoot != null) chargeBurstRoot.gameObject.SetActive(false);
 
             bool horizontal = Mathf.Abs(direction.x) > 0.1f;
             if (spriteHorizontal != null)
@@ -51,14 +57,47 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
             }
         }
 
+        /// <summary>Plays the explosion feedbacks (call only on the central explosion).</summary>
         public void PlayExplosionSound()
         {
+            PlayChargeBurst();
             explosionFeedbacks?.PlayFeedbacks(transform.position);
+        }
+
+        private void PlayChargeBurst()
+        {
+            if (chargeBurstRoot == null) return;
+            foreach (var ps in chargeBurstRoot.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (ps != null)
+                    ps.Play(true);
+            }
         }
 
         public void DestroyAfter(float seconds)
         {
-            Destroy(gameObject, seconds);
+            float destroyAfter = seconds;
+            if (explosionFeedbacks != null)
+                destroyAfter = Mathf.Max(destroyAfter, explosionFeedbacks.TotalDuration);
+            if (chargeBurstRoot != null)
+            {
+                foreach (var ps in chargeBurstRoot.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    if (ps != null)
+                        destroyAfter = Mathf.Max(destroyAfter, EstimateMaxSimTime(ps));
+                }
+            }
+
+            Destroy(gameObject, destroyAfter);
+        }
+
+        private static float EstimateMaxSimTime(ParticleSystem ps)
+        {
+            var main = ps.main;
+            float dur = main.duration;
+            var life = main.startLifetime;
+            float maxLife = Mathf.Max(life.constantMin, life.constantMax);
+            return dur + maxLife;
         }
     }
 }
