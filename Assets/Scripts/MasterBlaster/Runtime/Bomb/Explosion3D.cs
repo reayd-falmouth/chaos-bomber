@@ -69,35 +69,33 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
             if (chargeBurstRoot == null) return;
             foreach (var ps in chargeBurstRoot.GetComponentsInChildren<ParticleSystem>(true))
             {
-                if (ps != null)
-                    ps.Play(true);
+                if (ps == null) continue;
+                DisableParticlePhysicsInteractions(ps);
+                ps.Play(true);
             }
+        }
+
+        /// <summary>
+        /// ChargeExplosion assets may enable Collision (world/planes) with a broad layer mask,
+        /// which can hit pickups and other gameplay colliders. VFX should not participate in physics.
+        /// </summary>
+        private static void DisableParticlePhysicsInteractions(ParticleSystem ps)
+        {
+            var collision = ps.collision;
+            collision.enabled = false;
+            var trigger = ps.trigger;
+            trigger.enabled = false;
         }
 
         public void DestroyAfter(float seconds)
         {
+            // Do not extend lifetime from charge-burst particle duration — that kept billboard sprites
+            // visible long after the explosion clip should end. VFX cuts with the explosion timing.
             float destroyAfter = seconds;
             if (explosionFeedbacks != null)
                 destroyAfter = Mathf.Max(destroyAfter, explosionFeedbacks.TotalDuration);
-            if (chargeBurstRoot != null)
-            {
-                foreach (var ps in chargeBurstRoot.GetComponentsInChildren<ParticleSystem>(true))
-                {
-                    if (ps != null)
-                        destroyAfter = Mathf.Max(destroyAfter, EstimateMaxSimTime(ps));
-                }
-            }
 
             Destroy(gameObject, destroyAfter);
-        }
-
-        private static float EstimateMaxSimTime(ParticleSystem ps)
-        {
-            var main = ps.main;
-            float dur = main.duration;
-            var life = main.startLifetime;
-            float maxLife = Mathf.Max(life.constantMin, life.constantMax);
-            return dur + maxLife;
         }
     }
 }
