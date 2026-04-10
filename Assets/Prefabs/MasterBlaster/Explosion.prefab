@@ -531,6 +531,9 @@ MonoBehaviour:
   spriteCenter: {fileID: 6502963458885894632}
   spriteHorizontal: {fileID: 6398714110581251344}
   spriteVertical: {fileID: 3772248313485759971}
+  centerChargeParticlePrefab: {fileID: 0}
+  chargeVfxLayerName: ParticleEffects
+  chargeVfxFallbackLifetimeSeconds: 2
   explosionFeedbacks: {fileID: 4736127804381987904}
 --- !u!1 &965440716588849688
 GameObject:
