@@ -30,9 +30,6 @@ namespace HybridGame.MasterBlaster.Scripts
 
         public static event Action<GameMode> OnModeChanged;
 
-        [Tooltip("Mode before Start/ApplyMode (e.g. FPS for MasterBlaster_FPS so billboards and cameras match on load).")]
-        [SerializeField] private GameMode initialMode = GameMode.Bomberman;
-
         [Tooltip("Press this key to toggle mode (dev/testing only)")]
         public KeyCode devToggleKey = KeyCode.F2;
 
@@ -40,7 +37,6 @@ namespace HybridGame.MasterBlaster.Scripts
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
-            CurrentMode = initialMode;
         }
 
         private void Start()
