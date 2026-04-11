@@ -92,6 +92,7 @@ namespace Unity.FPS.Gameplay
         float m_TimeStartedWeaponSwitch;
         WeaponSwitchState m_WeaponSwitchState;
         int m_WeaponSwitchNewWeaponIndex;
+        bool m_WeaponsInitialized;
 
         void Awake()
         {
@@ -135,6 +136,20 @@ namespace Unity.FPS.Gameplay
                 return;
 
             SetFov(DefaultFov);
+            RestoreFpsWeaponVisibilityIfReady();
+        }
+
+        void OnDisable()
+        {
+            for (int i = 0; i < m_WeaponSlots.Length; i++)
+            {
+                WeaponController w = m_WeaponSlots[i];
+                if (w != null)
+                    w.ShowWeapon(false);
+            }
+
+            if (WeaponCamera != null)
+                WeaponCamera.enabled = false;
         }
 
         void Start()
@@ -161,6 +176,24 @@ namespace Unity.FPS.Gameplay
             }
 
             SwitchWeapon(true);
+            m_WeaponsInitialized = true;
+        }
+
+        void RestoreFpsWeaponVisibilityIfReady()
+        {
+            if (!m_WeaponsInitialized)
+                return;
+
+            if (WeaponCamera != null)
+                WeaponCamera.enabled = true;
+
+            for (int i = 0; i < m_WeaponSlots.Length; i++)
+            {
+                WeaponController w = m_WeaponSlots[i];
+                if (w == null)
+                    continue;
+                w.ShowWeapon(ActiveWeaponIndex >= 0 && i == ActiveWeaponIndex);
+            }
         }
 
         void Update()
