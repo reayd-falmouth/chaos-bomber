@@ -71,25 +71,14 @@ namespace Unity.FPS.Gameplay
                 GameConstants.k_AxisNameJoystickLookVertical);
         }
 
-        public bool GetJumpInputDown()
-        {
-            if (CanProcessInput())
-            {
-                return Input.GetButtonDown(GameConstants.k_ButtonNameJump);
-            }
+        /// <summary>
+        /// Jump is disabled: Space / gamepad South are used for bombs via the Input System (PlaceBomb).
+        /// <see cref="Jetpack"/> also reads these methods and will not activate until rebound elsewhere.
+        /// </summary>
+        public bool GetJumpInputDown() => false;
 
-            return false;
-        }
-
-        public bool GetJumpInputHeld()
-        {
-            if (CanProcessInput())
-            {
-                return Input.GetButton(GameConstants.k_ButtonNameJump);
-            }
-
-            return false;
-        }
+        /// <inheritdoc cref="GetJumpInputDown"/>
+        public bool GetJumpInputHeld() => false;
 
         public bool GetFireInputDown()
         {

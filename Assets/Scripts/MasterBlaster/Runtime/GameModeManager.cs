@@ -25,6 +25,12 @@ namespace HybridGame.MasterBlaster.Scripts
         public static bool IsGridPresentationMode(GameMode mode) =>
             mode == GameMode.Bomberman || mode == GameMode.ArenaPerspective;
 
+        /// <summary>
+        /// <see cref="BombController3D"/> runs in grid presentation modes and in FPS (bombs use Input System PlaceBomb).
+        /// </summary>
+        public static bool ShouldEnableBombController(GameMode mode) =>
+            IsGridPresentationMode(mode) || mode == GameMode.FPS;
+
         public static GameModeManager Instance { get; private set; }
         public GameMode CurrentMode { get; private set; } = GameMode.Bomberman;
 

@@ -432,7 +432,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (m_FPSInputHandler != null)
                 m_FPSInputHandler.enabled = isFps;
             if (m_BombController != null)
-                m_BombController.enabled = useGrid;
+                m_BombController.enabled = GameModeManager.ShouldEnableBombController(newMode);
 
             if (useGrid)
             {

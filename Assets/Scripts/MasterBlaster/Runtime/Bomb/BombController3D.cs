@@ -16,8 +16,8 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
     /// 3D port of MasterBlaster's BombController.
     /// Physics2D → Physics (3D), XY plane → XZ plane.
     /// Server-authoritative logic kept but wrapped in IsServer guards for future NGO upgrade.
-    /// Enabled only in Bomberman mode (GameModeManager disables it in FPS mode): pickup-granted bomb stats
-    /// (extra bombs, radius, time fuse, remote) remain stored on this component but do not drive gameplay until the player switches to grid view.
+    /// Active in grid presentation modes and in FPS (<see cref="GameModeManager.ShouldEnableBombController"/>).
+    /// PlaceBomb uses the Input System (keyboard Space / gamepad South); legacy FPS jump is disabled.
     /// </summary>
     public class BombController3D : MonoBehaviour
     {
