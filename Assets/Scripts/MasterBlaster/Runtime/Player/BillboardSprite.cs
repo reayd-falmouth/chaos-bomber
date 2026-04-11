@@ -34,6 +34,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("Applied every LateUpdate in Bomberman mode (e.g. bombs: X = 90).")]
         [SerializeField] private Vector3 bombermanEulerAngles = new Vector3(0f, 0f, 0f);
 
+        [Tooltip("In FPS billboard mode: face the full camera direction (sprite plane perpendicular to view). " +
+                 "Turn off for characters that should stay upright with horizontal yaw only (cylindrical billboard).")]
+        [SerializeField] private bool fpsUseFullLookAtBillboard;
+
         [Tooltip("When enabled, logs mode/camera/top-down path about once per second (Editor + Development builds).")]
         [SerializeField] private bool debugBillboardOrientation;
 
@@ -104,8 +108,9 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 if (billboardCam == null)
                     return;
 
-                transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                    transform.position, billboardCam);
+                transform.rotation = fpsUseFullLookAtBillboard
+                    ? BillboardSpriteOrientationMath.ComputeFpsBillboardLookAtRotation(transform.position, billboardCam)
+                    : BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(transform.position, billboardCam);
                 return;
             }
 
@@ -157,8 +162,9 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 var fc = billboardCam.GetComponent<UnityEngine.Camera>();
                 if (fc != null && !fc.orthographic)
                 {
-                    transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                        transform.position, billboardCam);
+                    transform.rotation = fpsUseFullLookAtBillboard
+                        ? BillboardSpriteOrientationMath.ComputeFpsBillboardLookAtRotation(transform.position, billboardCam)
+                        : BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(transform.position, billboardCam);
                     return;
                 }
             }

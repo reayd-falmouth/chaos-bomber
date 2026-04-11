@@ -156,5 +156,23 @@ namespace fps.Tests.EditMode
                 Object.DestroyImmediate(camGo);
             }
         }
+
+        [Test]
+        public void ComputeFpsBillboardLookAtRotation_AlignsForwardTowardCamera()
+        {
+            var camGo = new GameObject("CamLookAtTest");
+            try
+            {
+                camGo.transform.position = new Vector3(3f, 2f, 0f);
+                var q = BillboardSpriteOrientationMath.ComputeFpsBillboardLookAtRotation(Vector3.zero, camGo.transform);
+                Vector3 forward = q * Vector3.forward;
+                Vector3 toCam = (camGo.transform.position - Vector3.zero).normalized;
+                Assert.Greater(Vector3.Dot(forward, toCam), 0.99f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(camGo);
+            }
+        }
     }
 }

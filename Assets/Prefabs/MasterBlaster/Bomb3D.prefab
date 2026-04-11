@@ -453,6 +453,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Player.BillboardSprite
   targetWorldSize: 6.25
   bombermanEulerAngles: {x: 90, y: 0, z: 0}
+  fpsUseFullLookAtBillboard: 1
   debugBillboardOrientation: 0
 --- !u!1 &3000000
 GameObject:

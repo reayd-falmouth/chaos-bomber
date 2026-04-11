@@ -108,6 +108,18 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         /// </summary>
         public static Transform GetFpsBillboardFacingTransform(UnityEngine.Camera resolvedFromModeResolver)
         {
+            // When mode is FPS, always prefer the authored FPS rig — Camera.main can still be the ortho camera for
+            // one frame or if MainCamera was never retagged (Cinemachine / stack edge cases).
+            var gmm = GameModeManager.Instance;
+            if (gmm != null && gmm.CurrentMode == GameModeManager.GameMode.FPS &&
+                HybridCameraManager.Instance != null &&
+                HybridCameraManager.Instance.fpsCamera != null)
+            {
+                var fps = HybridCameraManager.Instance.fpsCamera;
+                if (fps.gameObject.activeInHierarchy && fps.enabled)
+                    return fps.transform;
+            }
+
             var main = UnityEngine.Camera.main;
             if (main != null && !main.orthographic)
                 return main.transform;
