@@ -10,9 +10,9 @@ namespace fps.Tests.EditMode
         [Test]
         public void ResolveForMode_Fps_ReturnsFpsCamera()
         {
-            var fps = new GameObject("fps").AddComponent<Camera>();
-            var bomber = new GameObject("bomber").AddComponent<Camera>();
-            var arena = new GameObject("arena").AddComponent<Camera>();
+            var fps = new GameObject("fps").AddComponent<UnityEngine.Camera>();
+            var bomber = new GameObject("bomber").AddComponent<UnityEngine.Camera>();
+            var arena = new GameObject("arena").AddComponent<UnityEngine.Camera>();
             try
             {
                 Assert.AreSame(
@@ -31,9 +31,9 @@ namespace fps.Tests.EditMode
         [Test]
         public void ResolveForMode_Bomberman_ReturnsBombermanCamera()
         {
-            var fps = new GameObject("fps").AddComponent<Camera>();
-            var bomber = new GameObject("bomber").AddComponent<Camera>();
-            var arena = new GameObject("arena").AddComponent<Camera>();
+            var fps = new GameObject("fps").AddComponent<UnityEngine.Camera>();
+            var bomber = new GameObject("bomber").AddComponent<UnityEngine.Camera>();
+            var arena = new GameObject("arena").AddComponent<UnityEngine.Camera>();
             try
             {
                 Assert.AreSame(
@@ -52,9 +52,9 @@ namespace fps.Tests.EditMode
         [Test]
         public void ResolveForMode_ArenaPerspective_WithDedicated_ReturnsArenaCamera()
         {
-            var fps = new GameObject("fps").AddComponent<Camera>();
-            var bomber = new GameObject("bomber").AddComponent<Camera>();
-            var arena = new GameObject("arena").AddComponent<Camera>();
+            var fps = new GameObject("fps").AddComponent<UnityEngine.Camera>();
+            var bomber = new GameObject("bomber").AddComponent<UnityEngine.Camera>();
+            var arena = new GameObject("arena").AddComponent<UnityEngine.Camera>();
             try
             {
                 Assert.AreSame(
@@ -73,8 +73,8 @@ namespace fps.Tests.EditMode
         [Test]
         public void ResolveForMode_ArenaPerspective_WithoutDedicated_FallsBackToBombermanCamera()
         {
-            var fps = new GameObject("fps").AddComponent<Camera>();
-            var bomber = new GameObject("bomber").AddComponent<Camera>();
+            var fps = new GameObject("fps").AddComponent<UnityEngine.Camera>();
+            var bomber = new GameObject("bomber").AddComponent<UnityEngine.Camera>();
             try
             {
                 Assert.AreSame(
