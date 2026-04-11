@@ -31,13 +31,16 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// </summary>
     [DefaultExecutionOrder(-100)]
     [RequireComponent(typeof(CharacterController))]
-    public class PlayerDualModeController : MonoBehaviour
+    public class PlayerDualModeController : MonoBehaviour, IFpsArenaMovementLock
     {
         [Header("Bomberman Movement")]
         public float bombermanSpeed = 5f;
         public float snapThreshold = 0.05f;
         public int coins = 0;
         public bool stop = false;
+
+        /// <inheritdoc />
+        public bool IsArenaStopActive => stop;
 
         [Header("Session")]
         [Tooltip("Synced from PlayerController (Awake/Start). Used for coins and shared-input ownership.")]
@@ -125,6 +128,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private InputAction m_SwitchModeAction;
         private bool m_ActionsEnabled;
 
+        private float m_InitialBombermanSpeed;
+
         // #region agent log
         private bool _agentLoggedFirstBmInputProbe;
         // #endregion
@@ -153,6 +158,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
             SyncPlayerIdFromPlayerController();
             BindInputActions();
+
+            m_InitialBombermanSpeed = bombermanSpeed;
         }
 
         private void CacheBillboxRoot()
@@ -239,6 +246,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             // Ensure the normal directional sprites are visible again in grid presentation modes
             if (GameModeManager.IsGridPresentationMode(m_CurrentMode))
                 SetSpriteDirection(m_LastDir, moving: false);
+
+            bombermanSpeed = m_InitialBombermanSpeed;
+            RefreshDirectionalWalkAnimationIntervals();
+            m_FPSController?.ResetArenaSpeedPickups();
         }
 
         private void ShowBombermanDeathVisual()
@@ -976,6 +987,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             bombermanSpeed += 1f;
             RefreshDirectionalWalkAnimationIntervals();
+            m_FPSController?.ApplyArenaSpeedPickupBonus(1f);
         }
 
         /// <summary>Walk frame interval scaled for current <see cref="bombermanSpeed"/>; used by remote bomb billboards.</summary>

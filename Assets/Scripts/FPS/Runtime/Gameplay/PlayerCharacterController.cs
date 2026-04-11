@@ -123,6 +123,11 @@ namespace Unity.FPS.Gameplay
         CharacterController m_Controller;
         PlayerWeaponsManager m_WeaponsManager;
         Actor m_Actor;
+        IFpsArenaMovementLock m_ArenaMovementLock;
+
+        float m_BaseMaxSpeedOnGround;
+        float m_BaseMaxSpeedInAir;
+        float m_ArenaSpeedPickupBonus;
         Vector3 m_GroundNormal;
         Vector3 m_CharacterVelocity;
         Vector3 m_LatestImpactSpeed;
@@ -208,8 +213,32 @@ namespace Unity.FPS.Gameplay
             if (m_Controller != null)
                 m_Controller.enableOverlapRecovery = true;
 
+            m_ArenaMovementLock = GetComponent<IFpsArenaMovementLock>();
+            m_BaseMaxSpeedOnGround = MaxSpeedOnGround;
+            m_BaseMaxSpeedInAir = MaxSpeedInAir;
+
             if (m_Health != null)
                 m_Health.OnDie += OnDie;
+        }
+
+        /// <summary>
+        /// Arena SpeedIncrease pickup: adds the same +1 units/s to ground and air caps as grid <c>bombermanSpeed</c>.
+        /// </summary>
+        public void ApplyArenaSpeedPickupBonus(float deltaUnits)
+        {
+            m_ArenaSpeedPickupBonus += deltaUnits;
+            MaxSpeedOnGround = m_BaseMaxSpeedOnGround + m_ArenaSpeedPickupBonus;
+            MaxSpeedInAir = m_BaseMaxSpeedInAir + m_ArenaSpeedPickupBonus;
+        }
+
+        /// <summary>
+        /// Clears arena-applied speed bonuses (e.g. new round via <c>PlayerDualModeController.ResetForNewGame</c>).
+        /// </summary>
+        public void ResetArenaSpeedPickups()
+        {
+            m_ArenaSpeedPickupBonus = 0f;
+            MaxSpeedOnGround = m_BaseMaxSpeedOnGround;
+            MaxSpeedInAir = m_BaseMaxSpeedInAir;
         }
 
         void Start()
@@ -347,7 +376,8 @@ namespace Unity.FPS.Gameplay
             }
 
             // character movement handling
-            bool isSprinting = m_InputHandler.GetSprintInputHeld();
+            bool movementLocked = m_ArenaMovementLock != null && m_ArenaMovementLock.IsArenaStopActive;
+            bool isSprinting = !movementLocked && m_InputHandler.GetSprintInputHeld();
             {
                 if (isSprinting)
                 {
@@ -357,7 +387,9 @@ namespace Unity.FPS.Gameplay
                 float speedModifier = isSprinting ? SprintSpeedModifier : 1f;
 
                 // converts move input to a worldspace vector based on our character's transform orientation
-                Vector3 worldspaceMoveInput = transform.TransformVector(m_InputHandler.GetMoveInput());
+                Vector3 worldspaceMoveInput = movementLocked
+                    ? Vector3.zero
+                    : transform.TransformVector(m_InputHandler.GetMoveInput());
 
                 // handle grounded movement
                 if (IsGrounded)
@@ -375,7 +407,7 @@ namespace Unity.FPS.Gameplay
                         MovementSharpnessOnGround * Time.deltaTime);
 
                     // jumping
-                    if (IsGrounded && m_InputHandler.GetJumpInputDown())
+                    if (!movementLocked && IsGrounded && m_InputHandler.GetJumpInputDown())
                     {
                         // force the crouch state to false
                         if (SetCrouchingState(false, false))
@@ -414,14 +446,25 @@ namespace Unity.FPS.Gameplay
                 // handle air movement
                 else
                 {
-                    // add air acceleration
-                    CharacterVelocity += worldspaceMoveInput * AccelerationSpeedInAir * Time.deltaTime;
+                    if (movementLocked)
+                    {
+                        float verticalVelocity = CharacterVelocity.y;
+                        Vector3 horizontalVelocity = Vector3.ProjectOnPlane(CharacterVelocity, Vector3.up);
+                        horizontalVelocity = Vector3.MoveTowards(
+                            horizontalVelocity, Vector3.zero, AccelerationSpeedInAir * Time.deltaTime);
+                        CharacterVelocity = horizontalVelocity + (Vector3.up * verticalVelocity);
+                    }
+                    else
+                    {
+                        // add air acceleration
+                        CharacterVelocity += worldspaceMoveInput * AccelerationSpeedInAir * Time.deltaTime;
 
-                    // limit air speed to a maximum, but only horizontally
-                    float verticalVelocity = CharacterVelocity.y;
-                    Vector3 horizontalVelocity = Vector3.ProjectOnPlane(CharacterVelocity, Vector3.up);
-                    horizontalVelocity = Vector3.ClampMagnitude(horizontalVelocity, MaxSpeedInAir * speedModifier);
-                    CharacterVelocity = horizontalVelocity + (Vector3.up * verticalVelocity);
+                        // limit air speed to a maximum, but only horizontally
+                        float verticalVelocity = CharacterVelocity.y;
+                        Vector3 horizontalVelocity = Vector3.ProjectOnPlane(CharacterVelocity, Vector3.up);
+                        horizontalVelocity = Vector3.ClampMagnitude(horizontalVelocity, MaxSpeedInAir * speedModifier);
+                        CharacterVelocity = horizontalVelocity + (Vector3.up * verticalVelocity);
+                    }
 
                     // apply the gravity to the velocity
                     CharacterVelocity += Vector3.down * GravityDownForce * Time.deltaTime;

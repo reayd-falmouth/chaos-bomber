@@ -11,7 +11,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
     /// <summary>
     /// 3D item block that spawns after a WallBlock3D is destroyed.
     /// Server-authoritative: only the server processes pickup and destroys the object.
-    /// Item effects are applied later once the 3D player controller API is wired up.
+    /// Bomb-related and Superman effects update <see cref="BombController3D"/> / grid logic; in FPS view
+    /// <see cref="BombController3D"/> is disabled so those perks are latent until Bomberman mode (no FPS bomb placement).
     /// </summary>
     public class ItemPickup3D : NetworkBehaviour
     {
@@ -82,6 +83,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
         /// <summary>
         /// Applies one concrete arena item (not <see cref="ItemPickup.ItemType.Random"/>) to a 3D hybrid player.
+        /// ExtraBomb, blast radius, time/remote bomb, and Superman primarily affect grid/Bomberman systems; stats still update in FPS but bombs are not placed in FPS mode.
         /// </summary>
         /// <param name="pickupSource">Optional instigator for damage (e.g. death pickup).</param>
         public static void ApplyTo3DPlayer(GameObject player, ItemPickup.ItemType type, GameObject pickupSource)
