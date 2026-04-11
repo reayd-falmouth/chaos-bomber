@@ -12,6 +12,8 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
     /// </summary>
     public class HybridCameraManager : MonoBehaviour
     {
+        public static HybridCameraManager Instance { get; private set; }
+
         [Header("Cameras")]
         [Tooltip("The player's first-person child camera (FPS mode)")]
         public UnityEngine.Camera fpsCamera;
@@ -36,6 +38,30 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
         public Vector2 designResolution = new Vector2(640f, 512f);
 
         Coroutine m_FpsProjectionResetRoutine;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        /// <summary>
+        /// Camera used for <see cref="HybridGame.MasterBlaster.Scripts.Player.BillboardSprite"/> facing; matches
+        /// <see cref="SetMode"/> active camera (not necessarily <see cref="UnityEngine.Camera.main"/> the same frame).
+        /// </summary>
+        public bool TryGetCameraForBillboards(GameModeManager.GameMode mode, out UnityEngine.Camera cam) =>
+            BillboardCameraResolver.TryResolve(mode, fpsCamera, bombermanCamera, arenaPerspectiveCamera, out cam);
 
         private void Start()
         {

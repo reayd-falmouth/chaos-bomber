@@ -1,5 +1,6 @@
 using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
+using HybridGame.MasterBlaster.Scripts.Camera;
 using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Player
@@ -15,7 +16,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// ArenaPerspective — same scale as grid; if MainCamera is perspective, pitch follows the camera
     ///                    (see <see cref="BillboardSpriteOrientationMath"/>).
     ///
-    /// FPS        — euler (-90, yaw, 0): fixed pitch, Y yaw toward Camera.main on XZ (camera yaw if XZ aligned); scale matches grid sizing.
+    /// FPS        — euler (-90, yaw, 0): fixed pitch, Y yaw toward resolved gameplay camera on XZ; scale matches grid sizing.
     /// </summary>
     public class BillboardSprite : MonoBehaviour
     {
@@ -38,19 +39,22 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         private void LateUpdate()
         {
+            transform.localScale = m_BombermanScale;
+
             if (GameModeManager.Instance == null)
+            {
+                LateUpdateWithoutGameModeManager();
                 return;
+            }
 
             var mode = GameModeManager.Instance.CurrentMode;
+            if (!TryGetBillboardCamera(mode, out var cam) || cam == null)
+                return;
+
             if (GameModeManager.IsGridPresentationMode(mode))
             {
-                transform.localScale = m_BombermanScale;
-                var cam = UnityEngine.Camera.main;
-                if (cam == null ||
-                    BillboardSpriteOrientationMath.UseFixedTopDownStyle(mode, cam.orthographic))
-                {
+                if (BillboardSpriteOrientationMath.UseFixedTopDownStyle(mode, cam.orthographic))
                     transform.rotation = Quaternion.Euler(bombermanEulerAngles);
-                }
                 else
                 {
                     float camPitchX = BillboardSpriteOrientationMath.NormalizeEulerX(cam.transform.eulerAngles.x);
@@ -61,12 +65,35 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            // FPS: cylindrical billboard — X = -90, Z = 0, Y from horizontal direction to camera (fallback: camera yaw).
-            transform.localScale = m_BombermanScale;
-            var fpsCam = UnityEngine.Camera.main;
-            if (fpsCam == null) return;
             transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                transform.position, fpsCam.transform);
+                transform.position, cam.transform);
+        }
+
+        private void LateUpdateWithoutGameModeManager()
+        {
+            UnityEngine.Camera cam = null;
+            if (HybridCameraManager.Instance != null &&
+                HybridCameraManager.Instance.TryGetCameraForBillboards(GameModeManager.GameMode.FPS, out var resolved))
+                cam = resolved;
+            if (cam == null)
+                cam = UnityEngine.Camera.main;
+            if (cam == null)
+                return;
+
+            if (cam.orthographic)
+                transform.rotation = Quaternion.Euler(bombermanEulerAngles);
+            else
+                transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                    transform.position, cam.transform);
+        }
+
+        private static bool TryGetBillboardCamera(GameModeManager.GameMode mode, out UnityEngine.Camera cam)
+        {
+            if (HybridCameraManager.Instance != null &&
+                HybridCameraManager.Instance.TryGetCameraForBillboards(mode, out cam))
+                return true;
+            cam = UnityEngine.Camera.main;
+            return cam != null;
         }
 
         private void ComputeBombermanScale()
