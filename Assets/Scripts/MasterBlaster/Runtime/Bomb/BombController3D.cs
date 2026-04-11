@@ -241,6 +241,23 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
                 ? $"localPos={playerBillbox.localPosition} localEuler={playerBillbox.localRotation.eulerAngles}"
                 : "Billbox (player) not found";
 
+            UnityEngine.Debug.Log(
+                "[BombController3D] BillBox spawn debug — player=" + gameObject.name +
+                " mode=" + mode + " mainCam=" + camInfo +
+                " remoteBomb=" + remoteBomb + " timeBomb=" + timeBomb +
+                "\n  player " + playerBillboxLine +
+                "\n" + FormatBombBillBoxDebugBlock(bomb, "  "),
+                this);
+        }
+
+        /// <summary>
+        /// BillBox / <see cref="BillboardSprite"/> / directional sprites for one bomb instance (shared by spawn debug and mode-change debug).
+        /// </summary>
+        public static string FormatBombBillBoxDebugBlock(GameObject bomb, string linePrefix = "  ")
+        {
+            if (bomb == null)
+                return linePrefix + "(null bomb)";
+
             Transform bombBillBox = bomb.transform.Find("BillBox");
             string bombBillBoxLine = bombBillBox != null
                 ? $"BillBox worldEuler={bombBillBox.rotation.eulerAngles} localEuler={bombBillBox.localRotation.eulerAngles}"
@@ -267,15 +284,11 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
                 }
             }
 
-            UnityEngine.Debug.Log(
-                "[BombController3D] BillBox spawn debug — player=" + gameObject.name +
-                " mode=" + mode + " mainCam=" + camInfo +
-                " remoteBomb=" + remoteBomb + " timeBomb=" + timeBomb +
-                "\n  player " + playerBillboxLine +
-                "\n  bomb " + bomb.name + " " + bombBillBoxLine +
-                "\n  BillboardSprite (" + boards.Length + "): " + (boards.Length == 0 ? "(none)" : boardsSb.ToString()) +
-                "\n  BillBox AnimatedSpriteRenderer: " + (spritesSb.Length == 0 ? "(none under BillBox)" : spritesSb.ToString()),
-                this);
+            return linePrefix + "bomb " + bomb.name + " " + bombBillBoxLine + "\n" +
+                   linePrefix + "BillboardSprite (" + boards.Length + "): " +
+                   (boards.Length == 0 ? "(none)" : boardsSb.ToString()) + "\n" +
+                   linePrefix + "BillBox AnimatedSpriteRenderer: " +
+                   (spritesSb.Length == 0 ? "(none under BillBox)" : spritesSb.ToString());
         }
 
         /// <summary>

@@ -80,7 +80,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [SerializeField] private float billboxLocalYFps = 1f;
 
         [Header("Debug")]
-        [Tooltip("When enabled, one log per mode change on the next frame (after cameras update): Billbox transform, Camera.main, BillboardSprite eulers under the player.")]
+        [Tooltip("When enabled, one log per mode change on the next frame (after cameras update): player Billbox, BillboardSprites on the player, and each bomb you placed (BillBox reorientation vs mode).")]
         [SerializeField] private bool debugLogBillboxOnModeChange;
 
         // ── private state ──────────────────────────────────────────────────────────
@@ -480,11 +480,28 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 boardsSb.Append(boards[i].gameObject.name).Append(" euler=").Append(boards[i].transform.rotation.eulerAngles);
             }
 
+            var bombsSb = new StringBuilder();
+            int bombCount = 0;
+            var placedBombs = FindObjectsByType<BombPassThroughGrid3D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            for (int i = 0; i < placedBombs.Length; i++)
+            {
+                var pt = placedBombs[i];
+                if (pt == null || pt.Placer != transform) continue;
+                bombCount++;
+                if (bombsSb.Length > 0) bombsSb.Append("\n");
+                bombsSb.Append(BombController3D.FormatBombBillBoxDebugBlock(pt.gameObject, "    "));
+            }
+
+            string bombsSection = bombCount == 0
+                ? "\n  --- Placed bombs (this player): (none) — compare after placing a bomb and switching modes ---"
+                : "\n  --- Placed bombs (this player), BillBox after mode change ---\n" + bombsSb;
+
             UnityEngine.Debug.Log(
                 "[PlayerDualModeController] Billbox mode debug (next frame after mode change) player=" + gameObject.name +
                 " mode=" + newMode + " mainCam=" + camInfo +
                 "\n  " + billboxLine +
-                "\n  BillboardSprite (" + boards.Length + "): " + (boards.Length == 0 ? "(none)" : boardsSb.ToString()),
+                "\n  BillboardSprite (" + boards.Length + "): " + (boards.Length == 0 ? "(none)" : boardsSb.ToString()) +
+                bombsSection,
                 this);
         }
 

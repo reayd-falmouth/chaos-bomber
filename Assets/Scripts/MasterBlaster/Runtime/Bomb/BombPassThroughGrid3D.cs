@@ -13,6 +13,9 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         private BoxCollider m_Box;
         private bool m_Armed;
 
+        /// <summary>Player who placed this bomb (for pass-through until they leave the cell).</summary>
+        public Transform Placer => m_Placer;
+
         public void Init(Transform placer)
         {
             m_Placer = placer;
