@@ -44,9 +44,9 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         private float secondsPerTick = 1f;
 
         [Header("Debug")]
-        [Tooltip("Logs [FPSInterlude] lines to the Console (filter by FPSInterlude). Enable on GameManager’s OnlineFpsInterludeController.")]
+        [Tooltip("Logs [FPSInterlude] lines to the Console (filter by FPSInterlude). Disable to silence.")]
         [SerializeField]
-        private bool logFpsInterludeDiagnostics;
+        private bool logFpsInterludeDiagnostics = true;
 
         /// <summary>True when the scene’s controller has diagnostics enabled (requires Instance).</summary>
         public static bool DiagnosticsEnabled =>
