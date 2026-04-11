@@ -8,6 +8,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 {
     /// <summary>
     /// Rotates and scales this transform each LateUpdate for the active camera mode.
+    /// Also reapplies when <see cref="GameModeManager.OnModeChanged"/> fires (after cameras update),
+    /// matching <see cref="PlayerDualModeController"/> Billbox sync for spawned bombs/explosions.
     ///
     /// Bomberman — sprite lies flat in the XZ plane, front face pointing UP (+Y) so it is
     ///             correctly visible to the overhead orthographic camera (forward = -Y).
@@ -44,6 +46,23 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         private Vector3 m_BombermanScale = Vector3.one;
         private float m_NextBillboardDebugLogTime;
+
+        private void OnEnable()
+        {
+            GameModeManager.OnModeChanged += HandleGameModeChanged;
+            if (GameModeManager.Instance != null)
+                ApplyBillboardOrientation();
+        }
+
+        private void OnDisable()
+        {
+            GameModeManager.OnModeChanged -= HandleGameModeChanged;
+        }
+
+        private void HandleGameModeChanged(GameModeManager.GameMode mode)
+        {
+            ApplyBillboardOrientation();
+        }
 
         private void Start()
         {
