@@ -23,7 +23,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private bool shrinkingEnabled = true;
 
-        [Tooltip("Total match length (seconds).")]
+        [Tooltip(
+            "Pre-shrink countdown (seconds). Alarm/shrink thresholds are derived from this. " +
+            "After shrinking starts, the round continues until the snake finishes (match end is not the clock alone)."
+        )]
         [SerializeField]
         private float matchDuration = 180f; // 3:00
 
@@ -216,6 +219,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 StartTimer();
         }
 
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
+                _netTimeRemaining.Value = timeRemaining;
+            if (shrinkingEnabled && autoStartTimer && !timerRunning)
+                StartTimer();
+        }
+
         void Update()
         {
             RefreshBackgroundPulseCamera();
@@ -256,12 +268,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             float remaining = GetDisplayedTimeRemaining();
             float alarmTh = ComputeAlarmThresholdRemaining();
-            string line1 = $"Match remaining: {remaining:F1}s";
+            string line1;
+            if (shrinkingStarted && !shrinkingComplete)
+                line1 = "Arena shrinking — survive!";
+            else
+                line1 = $"Match remaining: {remaining:F1}s";
             string line2;
             if (!shrinkingEnabled)
                 line2 = "Shrinking / timer disabled";
-            else if (!timerRunning && remaining <= 0f)
+            else if (!timerRunning && remaining <= 0f && !shrinkingStarted)
                 line2 = "Timer not started";
+            else if (shrinkingStarted && !shrinkingComplete)
+                line2 = "Wall closing in (snake fill)";
             else if (remaining <= 0f)
                 line2 = "Time's up";
             else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
@@ -292,7 +310,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (
                 NetworkManager.Singleton != null
                 && NetworkManager.Singleton.IsListening
-                && !IsServer
+                && !NetworkManager.Singleton.IsServer
             )
                 return _netTimeRemaining.Value;
             return timeRemaining;
@@ -313,7 +331,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         {
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
                 return false;
-            return !IsServer;
+            return !NetworkManager.Singleton.IsServer;
         }
 
         private float EffectiveMatchDuration()
@@ -352,13 +370,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         {
             if (!shrinkingEnabled || timerRunning)
                 return;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsServer)
+                return;
             timeRemaining = Mathf.Max(1f, EffectiveMatchDuration());
             timerRunning = true;
-            if (
-                NetworkManager.Singleton != null
-                && NetworkManager.Singleton.IsServer
-                && IsSpawned
-            )
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                 _netTimeRemaining.Value = timeRemaining;
             StartCoroutine(TimerRoutine());
         }
@@ -375,9 +391,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         // -------------------- Internals --------------------
         private IEnumerator TimerRoutine()
         {
-            // In online play, only the host runs the timer.
             bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-            if (isOnline && !IsServer)
+            if (isOnline && NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer)
             {
                 timerRunning = false;
                 yield break;
@@ -397,11 +412,25 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 shrinkThresholdFraction
             );
 
-            while (timerRunning && timeRemaining > 0f)
+            while (timerRunning)
             {
+                if (shrinkingStarted)
+                {
+                    timeRemaining = 0f;
+                    if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
+                        _netTimeRemaining.Value = 0f;
+                    if (shrinkingComplete)
+                        break;
+                    yield return null;
+                    continue;
+                }
+
+                if (timeRemaining <= 0f)
+                    break;
+
                 timeRemaining -= Time.deltaTime;
 
-                if (isOnline && IsServer && IsSpawned)
+                if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                     _netTimeRemaining.Value = timeRemaining;
 
                 if (!alarmActive && ArenaShrinkSchedule.ShouldAlarmBeOn(timeRemaining, alarmThreshold))
@@ -442,14 +471,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield return null;
             }
 
-            // When shrinking has started, wait for it to reach the center before ending the round
             if (shrinkingStarted && !shrinkingComplete)
             {
-                while (!shrinkingComplete)
+                while (timerRunning && !shrinkingComplete)
                     yield return null;
             }
 
-            // timer expired
+            // timer expired or shrink finished
             StopAlarmPresentation();
             RefreshBackgroundPulseCamera();
             if (_backgroundPulseCamera)
@@ -551,7 +579,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             StopAlarmAudio();
         }
 
-        // ------------ Shrinking (clockwise snake, inside border) ------------
+        // ------------ Shrinking (boustrophedon snake over inner bounds) ------------
         // How many cells to step inside from the outer wall (usually 1)
         [SerializeField]
         private int inset = 1;
@@ -598,47 +626,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield break;
             }
 
-            int left = minX;
-            int right = maxX;
-            int bottom = minY;
-            int top = maxY;
-
-            while (left <= right && bottom <= top)
+            foreach (var cell in ArenaShrinkSnakeOrder.EnumerateCells(minX, maxX, minY, maxY))
             {
-                // top row (left -> right)
-                for (int x = left; x <= right; x++)
-                {
-                    PlaceBlock(new Vector3Int(x, top, 0));
-                    yield return new WaitForSeconds(shrinkDelay);
-                }
-                top--;
+                if (indestructiblesTilemap.HasTile(cell))
+                    continue;
 
-                // right col (top -> bottom)
-                for (int y = top; y >= bottom; y--)
-                {
-                    PlaceBlock(new Vector3Int(right, y, 0));
-                    yield return new WaitForSeconds(shrinkDelay);
-                }
-                right--;
-
-                if (bottom > top || left > right)
-                    break;
-
-                // bottom row (right -> left)
-                for (int x = right; x >= left; x--)
-                {
-                    PlaceBlock(new Vector3Int(x, bottom, 0));
-                    yield return new WaitForSeconds(shrinkDelay);
-                }
-                bottom++;
-
-                // left col (bottom -> top)
-                for (int y = bottom; y <= top; y++)
-                {
-                    PlaceBlock(new Vector3Int(left, y, 0));
-                    yield return new WaitForSeconds(shrinkDelay);
-                }
-                left++;
+                PlaceBlock(cell);
+                yield return new WaitForSeconds(shrinkDelay);
             }
 
             shrinkingComplete = true;
@@ -702,7 +696,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             );
 
             bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-            if (isOnline && IsServer)
+            if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
                 PlaceBlockClientRpc(worldCenter);
 
             // 3) Play its SFX

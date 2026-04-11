@@ -112,6 +112,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 StartTimer();
         }
 
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
+                _netTimeRemaining.Value = timeRemaining;
+            if (matchTimerEnabled && autoStartTimer && !timerRunning)
+                StartTimer();
+        }
+
         private void Update()
         {
             RefreshBackgroundPulseCamera();
@@ -186,6 +195,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         {
             if (!matchTimerEnabled || timerRunning)
                 return;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsServer)
+                return;
             timeRemaining = Mathf.Max(1f, EffectiveMatchDuration());
             timerRunning = true;
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
@@ -207,7 +218,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (
                 NetworkManager.Singleton != null
                 && NetworkManager.Singleton.IsListening
-                && !IsServer
+                && !NetworkManager.Singleton.IsServer
             )
                 return _netTimeRemaining.Value;
             return timeRemaining;
@@ -215,7 +226,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         private void SyncClientAlarmFromNetworkIfNeeded()
         {
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || IsServer)
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsServer)
                 return;
 
             float remaining = _netTimeRemaining.Value;
@@ -247,7 +258,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private IEnumerator TimerRoutine()
         {
             bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-            if (isOnline && !IsServer)
+            if (isOnline && NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer)
             {
                 timerRunning = false;
                 yield break;
@@ -265,7 +276,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             {
                 timeRemaining -= Time.deltaTime;
 
-                if (isOnline && IsServer && IsSpawned)
+                if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                     _netTimeRemaining.Value = timeRemaining;
 
                 if (!alarmActive && ArenaShrinkSchedule.ShouldAlarmBeOn(timeRemaining, alarmThreshold))
