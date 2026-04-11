@@ -43,7 +43,23 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         [Min(0.05f)]
         private float secondsPerTick = 1f;
 
+        [Header("Debug")]
+        [Tooltip("Logs [FPSInterlude] lines to the Console (filter by FPSInterlude). Enable on GameManager’s OnlineFpsInterludeController.")]
+        [SerializeField]
+        private bool logFpsInterludeDiagnostics;
+
+        /// <summary>True when the scene’s controller has diagnostics enabled (requires Instance).</summary>
+        public static bool DiagnosticsEnabled =>
+            Instance != null && Instance.logFpsInterludeDiagnostics;
+
         private bool _interludeRoutineRunning;
+
+        private static void LogDiag(string message)
+        {
+            if (!DiagnosticsEnabled)
+                return;
+            UnityEngine.Debug.Log("[FPSInterlude] " + message);
+        }
 
         private void Awake()
         {
@@ -65,12 +81,14 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            LogDiag($"OnNetworkSpawn name={gameObject.name} NetworkObjectId={NetworkObjectId}");
             _syncedGameMode.OnValueChanged += OnSyncedGameModeChanged;
             ApplySyncedGameMode(_syncedGameMode.Value);
         }
 
         public override void OnNetworkDespawn()
         {
+            LogDiag($"OnNetworkDespawn name={gameObject.name}");
             _syncedGameMode.OnValueChanged -= OnSyncedGameModeChanged;
             base.OnNetworkDespawn();
         }
@@ -93,11 +111,17 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             if (IsSpawned)
                 return;
             if (!TryGetComponent<NetworkObject>(out var netObj) || netObj == null)
+            {
+                LogDiag("TrySpawnNetworkObjectIfServer: no NetworkObject on this GameObject");
                 return;
+            }
+
             if (netObj.IsSpawned)
                 return;
 
+            LogDiag($"TrySpawnNetworkObjectIfServer: calling Spawn() on {gameObject.name}");
             netObj.Spawn();
+            LogDiag($"TrySpawnNetworkObjectIfServer: after Spawn IsSpawned={IsSpawned} netObj.IsSpawned={netObj.IsSpawned}");
         }
 
         private void OnSyncedGameModeChanged(byte previous, byte next)
@@ -107,11 +131,16 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
         private static void ApplySyncedGameMode(byte value)
         {
+            var mode = ByteToGameMode(value);
+            LogDiag($"ApplySyncedGameMode byte={value} -> {mode} GameModeManager.Instance={(GameModeManager.Instance != null ? "ok" : "null")}");
             var gmm = GameModeManager.Instance;
             if (gmm == null)
                 return;
 
-            gmm.SwitchMode(ByteToGameMode(value));
+            var before = gmm.CurrentMode;
+            gmm.SwitchMode(mode);
+            if (GameModeManager.Instance != null)
+                LogDiag($"ApplySyncedGameMode after SwitchMode CurrentMode={GameModeManager.Instance.CurrentMode} (was {before})");
         }
 
         private static GameModeManager.GameMode ByteToGameMode(byte value)
@@ -135,11 +164,19 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         public bool TryBeginInterludeFromServer()
         {
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+            {
+                LogDiag("TryBeginInterludeFromServer: fail NetworkManager null or not IsListening");
                 return false;
+            }
+
             // Do not use NetworkBehaviour.IsServer before spawn — it is false when not spawned even on the host.
             if (!NetworkManager.Singleton.IsServer)
+            {
+                LogDiag("TryBeginInterludeFromServer: fail not NetworkManager.IsServer");
                 return false;
+            }
 
+            LogDiag($"TryBeginInterludeFromServer: enter IsSpawned={IsSpawned} interludeRunning={_interludeRoutineRunning}");
             TrySpawnNetworkObjectIfServer();
 
             if (!IsSpawned)
@@ -147,19 +184,25 @@ namespace HybridGame.MasterBlaster.Scripts.Online
                 UnityEngine.Debug.LogWarning(
                     "[OnlineFpsInterludeController] Random pickup on server but this NetworkObject is not spawned — " +
                     "cannot run FPS interlude. Ensure the GameManager NetworkObject is in-scene and spawnable.");
+                LogDiag("TryBeginInterludeFromServer: fail still !IsSpawned after TrySpawn");
                 return false;
             }
 
             if (_interludeRoutineRunning)
+            {
+                LogDiag("TryBeginInterludeFromServer: already running (no new interlude)");
                 return true;
+            }
 
             _interludeRoutineRunning = true;
+            LogDiag("TryBeginInterludeFromServer: starting ServerInterludeCoroutine");
             StartCoroutine(ServerInterludeCoroutine());
             return true;
         }
 
         private IEnumerator ServerInterludeCoroutine()
         {
+            LogDiag($"ServerInterludeCoroutine: start countdownSeconds={countdownSeconds} secondsPerTick={secondsPerTick}");
             GameModeManager.Instance?.SetExternalModeLock(true);
 
             _interludeActive.Value = true;
@@ -178,6 +221,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
             GameModeManager.Instance?.SetExternalModeLock(false);
             _interludeRoutineRunning = false;
+            LogDiag("ServerInterludeCoroutine: end returned to Bomberman, lock off");
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using HybridGame.MasterBlaster.Scripts.Camera;
 using HybridGame.MasterBlaster.Scripts.Debug;
+using HybridGame.MasterBlaster.Scripts.Online;
 using HybridGame.MasterBlaster.Scripts.Player;
 using UnityEngine;
 
@@ -74,6 +75,12 @@ namespace HybridGame.MasterBlaster.Scripts
 
         public void SwitchMode(GameMode newMode)
         {
+            if (OnlineFpsInterludeController.DiagnosticsEnabled)
+            {
+                UnityEngine.Debug.Log(
+                    $"[FPSInterlude] GameModeManager.SwitchMode requested {CurrentMode} -> {newMode} same={newMode == CurrentMode}");
+            }
+
             if (newMode == CurrentMode) return;
             CurrentMode = newMode;
             ApplyMode(newMode);

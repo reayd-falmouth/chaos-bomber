@@ -62,6 +62,14 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
 
             if (other.CompareTag("Player"))
             {
+                if (OnlineFpsInterludeController.DiagnosticsEnabled && itemType == ItemPickup.ItemType.Random)
+                {
+                    ulong pidLog = TryGetComponent<NetworkObject>(out var noPick) ? noPick.NetworkObjectId : 0UL;
+                    UnityEngine.Debug.Log(
+                        $"[FPSInterlude] ItemPickup3D.OnTriggerEnter pickup={gameObject.name} netId={pidLog} " +
+                        $"IsSpawned={IsSpawned} IsServer={IsServer} player={other.gameObject.name}");
+                }
+
                 ApplyEffect(other.gameObject);
                 Collect();
                 return;
@@ -76,15 +84,29 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             if (itemType == ItemPickup.ItemType.Random)
             {
                 bool online = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+                if (OnlineFpsInterludeController.DiagnosticsEnabled)
+                {
+                    UnityEngine.Debug.Log(
+                        $"[FPSInterlude] ItemPickup3D.ApplyEffect Random online={online} " +
+                        $"ctrlInstance={(OnlineFpsInterludeController.Instance != null)} pickup={gameObject.name}");
+                }
+
                 if (online)
                 {
                     var ctrl = OnlineFpsInterludeController.Instance;
-                    if (ctrl != null && ctrl.TryBeginInterludeFromServer())
+                    var began = ctrl != null && ctrl.TryBeginInterludeFromServer();
+                    if (OnlineFpsInterludeController.DiagnosticsEnabled)
+                        UnityEngine.Debug.Log($"[FPSInterlude] ItemPickup3D.TryBeginInterludeFromServer -> {began} (ctrl={(ctrl != null)})");
+
+                    if (ctrl != null && began)
                         return;
                     if (ctrl == null)
                         UnityEngine.Debug.LogWarning(
                             "[ItemPickup3D] Online Random pickup but OnlineFpsInterludeController is missing — falling back to ApplyRandom.");
                 }
+
+                if (OnlineFpsInterludeController.DiagnosticsEnabled)
+                    UnityEngine.Debug.Log("[FPSInterlude] ItemPickup3D: fallback ApplyRandom");
 
                 player.GetComponent<PlayerDualModeController>()?.ApplyRandom();
                 return;
