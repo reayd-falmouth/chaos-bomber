@@ -1,4 +1,5 @@
 using HybridGame.MasterBlaster.Scripts.Bomb;
+using HybridGame.MasterBlaster.Scripts.Online;
 using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Player.Abilities;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
@@ -74,6 +75,17 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         {
             if (itemType == ItemPickup.ItemType.Random)
             {
+                bool online = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+                if (online)
+                {
+                    var ctrl = OnlineFpsInterludeController.Instance;
+                    if (ctrl != null && ctrl.TryBeginInterludeFromServer())
+                        return;
+                    if (ctrl == null)
+                        UnityEngine.Debug.LogWarning(
+                            "[ItemPickup3D] Online Random pickup but OnlineFpsInterludeController is missing — falling back to ApplyRandom.");
+                }
+
                 player.GetComponent<PlayerDualModeController>()?.ApplyRandom();
                 return;
             }

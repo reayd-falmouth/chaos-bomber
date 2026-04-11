@@ -39,6 +39,12 @@ namespace HybridGame.MasterBlaster.Scripts
         [Tooltip("Press this key to toggle mode (dev/testing only)")]
         public KeyCode devToggleKey = KeyCode.F2;
 
+        /// <summary>When true, F2 mode cycling is disabled (e.g. online FPS interlude).</summary>
+        private bool _externalModeLock;
+
+        /// <summary>Called by <see cref="HybridGame.MasterBlaster.Scripts.Online.OnlineFpsInterludeController"/> during networked interludes.</summary>
+        public void SetExternalModeLock(bool locked) => _externalModeLock = locked;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -60,6 +66,8 @@ namespace HybridGame.MasterBlaster.Scripts
 
         private void Update()
         {
+            if (_externalModeLock)
+                return;
             if (Input.GetKeyDown(devToggleKey))
                 SwitchMode(GameModeCycle.GetNext(CurrentMode));
         }
