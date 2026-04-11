@@ -49,5 +49,33 @@ namespace fps.Tests.EditMode
             Assert.IsTrue(ok);
             Assert.IsNotNull(cam);
         }
+
+        [Test]
+        public void UseTopDownGridBillboardRotation_FpsMode_IsFalse()
+        {
+            Assert.IsFalse(BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(GameModeManager.GameMode.FPS));
+        }
+
+        [Test]
+        public void UseTopDownGridBillboardRotation_BombermanWithOrthoMain_IsTrue()
+        {
+            m_MainCamGo = new GameObject("OrthoMainForTopDownTest");
+            m_MainCamGo.tag = "MainCamera";
+            var cam = m_MainCamGo.AddComponent<Camera>();
+            cam.orthographic = true;
+
+            Assert.IsTrue(BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(GameModeManager.GameMode.Bomberman));
+        }
+
+        [Test]
+        public void UseTopDownGridBillboardRotation_BombermanWithPerspectiveMain_IsFalse()
+        {
+            m_MainCamGo = new GameObject("PerspMainForTopDownTest");
+            m_MainCamGo.tag = "MainCamera";
+            var cam = m_MainCamGo.AddComponent<Camera>();
+            cam.orthographic = false;
+
+            Assert.IsFalse(BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(GameModeManager.GameMode.Bomberman));
+        }
     }
 }

@@ -11,6 +11,21 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     public static class BillboardSpriteCameraHelper
     {
         /// <summary>
+        /// When true, <see cref="BillboardSprite"/> uses grid <c>bombermanEulerAngles</c> (flat / face-up for ortho).
+        /// When <see cref="UnityEngine.Camera.main"/> is perspective, use false so bombs/explosions get cylindrical FPS
+        /// billboarding even if <see cref="GameModeManager"/> is still a grid presentation mode (e.g. angled arena).
+        /// </summary>
+        public static bool UseTopDownGridBillboardRotation(GameModeManager.GameMode mode)
+        {
+            if (!GameModeManager.IsGridPresentationMode(mode))
+                return false;
+            var main = UnityEngine.Camera.main;
+            if (main == null)
+                return true;
+            return main.orthographic;
+        }
+
+        /// <summary>
         /// Resolves which camera should drive billboard facing for <paramref name="mode"/>.
         /// </summary>
         public static bool TryResolveBillboardCamera(GameModeManager.GameMode mode, out UnityEngine.Camera cam)

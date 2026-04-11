@@ -16,7 +16,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// ArenaPerspective — same scale as grid; if MainCamera is perspective, pitch follows the camera
     ///                    (see <see cref="BillboardSpriteOrientationMath"/>).
     ///
-    /// FPS        — euler (-90, yaw, 0): fixed pitch, Y yaw toward resolved gameplay camera on XZ; scale matches grid sizing.
+    /// FPS (or any time <see cref="UnityEngine.Camera.main"/> is perspective) — euler (-90, yaw, 0): yaw toward
+    /// gameplay camera on XZ. Grid euler is used only for true top-down (orthographic main) grid modes.
     /// </summary>
     [DefaultExecutionOrder(100)]
     public class BillboardSprite : MonoBehaviour
@@ -67,7 +68,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(mode, out var cam))
                 return;
 
-            if (GameModeManager.IsGridPresentationMode(mode))
+            if (BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(mode))
             {
                 if (BillboardSpriteOrientationMath.UseFixedTopDownStyle(mode, cam.orthographic))
                     transform.rotation = Quaternion.Euler(bombermanEulerAngles);
@@ -93,6 +94,18 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(GameModeManager.GameMode.FPS, out var cam))
                 return;
+
+            bool mainPerspective = UnityEngine.Camera.main != null && !UnityEngine.Camera.main.orthographic;
+            if (mainPerspective)
+            {
+                var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardCameraTransform(cam);
+                if (billboardCam == null)
+                    return;
+
+                transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                    transform.position, billboardCam);
+                return;
+            }
 
             if (cam.orthographic)
                 transform.rotation = Quaternion.Euler(bombermanEulerAngles);
