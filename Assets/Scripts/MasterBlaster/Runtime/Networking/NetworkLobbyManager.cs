@@ -40,6 +40,8 @@ namespace HybridGame.MasterBlaster.Scripts.Networking
         public async Task CreateLobbyAsync(int maxPlayers = 4)
         {
             await InitializeAsync();
+            // Must use full type name: Networking.RelayHandler (stub) shadows Online.RelayHandler in this folder.
+            HybridGame.MasterBlaster.Scripts.Online.RelayHandler.EnsureUnityTransportForSingleton();
             NetworkManager.Singleton?.StartHost();
             UnityEngine.Debug.Log("[NetworkLobbyManager] Stub — started local host (no Relay).");
         }
@@ -47,6 +49,7 @@ namespace HybridGame.MasterBlaster.Scripts.Networking
         /// <summary>TODO Phase 6: Join lobby by code and start NGO as client.</summary>
         public Task JoinLobbyAsync(string lobbyCode)
         {
+            HybridGame.MasterBlaster.Scripts.Online.RelayHandler.EnsureUnityTransportForSingleton();
             NetworkManager.Singleton?.StartClient();
             UnityEngine.Debug.Log($"[NetworkLobbyManager] Stub — started local client (code ignored: {lobbyCode}).");
             return Task.CompletedTask;
