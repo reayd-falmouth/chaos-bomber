@@ -1,3 +1,4 @@
+using System.Collections;
 using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Camera;
@@ -35,15 +36,30 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             //if (bombermanEulerAngles == Vector3.zero)
             //    bombermanEulerAngles = new Vector3(-90f, 0f, 0f);
             ComputeBombermanScale();
+            StartCoroutine(CoApplyBillboardAfterHybridCameraReady());
+        }
+
+        /// <summary>
+        /// One frame after Start: <see cref="HybridCameraManager"/> may register after spawned bombs/explosions enable.
+        /// </summary>
+        private IEnumerator CoApplyBillboardAfterHybridCameraReady()
+        {
+            yield return null;
+            ApplyBillboardOrientation();
         }
 
         private void LateUpdate()
+        {
+            ApplyBillboardOrientation();
+        }
+
+        private void ApplyBillboardOrientation()
         {
             transform.localScale = m_BombermanScale;
 
             if (GameModeManager.Instance == null)
             {
-                LateUpdateWithoutGameModeManager();
+                ApplyBillboardWithoutGameModeManager();
                 return;
             }
 
@@ -69,7 +85,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 transform.position, cam.transform);
         }
 
-        private void LateUpdateWithoutGameModeManager()
+        private void ApplyBillboardWithoutGameModeManager()
         {
             UnityEngine.Camera cam = null;
             if (HybridCameraManager.Instance != null &&

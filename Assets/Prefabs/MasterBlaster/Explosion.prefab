@@ -531,7 +531,8 @@ MonoBehaviour:
   spriteCenter: {fileID: 6502963458885894632}
   spriteHorizontal: {fileID: 6398714110581251344}
   spriteVertical: {fileID: 3772248313485759971}
-  centerChargeParticlePrefab: {fileID: 0}
+  centerChargeParticlePrefab: {fileID: 3610644512686537207, guid: d2444a1796cbb614391126b11e23a3fb,
+    type: 3}
   chargeVfxLayerName: ParticleEffects
   chargeVfxFallbackLifetimeSeconds: 2
   explosionFeedbacks: {fileID: 4736127804381987904}
@@ -9335,7 +9336,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1531706673953477973}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.35, z: 0}
   m_LocalScale: {x: 6.25, y: 6.25, z: 6.25}
   m_ConstrainProportionsScale: 1
@@ -9344,7 +9345,7 @@ Transform:
   - {fileID: 922338127356858063}
   - {fileID: 6454858912763549840}
   m_Father: {fileID: 710774327073055155}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7885279315548155391
 MonoBehaviour:
   m_ObjectHideFlags: 0
