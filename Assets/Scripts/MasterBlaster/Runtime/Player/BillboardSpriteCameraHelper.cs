@@ -83,7 +83,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 if (!s_LoggedOrthoMainWhileFpsWarning && main != null && main.orthographic)
                 {
                     s_LoggedOrthoMainWhileFpsWarning = true;
-                    Debug.LogWarning(
+                    UnityEngine.Debug.LogWarning(
                         "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using first enabled perspective camera (" +
                         c.gameObject.name +
                         "). Add <HybridCameraManager> to the scene or ensure MainCamera tags the FPS view after mode switch.",
