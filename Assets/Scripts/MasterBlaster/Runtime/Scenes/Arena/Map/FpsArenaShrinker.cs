@@ -537,6 +537,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             maxX = c - 1 - inset;
             minY = inset;
             maxY = r - 1 - inset;
+
+            // One more step toward grid edges; walls are skipped via IsIndestructible (fixes off-by-one start vs. outer ring).
+            minX = Mathf.Max(0, minX - 1);
+            maxX = Mathf.Min(c - 1, maxX + 1);
+            minY = Mathf.Max(0, minY - 1);
+            maxY = Mathf.Min(r - 1, maxY + 1);
+
             if (minX > maxX)
             {
                 int mid = (minX + maxX) / 2;

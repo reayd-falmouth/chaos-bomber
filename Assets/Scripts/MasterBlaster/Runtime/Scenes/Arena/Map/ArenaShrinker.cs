@@ -703,6 +703,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             minY = b.yMin + inset;
             maxY = b.yMax - inset - 1;
 
+            // Include one more ring of cells toward the compressed bounds (matches playable floor vs. wall thickness).
+            minX = Mathf.Max(b.xMin, minX - 1);
+            maxX = Mathf.Min(b.xMax - 1, maxX + 1);
+            minY = Mathf.Max(b.yMin, minY - 1);
+            maxY = Mathf.Min(b.yMax - 1, maxY + 1);
+
             // Safety clamp
             if (minX > maxX)
             {
