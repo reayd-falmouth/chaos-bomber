@@ -93,6 +93,12 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
             }
         }
 
+        /// <summary>Arena shrink and similar hazards: trigger the same path as releasing detonate.</summary>
+        public void ForceDetonateFromArenaShrink()
+        {
+            Detonate();
+        }
+
         private void Detonate()
         {
             if (m_Detonated) return;
