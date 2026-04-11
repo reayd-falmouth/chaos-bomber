@@ -33,7 +33,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
         private InputAction _moveAction;
         private InputAction _bombAction;
         private InputAction _detonateAction;
-        private InputAction _switchModeAction;
+        private InputAction _fpsCycleWeaponAction;
         private bool _bombHeldLastFrame;
 
         /// <summary>True when input is read from a specific gamepad (not shared keyboard bindings).</summary>
@@ -45,11 +45,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _gamepad = gamepad;
             _debugUntil = Time.unscaledTime + 5f; // log input for 5 s after assignment
             UnityEngine.Debug.Log($"[HumanPlayerInput] {gameObject.name} → locked to: {(gamepad != null ? $"{gamepad.displayName} ({gamepad.GetType().Name})" : "NULL")}");
-            // Shared SwitchMode listens to any gamepad; disable it when using per-pad North for mode switch.
+            // Shared FpsCycleWeapon listens to any gamepad; disable it when using per-pad North for FPS weapon.
             if (_gamepad != null)
-                _switchModeAction?.Disable();
+                _fpsCycleWeaponAction?.Disable();
             else if (isActiveAndEnabled)
-                _switchModeAction?.Enable();
+                _fpsCycleWeaponAction?.Enable();
         }
 
         public void Init(int deviceIndex, KeyCode up, KeyCode down, KeyCode left, KeyCode right, KeyCode bomb, KeyCode detonate)
@@ -72,16 +72,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _moveAction = map.FindAction("Move");
             _bombAction = map.FindAction("PlaceBomb");
             _detonateAction = map.FindAction("Detonate");
-            _switchModeAction = map.FindAction("SwitchMode");
+            _fpsCycleWeaponAction = map.FindAction("FpsCycleWeapon");
             if (isActiveAndEnabled)
             {
                 _moveAction?.Enable();
                 _bombAction?.Enable();
                 _detonateAction?.Enable();
                 if (_gamepad == null)
-                    _switchModeAction?.Enable();
+                    _fpsCycleWeaponAction?.Enable();
                 else
-                    _switchModeAction?.Disable();
+                    _fpsCycleWeaponAction?.Disable();
             }
         }
 
@@ -91,9 +91,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _bombAction?.Enable();
             _detonateAction?.Enable();
             if (_gamepad == null)
-                _switchModeAction?.Enable();
+                _fpsCycleWeaponAction?.Enable();
             else
-                _switchModeAction?.Disable();
+                _fpsCycleWeaponAction?.Disable();
         }
 
         private void OnDisable()
@@ -101,7 +101,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
             _moveAction?.Disable();
             _bombAction?.Disable();
             _detonateAction?.Disable();
-            _switchModeAction?.Disable();
+            _fpsCycleWeaponAction?.Disable();
         }
 
         private void LateUpdate()
@@ -165,13 +165,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
         }
 
         /// <summary>
-        /// North / Tab mode switch: per-gamepad when locked, otherwise the shared SwitchMode action.
+        /// Gamepad North (FPS weapon cycle): per-gamepad when locked, otherwise the shared FpsCycleWeapon action.
         /// </summary>
-        public bool WasSwitchModePressedThisFrame()
+        public bool WasFpsCycleWeaponPressedThisFrame()
         {
             if (_gamepad != null)
                 return _gamepad.buttonNorth.wasPressedThisFrame;
-            return _switchModeAction != null && _switchModeAction.WasPressedThisFrame();
+            return _fpsCycleWeaponAction != null && _fpsCycleWeaponAction.WasPressedThisFrame();
         }
     }
 }

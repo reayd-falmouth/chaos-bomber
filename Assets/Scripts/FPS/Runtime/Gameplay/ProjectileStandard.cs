@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Unity.FPS.Game;
 using UnityEngine;
 
@@ -224,8 +223,6 @@ namespace Unity.FPS.Gameplay
 
         void OnHit(Vector3 point, Vector3 normal, Collider collider)
         {
-            TryDamageMasterBlasterDestructibleWall(collider);
-
             // damage
             if (AreaOfDamage)
             {
@@ -262,33 +259,6 @@ namespace Unity.FPS.Gameplay
 
             // Self Destruct
             Destroy(this.gameObject);
-        }
-
-        static readonly string k_WallBlock3DFullName = "HybridGame.MasterBlaster.Scripts.Arena.WallBlock3D";
-
-        void TryDamageMasterBlasterDestructibleWall(Collider collider)
-        {
-            if (collider == null) return;
-
-            var monoBehaviours = collider.GetComponentsInParent<MonoBehaviour>(true);
-            for (int i = 0; i < monoBehaviours.Length; i++)
-            {
-                var mb = monoBehaviours[i];
-                if (mb == null) continue;
-
-                var t = mb.GetType();
-                if (!string.Equals(t.FullName, k_WallBlock3DFullName, StringComparison.Ordinal))
-                    continue;
-
-                var method = t.GetMethod("ApplyProjectileDamage",
-                    BindingFlags.Instance | BindingFlags.Public,
-                    binder: null,
-                    types: new[] { typeof(float), typeof(GameObject) },
-                    modifiers: null);
-
-                method?.Invoke(mb, new object[] { Damage, m_ProjectileBase.Owner });
-                return;
-            }
         }
 
         void OnDrawGizmosSelected()

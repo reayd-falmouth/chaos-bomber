@@ -46,7 +46,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("Synced from PlayerController (Awake/Start). Used for coins and shared-input ownership.")]
         public int playerId;
 
-        [Tooltip("Only this arena player id enables the shared InputActionAsset (Move / SwitchMode / bomb) in Bomberman. " +
+        [Tooltip("Only this arena player id enables the shared InputActionAsset (Move / FpsCycleWeapon / bomb) in Bomberman. " +
                  "Set playerId on each instance when not using PlayerController (e.g. 1 vs 2).")]
         [SerializeField]
         private int bombermanKeyboardOwnerPlayerId = 1;
@@ -125,7 +125,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         // Input System actions
         private InputAction m_MoveAction;
-        private InputAction m_SwitchModeAction;
+        private InputAction m_FpsCycleWeaponAction;
         private bool m_ActionsEnabled;
 
         private float m_InitialBombermanSpeed;
@@ -359,17 +359,18 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             if (m_IsDead) return;
 
-            if (MayProcessSwitchModeInput())
+            if (m_CurrentMode == GameModeManager.GameMode.FPS && m_WeaponsManager != null &&
+                MayProcessFpsCycleWeaponInput())
             {
                 bool pressed = false;
                 var hip = GetComponent<HumanPlayerInput>();
                 if (hip != null)
-                    pressed = hip.WasSwitchModePressedThisFrame();
-                else if (m_SwitchModeAction != null && m_SwitchModeAction.enabled)
-                    pressed = m_SwitchModeAction.WasPressedThisFrame();
+                    pressed = hip.WasFpsCycleWeaponPressedThisFrame();
+                else if (m_FpsCycleWeaponAction != null && m_FpsCycleWeaponAction.enabled)
+                    pressed = m_FpsCycleWeaponAction.WasPressedThisFrame();
 
                 if (pressed)
-                    GameModeManager.Instance?.SwitchMode(GameModeCycle.GetNext(m_CurrentMode));
+                    m_WeaponsManager.SwitchWeapon(true);
             }
 
             if (!GameModeManager.IsGridPresentationMode(m_CurrentMode)) return;
@@ -459,7 +460,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             {
                 EndRemoteBombSteerSession();
                 DisableActions();
-                EnableActions(); // FPS: only SwitchMode for owner; never shared Move (FPS uses PlayerInputHandler)
+                EnableActions(); // FPS: FpsCycleWeapon (North) for owner; never shared Move (FPS uses PlayerInputHandler)
             }
 
             if (debugLogBillboxOnModeChange)
@@ -1057,10 +1058,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            m_MoveAction       = map.FindAction("Move");
-            m_SwitchModeAction = map.FindAction("SwitchMode");
+            m_MoveAction           = map.FindAction("Move");
+            m_FpsCycleWeaponAction = map.FindAction("FpsCycleWeapon");
             string bd = "{\"moveNull\":" + (m_MoveAction == null ? "true" : "false") +
-                        ",\"switchNull\":" + (m_SwitchModeAction == null ? "true" : "false") + "}";
+                        ",\"fpsWeaponNull\":" + (m_FpsCycleWeaponAction == null ? "true" : "false") + "}";
             AgentDebugNdjson.Log("B", "PlayerDualModeController.BindInputActions", "actions_resolved", bd);
             // #endregion
         }
@@ -1108,8 +1109,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         private bool IsAiControlled() => GetComponent<AIPlayerInput>() != null;
 
-        /// <summary>Humans that drive this slot may cycle view mode; AI must not consume SwitchMode.</summary>
-        private bool MayProcessSwitchModeInput() =>
+        /// <summary>Humans that drive this slot may use North to cycle FPS weapons; AI must not consume FpsCycleWeapon.</summary>
+        private bool MayProcessFpsCycleWeaponInput() =>
             !IsAiControlled() && CanDriveBombermanLocally();
 
         private void EnableActions()
@@ -1117,7 +1118,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (IsAiControlled())
             {
                 m_MoveAction?.Disable();
-                m_SwitchModeAction?.Disable();
+                m_FpsCycleWeaponAction?.Disable();
                 m_ActionsEnabled = false;
                 m_BombController?.RefreshBombInputFromDualMode();
                 AgentLogEnableActionsState("ai_no_actions");
@@ -1132,7 +1133,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 if (!ShouldProcessBombermanMovement())
                 {
                     m_MoveAction?.Disable();
-                    m_SwitchModeAction?.Disable();
+                    m_FpsCycleWeaponAction?.Disable();
                     m_ActionsEnabled = false;
                     m_BombController?.RefreshBombInputFromDualMode();
                     AgentLogEnableActionsState("bomberman_no_input_slot");
@@ -1144,10 +1145,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 else
                     m_MoveAction?.Disable();
 
-                if (useSharedSwitch)
-                    m_SwitchModeAction?.Enable();
-                else
-                    m_SwitchModeAction?.Disable();
+                // FpsCycleWeapon (gamepad North) is FPS-only; keep disabled in grid presentation modes.
+                m_FpsCycleWeaponAction?.Disable();
 
                 m_ActionsEnabled = true;
                 m_BombController?.RefreshBombInputFromDualMode();
@@ -1158,20 +1157,20 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             // FPS: movement is PlayerInputHandler — do not enable shared Move (would duplicate input)
             m_MoveAction?.Disable();
             if (useSharedSwitch)
-                m_SwitchModeAction?.Enable();
+                m_FpsCycleWeaponAction?.Enable();
             else
-                m_SwitchModeAction?.Disable();
+                m_FpsCycleWeaponAction?.Disable();
 
-            m_ActionsEnabled = useSharedSwitch ? m_SwitchModeAction != null : true;
+            m_ActionsEnabled = useSharedSwitch ? m_FpsCycleWeaponAction != null : true;
             m_BombController?.RefreshBombInputFromDualMode();
-            AgentLogEnableActionsState("fps_switch_only");
+            AgentLogEnableActionsState("fps_weapon_north_only");
         }
 
         // #region agent log
         private void AgentLogEnableActionsState(string branch)
         {
             bool moveEn = m_MoveAction != null && m_MoveAction.enabled;
-            bool swEn = m_SwitchModeAction != null && m_SwitchModeAction.enabled;
+            bool fpsWEn = m_FpsCycleWeaponAction != null && m_FpsCycleWeaponAction.enabled;
             string data = "{\"branch\":\"" + branch + "\",\"currentMode\":\"" + m_CurrentMode +
                           "\",\"playerId\":" + playerId + ",\"bombermanKeyboardOwnerPlayerId\":" +
                           bombermanKeyboardOwnerPlayerId + ",\"receiveSharedKeyboardInput\":" +
@@ -1179,9 +1178,9 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                           (OwnsBombermanSharedInput() ? "true" : "false") + ",\"canDriveLocal\":" +
                           (CanDriveBombermanLocally() ? "true" : "false") + ",\"m_ActionsEnabled\":" +
                           (m_ActionsEnabled ? "true" : "false") + ",\"moveNull\":" +
-                          (m_MoveAction == null ? "true" : "false") + ",\"switchNull\":" +
-                          (m_SwitchModeAction == null ? "true" : "false") + ",\"moveEnabled\":" +
-                          (moveEn ? "true" : "false") + ",\"switchEnabled\":" + (swEn ? "true" : "false") +
+                          (m_MoveAction == null ? "true" : "false") + ",\"fpsWeaponNull\":" +
+                          (m_FpsCycleWeaponAction == null ? "true" : "false") + ",\"moveEnabled\":" +
+                          (moveEn ? "true" : "false") + ",\"fpsWeaponEnabled\":" + (fpsWEn ? "true" : "false") +
                           ",\"inputActionsNull\":" + (inputActions == null ? "true" : "false") + "}";
             AgentDebugNdjson.Log("A", "PlayerDualModeController.EnableActions", "state", data);
         }
@@ -1190,7 +1189,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private void DisableActions()
         {
             m_MoveAction?.Disable();
-            m_SwitchModeAction?.Disable();
+            m_FpsCycleWeaponAction?.Disable();
             m_ActionsEnabled = false;
         }
     }
