@@ -186,19 +186,25 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   shrinkingEnabled: 1
   matchDuration: 180
+  useRemainingSecondsSchedule: 1
+  alarmRemainingSeconds: 18
+  shrinkRemainingSeconds: 27
   alarmThresholdFraction: 0.1
-  shrinkThresholdFraction: 0.05
+  shrinkThresholdFraction: 0.15
+  shrinkDelaySecondsAfterAlarm: 0
+  editorQuickTestMatchDuration: 0
   autoStartTimer: 1
   targetCamera: {fileID: 0}
   alarmColor: {r: 1, g: 0, b: 0, a: 1}
   pulseSpeed: 5
   alarmStartFeedbacks: {fileID: 0}
   alarmStopFeedbacks: {fileID: 0}
+  alarmLoopClip: {fileID: 8300000, guid: efa31b7496286b643b4c8ab5de0df906, type: 3}
   indestructiblePrefab: {fileID: 4437210315810945042, guid: da969a59e7f6c344b8d0830fc0c21254, type: 3}
   indestructiblesTilemap: {fileID: 6316150059619770268}
   destructiblesTilemap: {fileID: 2021028982257338901}
   shrinkDelay: 0.08
-  overlapBoxSize: {x: 0.9, y: 0.9}
+  overlapHalfExtents: {x: 0.45, y: 0.45, z: 0.45}
   overlapMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -3521,19 +3527,25 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   shrinkingEnabled: 1
   matchDuration: 180
-  alarmThresholdFraction: 0.2
-  shrinkThresholdFraction: 0.1
+  useRemainingSecondsSchedule: 1
+  alarmRemainingSeconds: 18
+  shrinkRemainingSeconds: 27
+  alarmThresholdFraction: 0.1
+  shrinkThresholdFraction: 0.15
+  shrinkDelaySecondsAfterAlarm: 0
+  editorQuickTestMatchDuration: 0
   autoStartTimer: 1
   targetCamera: {fileID: 0}
   alarmColor: {r: 1, g: 0, b: 0, a: 1}
   pulseSpeed: 5
   alarmStartFeedbacks: {fileID: 0}
   alarmStopFeedbacks: {fileID: 0}
+  alarmLoopClip: {fileID: 8300000, guid: efa31b7496286b643b4c8ab5de0df906, type: 3}
   indestructiblePrefab: {fileID: 4437210315810945042, guid: da969a59e7f6c344b8d0830fc0c21254, type: 3}
   indestructiblesTilemap: {fileID: 456272444618377832}
   destructiblesTilemap: {fileID: 8610332672930726791}
   shrinkDelay: 0.2
-  overlapBoxSize: {x: 0.9, y: 0.9}
+  overlapHalfExtents: {x: 0.45, y: 0.45, z: 0.45}
   overlapMask:
     serializedVersion: 2
     m_Bits: 4294967295

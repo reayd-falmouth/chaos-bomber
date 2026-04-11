@@ -7,10 +7,6 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-// AudioController
-
-// SceneFlowManager etc.
-
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 {
     [DisallowMultipleComponent]
@@ -20,6 +16,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         /// <summary>Replicated timer so client UIs stay in sync with the host.</summary>
         private NetworkVariable<float> _netTimeRemaining = new NetworkVariable<float>(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         // -------------------- Timer & Alarm --------------------
         [Header("Timer")]
         [Tooltip("Only run timer/alarm/shrinking when enabled.")]
@@ -30,15 +27,47 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private float matchDuration = 180f; // 3:00
 
+        [Header("Schedule")]
         [Tooltip(
-            "When remaining time <= this fraction, alarm starts & background pulses (e.g. 0.10 = last 10%)."
+            "If true, use alarmRemainingSeconds / shrinkRemainingSeconds. If false, use fraction fields below."
+        )]
+        [SerializeField]
+        private bool useRemainingSecondsSchedule = true;
+
+        [Tooltip("Alarm when remaining time is less than or equal to this (seconds).")]
+        [SerializeField]
+        private float alarmRemainingSeconds = 18f;
+
+        [Tooltip(
+            "Shrink when remaining time is less than or equal to this (seconds). Ignored if Shrink Delay After Alarm is set."
+        )]
+        [SerializeField]
+        private float shrinkRemainingSeconds = 27f;
+
+        [Tooltip(
+            "When remaining time <= this fraction, alarm starts & background pulses (e.g. 0.10 = last 10%). Used when Use Remaining Seconds is off."
         )]
         [SerializeField]
         private float alarmThresholdFraction = 0.10f;
 
-        [Tooltip("When remaining time <= this fraction, shrinking starts (e.g. 0.15 = last 15%).")]
+        [Tooltip(
+            "When remaining time <= this fraction, shrinking starts (e.g. 0.15 = last 15%). Used when Use Remaining Seconds is off."
+        )]
         [SerializeField]
         private float shrinkThresholdFraction = 0.15f;
+
+        [Tooltip(
+            "If greater than zero, shrink starts this many seconds after the alarm starts (real time). When set, Shrink Remaining Seconds / fraction shrink threshold is not used to trigger shrink."
+        )]
+        [SerializeField]
+        private float shrinkDelaySecondsAfterAlarm;
+
+#if UNITY_EDITOR
+        [Header("Editor quick test")]
+        [Tooltip("If greater than zero in the Editor, overrides match duration for faster iteration (builds ignore this).")]
+        [SerializeField]
+        private float editorQuickTestMatchDuration;
+#endif
 
         [Tooltip("Start timer automatically on Start().")]
         [SerializeField]
@@ -54,13 +83,19 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private float pulseSpeed = 5f; // sin speed
 
-        // --- Timer & Alarm (existing fields stay the same) ---
-
         [Header("Alarm Feedbacks")]
-        [SerializeField] private MMF_Player alarmStartFeedbacks;
-        [SerializeField] private MMF_Player alarmStopFeedbacks;
+        [SerializeField]
+        private MMF_Player alarmStartFeedbacks;
 
-        private AudioSource sirenSource; // local to Arena; dies with the scene
+        [SerializeField]
+        private MMF_Player alarmStopFeedbacks;
+
+        [Header("Alarm audio")]
+        [Tooltip("Optional loop played on the required AudioSource while the alarm is active.")]
+        [SerializeField]
+        private AudioClip alarmLoopClip;
+
+        private AudioSource _arenaAudioSource;
 
         // -------------------- Shrinking --------------------
         [Header("Shrinking")]
@@ -112,7 +147,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private bool timerRunning;
         private bool endingTriggered;
         private Color originalBg;
-        private Coroutine alarmLoopCo;
+        private float _alarmStartTime;
+        private bool _alarmHasFiredForDelay;
 
         // shrink bounds (inclusive)
         private int minX,
@@ -127,6 +163,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 shrinkingEnabled = false;
             else if (PlayerPrefs.HasKey("Shrinking"))
                 shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
+
+            _arenaAudioSource = GetComponent<AudioSource>();
 
             if (!targetCamera)
                 targetCamera = UnityEngine.Camera.main;
@@ -161,6 +199,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         void Update()
         {
+            SyncClientAlarmFromNetworkIfNeeded();
+
             // background pulse while alarm is active
             if (alarmActive && targetCamera)
             {
@@ -169,20 +209,75 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             }
         }
 
+        private void SyncClientAlarmFromNetworkIfNeeded()
+        {
+            if (!ShouldDriveAlarmFromNetworkVariable())
+                return;
+
+            float remaining = _netTimeRemaining.Value;
+            float alarmThreshold = ComputeAlarmThresholdRemaining();
+            bool shouldAlarm = ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmThreshold);
+            ApplyAlarmPresentationState(shouldAlarm);
+        }
+
+        private bool ShouldDriveAlarmFromNetworkVariable()
+        {
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+                return false;
+            return !IsServer;
+        }
+
+        private float EffectiveMatchDuration()
+        {
+#if UNITY_EDITOR
+            if (editorQuickTestMatchDuration > 0f)
+                return editorQuickTestMatchDuration;
+#endif
+            return matchDuration;
+        }
+
+        private float ComputeAlarmThresholdRemaining()
+        {
+            float md = EffectiveMatchDuration();
+            return ArenaShrinkSchedule.GetAlarmThresholdRemaining(
+                md,
+                useRemainingSecondsSchedule,
+                alarmRemainingSeconds,
+                alarmThresholdFraction
+            );
+        }
+
+        private float ComputeShrinkThresholdRemaining()
+        {
+            float md = EffectiveMatchDuration();
+            return ArenaShrinkSchedule.GetShrinkThresholdRemaining(
+                md,
+                useRemainingSecondsSchedule,
+                shrinkRemainingSeconds,
+                shrinkThresholdFraction
+            );
+        }
+
         // -------------------- Public API --------------------
         public void StartTimer()
         {
             if (!shrinkingEnabled || timerRunning)
                 return;
-            timeRemaining = Mathf.Max(1f, matchDuration);
+            timeRemaining = Mathf.Max(1f, EffectiveMatchDuration());
             timerRunning = true;
+            if (
+                NetworkManager.Singleton != null
+                && NetworkManager.Singleton.IsServer
+                && IsSpawned
+            )
+                _netTimeRemaining.Value = timeRemaining;
             StartCoroutine(TimerRoutine());
         }
 
         public void StopTimer()
         {
             timerRunning = false;
-            StopAlarm();
+            StopAlarmPresentation();
             if (targetCamera)
                 targetCamera.backgroundColor = originalBg;
         }
@@ -193,26 +288,65 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             // In online play, only the host runs the timer.
             bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
             if (isOnline && !IsServer)
+            {
+                timerRunning = false;
                 yield break;
+            }
 
-            float alarmTime = matchDuration * Mathf.Clamp01(alarmThresholdFraction);
-            float shrinkTime = matchDuration * Mathf.Clamp01(shrinkThresholdFraction);
+            float md = EffectiveMatchDuration();
+            float alarmThreshold = ArenaShrinkSchedule.GetAlarmThresholdRemaining(
+                md,
+                useRemainingSecondsSchedule,
+                alarmRemainingSeconds,
+                alarmThresholdFraction
+            );
+            float shrinkThreshold = ArenaShrinkSchedule.GetShrinkThresholdRemaining(
+                md,
+                useRemainingSecondsSchedule,
+                shrinkRemainingSeconds,
+                shrinkThresholdFraction
+            );
 
             while (timerRunning && timeRemaining > 0f)
             {
                 timeRemaining -= Time.deltaTime;
 
-                if (isOnline)
+                if (isOnline && IsServer && IsSpawned)
                     _netTimeRemaining.Value = timeRemaining;
 
-                if (!alarmActive && timeRemaining <= alarmTime)
-                    StartAlarm();
-
-                if (!shrinkingStarted && timeRemaining <= shrinkTime)
+                if (!alarmActive && ArenaShrinkSchedule.ShouldAlarmBeOn(timeRemaining, alarmThreshold))
                 {
-                    shrinkingStarted = true;
-                    shrinkingComplete = false;
-                    StartCoroutine(ShrinkRoutine());
+                    _alarmHasFiredForDelay = true;
+                    _alarmStartTime = Time.time;
+                    StartAlarmPresentation();
+                }
+
+                if (!shrinkingStarted)
+                {
+                    bool startShrink = false;
+                    if (shrinkDelaySecondsAfterAlarm > 0f)
+                    {
+                        startShrink = ArenaShrinkSchedule.ShouldStartShrinkAfterAlarmDelay(
+                            _alarmHasFiredForDelay,
+                            _alarmStartTime,
+                            shrinkDelaySecondsAfterAlarm,
+                            Time.time
+                        );
+                    }
+                    else
+                    {
+                        startShrink = ArenaShrinkSchedule.ShouldStartShrinkByRemaining(
+                            timeRemaining,
+                            shrinkThreshold
+                        );
+                    }
+
+                    if (startShrink)
+                    {
+                        shrinkingStarted = true;
+                        shrinkingComplete = false;
+                        StartCoroutine(ShrinkRoutine());
+                    }
                 }
 
                 yield return null;
@@ -226,7 +360,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             }
 
             // timer expired
-            StopAlarm();
+            StopAlarmPresentation();
             if (targetCamera)
                 targetCamera.backgroundColor = originalBg;
 
@@ -234,27 +368,70 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             {
                 endingTriggered = true;
                 if (TrainingMode.IsActive)
-                    yield break;   // timer is disabled in training; episode resets are handled per-arena by BombermanAgent
+                    yield break; // timer is disabled in training; episode resets are handled per-arena by BombermanAgent
                 SceneFlowManager.I.GoTo(FlowState.Standings);
             }
         }
 
+        private void StartAlarmPresentation()
+        {
+            ApplyAlarmPresentationState(true);
+        }
+
+        private void StopAlarmPresentation()
+        {
+            ApplyAlarmPresentationState(false);
+        }
+
+        private void ApplyAlarmPresentationState(bool active)
+        {
+            if (alarmActive == active)
+                return;
+            alarmActive = active;
+            if (active)
+            {
+                alarmStartFeedbacks?.PlayFeedbacks();
+                PlayAlarmAudio();
+            }
+            else
+            {
+                alarmStopFeedbacks?.PlayFeedbacks();
+                StopAlarmAudio();
+            }
+        }
+
+        private void PlayAlarmAudio()
+        {
+            if (_arenaAudioSource == null || alarmLoopClip == null)
+                return;
+            _arenaAudioSource.loop = true;
+            _arenaAudioSource.clip = alarmLoopClip;
+            _arenaAudioSource.Play();
+        }
+
+        private void StopAlarmAudio()
+        {
+            if (_arenaAudioSource == null)
+                return;
+            _arenaAudioSource.Stop();
+            _arenaAudioSource.clip = null;
+        }
+
         public void StartAlarm()
         {
-            alarmActive = true;
-            alarmStartFeedbacks?.PlayFeedbacks();
+            StartAlarmPresentation();
         }
 
         public void StopAlarm()
         {
-            alarmActive = false;
-            alarmStopFeedbacks?.PlayFeedbacks();
+            StopAlarmPresentation();
         }
 
         public override void OnDestroy()
         {
             base.OnDestroy();
             alarmStopFeedbacks?.PlayFeedbacks();
+            StopAlarmAudio();
         }
 
         // ------------ Shrinking (clockwise snake, inside border) ------------
@@ -299,7 +476,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private IEnumerator ShrinkRoutine()
         {
             if (!indestructiblesTilemap || !indestructiblePrefab)
+            {
+                shrinkingComplete = true;
                 yield break;
+            }
 
             int left = minX;
             int right = maxX;
@@ -351,7 +531,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [ClientRpc]
         private void PlaceBlockClientRpc(Vector3 worldPos)
         {
-            if (IsServer) return;
+            if (IsServer)
+                return;
             if (indestructiblePrefab != null)
                 Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, indestructiblesTilemap.transform);
         }
