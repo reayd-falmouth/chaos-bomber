@@ -75,6 +75,31 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             base.OnNetworkDespawn();
         }
 
+        private void OnEnable()
+        {
+            // In-scene NetworkObjects that start disabled (common in single-scene flow) may never auto-spawn;
+            // spawn when the GameObject becomes active on the host.
+            TrySpawnNetworkObjectIfServer();
+        }
+
+        /// <summary>
+        /// Ensures this in-scene <see cref="NetworkObject"/> is spawned on the server so
+        /// <see cref="NetworkVariable{T}"/> writes and <see cref="IsServer"/> are valid.
+        /// </summary>
+        private void TrySpawnNetworkObjectIfServer()
+        {
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || !NetworkManager.Singleton.IsServer)
+                return;
+            if (IsSpawned)
+                return;
+            if (!TryGetComponent<NetworkObject>(out var netObj) || netObj == null)
+                return;
+            if (netObj.IsSpawned)
+                return;
+
+            netObj.Spawn();
+        }
+
         private void OnSyncedGameModeChanged(byte previous, byte next)
         {
             ApplySyncedGameMode(next);
@@ -109,10 +134,22 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         /// </summary>
         public bool TryBeginInterludeFromServer()
         {
-            if (!IsSpawned || !IsServer)
-                return false;
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
                 return false;
+            // Do not use NetworkBehaviour.IsServer before spawn — it is false when not spawned even on the host.
+            if (!NetworkManager.Singleton.IsServer)
+                return false;
+
+            TrySpawnNetworkObjectIfServer();
+
+            if (!IsSpawned)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[OnlineFpsInterludeController] Random pickup on server but this NetworkObject is not spawned — " +
+                    "cannot run FPS interlude. Ensure the GameManager NetworkObject is in-scene and spawnable.");
+                return false;
+            }
+
             if (_interludeRoutineRunning)
                 return true;
 
