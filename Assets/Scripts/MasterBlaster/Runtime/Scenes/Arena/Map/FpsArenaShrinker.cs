@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Collections.Generic;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Bomb;
+using HybridGame.MasterBlaster.Scripts.Debug;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Bomb;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
@@ -131,6 +133,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         )]
         [SerializeField]
         private bool snakeIterateYFromMinToMax;
+
+        [Tooltip(
+            "When true, fill order is the same snake/spiral as below, but rotated so Manual Snake Start Cell is visited first. " +
+            "Coordinates match hybrid grid cell indices (inclusive inner bounds after inset); if the cell is not in the order, the rotation is skipped."
+        )]
+        [SerializeField]
+        private bool useManualSnakeStart;
+
+        [Tooltip("Grid cell (x, y) for the first shrink block when Use Manual Snake Start is enabled.")]
+        [SerializeField]
+        private Vector2Int manualSnakeStartCell;
 
         [Tooltip("Optional one-shot when a block is placed. If set, overrides AudioSource.clip on the spawned prefab.")]
         [SerializeField]
@@ -366,6 +379,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         public void StartTimer()
         {
+            // #region agent log
+            AgentDebugNdjson_624424.Log(
+                "H2",
+                "FpsArenaShrinker.StartTimer",
+                "entry",
+                "{\"shrinkingEnabled\":" + (shrinkingEnabled ? "true" : "false") +
+                ",\"timerRunning\":" + (timerRunning ? "true" : "false") +
+                ",\"isServer\":" + (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsServer ? "true" : "false") + "}",
+                "pre"
+            );
+            // #endregion
             if (!shrinkingEnabled || timerRunning)
                 return;
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsServer)
@@ -391,6 +415,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         /// </summary>
         public void ResetMatchStateForNewRound()
         {
+            // #region agent log
+            AgentDebugNdjson_624424.Log(
+                "H3",
+                "FpsArenaShrinker.ResetMatchStateForNewRound",
+                "called",
+                "{}",
+                "pre"
+            );
+            // #endregion
             StopAllCoroutines();
             timerRunning = false;
             endingTriggered = false;
@@ -568,16 +601,50 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             EnsureShrinkBlocksRoot();
             ComputeInsideBoundsFromGrid();
 
-            foreach (
-                var cell in ArenaShrinkCellOrder.EnumerateCells(
+            IEnumerable<Vector3Int> visit;
+            if (useManualSnakeStart)
+            {
+                var order = ArenaShrinkOrderUtilities.ToOrderedList(
                     shrinkPattern,
                     minX,
                     maxX,
                     minY,
                     maxY,
                     snakeIterateYFromMinToMax
+                );
+                if (
+                    ArenaShrinkOrderUtilities.TryRotateToStart(
+                        order,
+                        manualSnakeStartCell.x,
+                        manualSnakeStartCell.y,
+                        out var rotated
+                    )
                 )
-            )
+                {
+                    visit = rotated;
+                }
+                else
+                {
+                    UnityEngine.Debug.LogWarning(
+                        $"[FpsArenaShrinker] Manual snake start ({manualSnakeStartCell.x},{manualSnakeStartCell.y}) "
+                        + "not found in computed shrink order; using unrotated order."
+                    );
+                    visit = order;
+                }
+            }
+            else
+            {
+                visit = ArenaShrinkCellOrder.EnumerateCells(
+                    shrinkPattern,
+                    minX,
+                    maxX,
+                    minY,
+                    maxY,
+                    snakeIterateYFromMinToMax
+                );
+            }
+
+            foreach (var cell in visit)
             {
                 var c2 = new Vector2Int(cell.x, cell.y);
                 if (g.IsIndestructible(c2))
@@ -604,7 +671,20 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private void PlaceBlock(Vector2Int cell)
         {
             var g = Grid;
-            Vector3 worldCenter = ArenaGrid3D.CellToWorld(cell);
+            Vector3 worldCenter = ArenaGrid3D.CellToWorldShrinkBlock(cell);
+            // #region agent log
+            AgentDebugNdjson_624424.Log(
+                "H4",
+                "FpsArenaShrinker.PlaceBlock",
+                "worldCenter_shrinkBlock",
+                "{\"cellX\":" + cell.x + ",\"cellY\":" + cell.y +
+                ",\"wx\":" + worldCenter.x.ToString("F4") +
+                ",\"wy\":" + worldCenter.y.ToString("F4") +
+                ",\"wz\":" + worldCenter.z.ToString("F4") +
+                ",\"gridOriginY\":" + ArenaGrid3D.GridOrigin.y.ToString("F4") + "}",
+                "post-fix"
+            );
+            // #endregion
 
             var dest = g != null ? g.GetDestructible(cell) : null;
             if (dest != null)

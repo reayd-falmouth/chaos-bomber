@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Bomb;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
@@ -140,6 +141,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         )]
         [SerializeField]
         private bool snakeIterateYFromMinToMax;
+
+        [Tooltip(
+            "When true, fill order is the same snake/spiral as below, but rotated so Manual Snake Start Cell is visited first. " +
+            "Coordinates are tilemap cell X/Y (inclusive inner bounds after inset). If the cell is not in the order, rotation is skipped."
+        )]
+        [SerializeField]
+        private bool useManualSnakeStart;
+
+        [Tooltip("Tilemap grid cell (x, y) for the first shrink block when Use Manual Snake Start is enabled.")]
+        [SerializeField]
+        private Vector2Int manualSnakeStartCell;
 
         [Tooltip("Optional one-shot when a block is placed. If set, overrides relying on AudioSource on the block prefab.")]
         [SerializeField]
@@ -737,16 +749,50 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             EnsureShrinkBlocksRoot();
             ComputeInsideBounds();
 
-            foreach (
-                var cell in ArenaShrinkCellOrder.EnumerateCells(
+            IEnumerable<Vector3Int> visit;
+            if (useManualSnakeStart)
+            {
+                var order = ArenaShrinkOrderUtilities.ToOrderedList(
                     shrinkPattern,
                     minX,
                     maxX,
                     minY,
                     maxY,
                     snakeIterateYFromMinToMax
+                );
+                if (
+                    ArenaShrinkOrderUtilities.TryRotateToStart(
+                        order,
+                        manualSnakeStartCell.x,
+                        manualSnakeStartCell.y,
+                        out var rotated
+                    )
                 )
-            )
+                {
+                    visit = rotated;
+                }
+                else
+                {
+                    UnityEngine.Debug.LogWarning(
+                        $"[ArenaShrinker] Manual snake start ({manualSnakeStartCell.x},{manualSnakeStartCell.y}) "
+                        + "not found in computed shrink order; using unrotated order."
+                    );
+                    visit = order;
+                }
+            }
+            else
+            {
+                visit = ArenaShrinkCellOrder.EnumerateCells(
+                    shrinkPattern,
+                    minX,
+                    maxX,
+                    minY,
+                    maxY,
+                    snakeIterateYFromMinToMax
+                );
+            }
+
+            foreach (var cell in visit)
             {
                 if (indestructiblesTilemap.HasTile(cell))
                     continue;
