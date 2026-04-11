@@ -44,6 +44,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         /// <summary>
         /// FPS: fixed pitch X = -90°, Z = 0°; Y yaw from horizontal direction to the camera (cylindrical billboard).
+        /// Returns false when the horizontal offset is degenerate (see <see cref="ComputeFpsBillboardRotation"/> for fallback).
         /// </summary>
         public static bool TryComputeFpsCylindricalBillboardRotation(
             Vector3 spriteWorldPosition,
@@ -61,6 +62,26 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             float yaw = Quaternion.LookRotation(dir.normalized, Vector3.up).eulerAngles.y;
             rotation = Quaternion.Euler(-90f, yaw, 0f);
             return true;
+        }
+
+        /// <summary>
+        /// FPS billboard rotation: yaw toward the camera on XZ when non-degenerate; when the camera is in the same
+        /// XZ column as the sprite (typical for a first-person camera and a Billbox on the same player), uses camera yaw.
+        /// </summary>
+        public static Quaternion ComputeFpsBillboardRotation(Vector3 spriteWorldPosition, Transform camera)
+        {
+            if (camera == null)
+                return Quaternion.identity;
+
+            Vector3 dir = camera.position - spriteWorldPosition;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > MinDirSqrMag)
+            {
+                float yaw = Quaternion.LookRotation(dir.normalized, Vector3.up).eulerAngles.y;
+                return Quaternion.Euler(-90f, yaw, 0f);
+            }
+
+            return Quaternion.Euler(-90f, camera.eulerAngles.y, 0f);
         }
     }
 }

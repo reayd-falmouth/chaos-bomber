@@ -88,5 +88,73 @@ namespace fps.Tests.EditMode
             Assert.IsFalse(BillboardSpriteOrientationMath.TryComputeFpsCylindricalBillboardRotation(
                 Vector3.zero, new Vector3(0f, 5f, 0f), out _));
         }
+
+        [Test]
+        public void ComputeFpsBillboardRotation_NullCamera_ReturnsIdentity()
+        {
+            Assert.AreEqual(Quaternion.identity, BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                Vector3.zero, null));
+        }
+
+        [Test]
+        public void ComputeFpsBillboardRotation_CameraEast_MatchesCylindricalYaw()
+        {
+            var camGo = new GameObject("CamTest");
+            try
+            {
+                camGo.transform.position = new Vector3(5f, 10f, 0f);
+                camGo.transform.rotation = Quaternion.identity;
+                var q = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(Vector3.zero, camGo.transform);
+                var e = q.eulerAngles;
+                Assert.Less(
+                    Mathf.Abs(BillboardSpriteOrientationMath.NormalizeEulerX(e.x) - -90f),
+                    1f);
+                Assert.Less(Mathf.Abs(Mathf.DeltaAngle(e.z, 0f)), 1f);
+                Assert.Less(Mathf.Abs(Mathf.DeltaAngle(e.y, 90f)), 1f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(camGo);
+            }
+        }
+
+        [Test]
+        public void ComputeFpsBillboardRotation_CameraDirectlyAbove_UsesCameraYaw()
+        {
+            var camGo = new GameObject("CamTest");
+            try
+            {
+                camGo.transform.position = new Vector3(0f, 5f, 0f);
+                camGo.transform.rotation = Quaternion.Euler(0f, 33f, 0f);
+                var q = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(Vector3.zero, camGo.transform);
+                var e = q.eulerAngles;
+                Assert.Less(
+                    Mathf.Abs(BillboardSpriteOrientationMath.NormalizeEulerX(e.x) - -90f),
+                    1f);
+                Assert.Less(Mathf.Abs(Mathf.DeltaAngle(e.z, 0f)), 1f);
+                Assert.Less(Mathf.Abs(Mathf.DeltaAngle(e.y, 33f)), 1f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(camGo);
+            }
+        }
+
+        [Test]
+        public void ComputeFpsBillboardRotation_TooCloseHorizontal_UsesCameraYaw()
+        {
+            var camGo = new GameObject("CamTest");
+            try
+            {
+                camGo.transform.position = new Vector3(0.01f, 2f, 0f);
+                camGo.transform.rotation = Quaternion.Euler(0f, -120f, 0f);
+                var q = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(Vector3.zero, camGo.transform);
+                Assert.Less(Mathf.Abs(Mathf.DeltaAngle(q.eulerAngles.y, -120f)), 1f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(camGo);
+            }
+        }
     }
 }

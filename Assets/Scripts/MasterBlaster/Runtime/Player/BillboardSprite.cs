@@ -15,7 +15,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// ArenaPerspective — same scale as grid; if MainCamera is perspective, pitch follows the camera
     ///                    (see <see cref="BillboardSpriteOrientationMath"/>).
     ///
-    /// FPS        — euler (-90, yaw, 0): fixed pitch, Y yaw toward Camera.main on XZ; scale matches grid sizing.
+    /// FPS        — euler (-90, yaw, 0): fixed pitch, Y yaw toward Camera.main on XZ (camera yaw if XZ aligned); scale matches grid sizing.
     /// </summary>
     public class BillboardSprite : MonoBehaviour
     {
@@ -61,13 +61,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            // FPS: cylindrical billboard — X = -90, Z = 0, Y from horizontal direction to camera.
+            // FPS: cylindrical billboard — X = -90, Z = 0, Y from horizontal direction to camera (fallback: camera yaw).
             transform.localScale = m_BombermanScale;
             var fpsCam = UnityEngine.Camera.main;
             if (fpsCam == null) return;
-            if (BillboardSpriteOrientationMath.TryComputeFpsCylindricalBillboardRotation(
-                    transform.position, fpsCam.transform.position, out var fpsRot))
-                transform.rotation = fpsRot;
+            transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                transform.position, fpsCam.transform);
         }
 
         private void ComputeBombermanScale()
