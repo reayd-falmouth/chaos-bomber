@@ -37,11 +37,14 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
             try
             {
-                await NetworkLobbyManager.Instance.CreateLobbyAsync();
-                string code = NetworkLobbyManager.Instance.LobbyJoinCode;
+                if (PlayFabLobbyManager.Instance == null)
+                    throw new System.InvalidOperationException("PlayFabLobbyManager missing in scene (add it on the NetworkManager object).");
+
+                await PlayFabLobbyManager.Instance.CreateLobbyAsync();
+                string connectionString = PlayFabLobbyManager.Instance.LobbyConnectionString;
                 if (connectionStringDisplay != null)
-                    connectionStringDisplay.text = code;
-                SetStatus("Hosting — share the lobby code above with friends.");
+                    connectionStringDisplay.text = connectionString ?? string.Empty;
+                SetStatus("Hosting — share the connection string above with friends.");
             }
             catch (System.Exception e)
             {
@@ -52,10 +55,10 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
         async void OnJoinClicked()
         {
-            string code = joinCodeInput.text.Trim();
+            string code = OnlineLobbyConnectionString.Normalize(joinCodeInput != null ? joinCodeInput.text : string.Empty);
             if (string.IsNullOrEmpty(code))
             {
-                SetStatus("Paste the host's lobby code first.");
+                SetStatus("Paste the host's connection string first.");
                 return;
             }
 
@@ -64,7 +67,10 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
             try
             {
-                await NetworkLobbyManager.Instance.JoinLobbyAsync(code);
+                if (PlayFabLobbyManager.Instance == null)
+                    throw new System.InvalidOperationException("PlayFabLobbyManager missing in scene (add it on the NetworkManager object).");
+
+                await PlayFabLobbyManager.Instance.JoinLobbyAsync(code);
                 SetStatus("Connected!");
             }
             catch (System.Exception e)

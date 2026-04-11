@@ -21,7 +21,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.SearchingOnline
         [SerializeField] private Text connectionCodeText;
 
         [Header("Matchmaking")]
-        [SerializeField] private OnlineBackend backend = OnlineBackend.UnityServicesLobby;
+        [SerializeField] private OnlineBackend backend = OnlineBackend.PlayFabLobby;
         [SerializeField] private bool hostByDefault = true;
         [Range(2, 8)]
         [SerializeField] private int maxPlayers = 5;
