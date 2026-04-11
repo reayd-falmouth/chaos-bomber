@@ -72,6 +72,25 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             _newGamePending = false;
         }
 
+        /// <summary>
+        /// Clears all shop upgrade tiers (per player) when a round ends (e.g. Standings).
+        /// Preserves <see cref="PlayerCoins"/> and <see cref="PlayerWins"/> for the session.
+        /// </summary>
+        public void ClearShopUpgradesPreserveCoinsAndWins()
+        {
+            foreach (var kvp in PlayerUpgrades)
+            {
+                if (kvp.Value == null)
+                    continue;
+                foreach (ShopItemType type in System.Enum.GetValues(typeof(ShopItemType)))
+                {
+                    if (type == ShopItemType.Exit)
+                        continue;
+                    kvp.Value[type] = 0;
+                }
+            }
+        }
+
         public bool ConsumeNewGamePending()
         {
             if (!_newGamePending)

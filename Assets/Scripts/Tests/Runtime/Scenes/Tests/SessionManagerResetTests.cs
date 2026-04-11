@@ -36,6 +36,35 @@ namespace HybridGame.MasterBlaster.Tests
                 Object.DestroyImmediate(go);
             }
         }
+
+        [Test]
+        public void ClearShopUpgradesPreserveCoinsAndWins_KeepsCoinsAndWins_ClearsShopTiers()
+        {
+            var go = new GameObject("SessionManager_ClearShop_Test");
+            try
+            {
+                var session = go.AddComponent<SessionManager>();
+                session.Initialize(playerCount: 2);
+
+                session.AddCoins(1, 7);
+                session.AddWin(1);
+                session.SetUpgradeLevel(1, ShopItemType.ExtraBomb, 2);
+                session.SetUpgradeLevel(1, ShopItemType.Superman, 1);
+                session.SetUpgradeLevel(2, ShopItemType.Ghost, 1);
+
+                session.ClearShopUpgradesPreserveCoinsAndWins();
+
+                Assert.That(session.GetCoins(1), Is.EqualTo(7));
+                Assert.That(session.GetWins(1), Is.EqualTo(1));
+                Assert.That(session.GetUpgradeLevel(1, ShopItemType.ExtraBomb), Is.EqualTo(0));
+                Assert.That(session.GetUpgradeLevel(1, ShopItemType.Superman), Is.EqualTo(0));
+                Assert.That(session.GetUpgradeLevel(2, ShopItemType.Ghost), Is.EqualTo(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
     }
 }
 

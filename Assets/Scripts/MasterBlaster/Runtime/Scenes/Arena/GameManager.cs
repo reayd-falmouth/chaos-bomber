@@ -301,24 +301,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 PlayerPrefs.Save();
                 ResetPlayersForNewGame(playerCount);
                 HybridArenaGrid.Instance?.RestoreDestructiblesFromBaselineThenRethinAndRebuild();
-                ApplyAvatarStartingPerkForNewGame();
             }
 
-            // 🔹 Force upgrades and wins to be reapplied every new game round (only for players in this game)
-            foreach (var p in players)
-            {
-                if (p == null)
-                    continue;
-                var pc = p.GetComponent<PlayerController>();
-                if (pc != null && pc.playerId > 0 && SessionManager.Instance != null)
-                {
-                    pc.wins = SessionManager.Instance.GetWins(pc.playerId);
-                    pc.ApplyUpgrades();
-                    var bc = p.GetComponent<BombController>();
-                    if (bc != null)
-                        bc.ApplyUpgrades(pc.playerId);
-                }
-            }
+            ApplySessionLoadoutForAllPlayers();
+
+            if (newGamePending)
+                ApplyAvatarStartingPerkForNewGame();
 
             // Load settings; in training mode shrinking and start money are always off,
             // but map layout is controlled by TrainingAcademyHelper via PlayerPrefs
@@ -512,10 +500,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         }
 
         /// <summary>
-        /// Applies avatar-selected starting perk to player 1 hybrid player once per new session (PlayerPrefs).
+        /// Applies avatar-selected starting perk to player 1 hybrid player once per new session when
+        /// <see cref="AvatarSelectionPrefs.ApplyAvatarStartingPerkNextGameKey"/> is set (online avatar confirm).
         /// </summary>
         private void ApplyAvatarStartingPerkForNewGame()
         {
+            if (PlayerPrefs.GetInt(AvatarSelectionPrefs.ApplyAvatarStartingPerkNextGameKey, 0) != 1)
+                return;
+
             int stored = PlayerPrefs.GetInt(AvatarSelectionPrefs.AvatarStartingPerkKey, 0);
             var perk = (AvatarStartingPerk)stored;
             if (!AvatarSelectionPrefs.TryMapPerkToItemType(perk, out var itemType))
@@ -533,7 +525,47 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 if (dual == null || dual.playerId != 1)
                     continue;
                 ItemPickup3D.ApplyTo3DPlayer(go, itemType, null);
+                PlayerPrefs.SetInt(AvatarSelectionPrefs.ApplyAvatarStartingPerkNextGameKey, 0);
+                PlayerPrefs.Save();
                 return;
+            }
+        }
+
+        /// <summary>
+        /// Reapplies session shop tiers and 3D bomb loadout for every active player (including dual-only without 2D <see cref="PlayerController"/>).
+        /// </summary>
+        private void ApplySessionLoadoutForAllPlayers()
+        {
+            if (players == null || SessionManager.Instance == null)
+                return;
+
+            foreach (var p in players)
+            {
+                if (p == null)
+                    continue;
+
+                var pc = p.GetComponent<PlayerController>();
+                var dual = p.GetComponent<PlayerDualModeController>();
+                int pid = 0;
+                if (pc != null && pc.playerId > 0)
+                    pid = pc.playerId;
+                else if (dual != null && dual.playerId > 0)
+                    pid = dual.playerId;
+                if (pid <= 0)
+                    continue;
+
+                if (pc != null)
+                {
+                    pc.wins = SessionManager.Instance.GetWins(pid);
+                    pc.ApplyUpgrades();
+                    var bc = p.GetComponent<BombController>();
+                    if (bc != null)
+                        bc.ApplyUpgrades(pid);
+                }
+
+                var bc3d = p.GetComponent<BombController3D>();
+                if (bc3d != null)
+                    bc3d.ApplyLoadoutFromSession(pid);
             }
         }
 

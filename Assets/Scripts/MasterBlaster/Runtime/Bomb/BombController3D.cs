@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
+using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Debug;
 using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
+using HybridGame.MasterBlaster.Scripts.Scenes.Shop;
 using Unity.FPS.Game;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -63,11 +65,16 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         private InputAction m_BombAction;
         private PlayerDualModeController m_DualMode;
 
+        private int m_BaseBombAmount;
+        private int m_BaseExplosionRadius;
+
         // ── Unity lifecycle ────────────────────────────────────────────────────────
 
         private void Awake()
         {
             CacheLayerIds();
+            m_BaseBombAmount = bombAmount;
+            m_BaseExplosionRadius = explosionRadius;
             m_BombsRemaining = bombAmount;
             m_DualMode = GetComponent<PlayerDualModeController>();
             if (inputActions == null && m_DualMode != null && m_DualMode.inputActions != null)
@@ -511,6 +518,40 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
         }
 
         // ── Upgrades ──────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Resets bomb stats from prefab base + <see cref="SessionManager"/> shop tiers (same rules as 2D <c>BombController.ApplyUpgrades</c>).
+        /// Call from <see cref="HybridGame.MasterBlaster.Scripts.Scenes.Arena.GameManager"/> when entering the arena.
+        /// </summary>
+        public void ApplyLoadoutFromSession(int playerId)
+        {
+            if (SessionManager.Instance == null || playerId <= 0)
+                return;
+
+            if (m_BaseBombAmount == 0)
+                m_BaseBombAmount = bombAmount;
+            if (m_BaseExplosionRadius == 0)
+                m_BaseExplosionRadius = explosionRadius;
+
+            bombAmount = m_BaseBombAmount;
+            explosionRadius = m_BaseExplosionRadius;
+            timeBomb = false;
+            remoteBomb = false;
+
+            int extraBombs = SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.ExtraBomb);
+            bombAmount += extraBombs;
+
+            int powerUps = SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.PowerUp);
+            explosionRadius += powerUps;
+
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Timebomb) == 1)
+                timeBomb = true;
+
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Controller) == 1)
+                remoteBomb = true;
+
+            m_BombsRemaining = bombAmount;
+        }
 
         public void AddBomb() { bombAmount++; m_BombsRemaining++; }
         public void IncreaseBlastRadius() { explosionRadius++; }

@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Debug;
 using HybridGame.MasterBlaster.Scripts.Levels;
@@ -113,16 +114,19 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
         }
 
         [Header("Online")]
-        [Tooltip("Assign the OnlineLobbyUI panel GameObject. When Online is selected, this panel activates instead of starting locally.")]
+        [Tooltip("Assign the OnlineLobbyUI panel (host/join buttons).")]
         [SerializeField] private GameObject onlineLobbyPanel;
 
-        private bool _onlineSelected;
+        [Tooltip("Row index that opens the online lobby panel on confirm (e.g. a dedicated ONLINE row). Use -1 to disable. Must not be the BACK row (last index).")]
+        [SerializeField] private int onlineLobbyMenuRowIndex = -1;
 
         private void HandleSubmit()
         {
-            if (_onlineSelected)
+            if (onlineLobbyMenuRowIndex >= 0
+                && options != null
+                && selectedIndex == onlineLobbyMenuRowIndex
+                && selectedIndex != options.Length - 1)
             {
-                // Show the online lobby panel; NetworkLobbyManager handles the rest.
                 if (onlineLobbyPanel != null)
                     onlineLobbyPanel.SetActive(true);
                 return;
@@ -214,6 +218,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
             // Always reset session (wins, coins, upgrades) when starting a new game from the menu
             SessionManager.Instance.Initialize(players);
+
+            // Menu start is local flow: no avatar-select perk unless user came through online avatar (flag set there).
+            PlayerPrefs.SetInt(AvatarSelectionPrefs.ApplyAvatarStartingPerkNextGameKey, 0);
 
             // Single-scene mode: mark that the next time we enter Game, we should fully reinitialize player state and arena.
             PlayerPrefs.SetInt("NewGamePending", 1);

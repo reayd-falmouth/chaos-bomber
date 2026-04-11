@@ -1,4 +1,5 @@
 using System;
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -131,6 +132,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Title
 
             // Always reset session (wins, coins, upgrades) when starting a new game from the title.
             SessionManager.Instance.Initialize(players);
+
+            // Local match: no avatar-select starting perk (inspector loadout only).
+            PlayerPrefs.SetInt(AvatarSelectionPrefs.ApplyAvatarStartingPerkNextGameKey, 0);
 
             // Single-scene mode: mark that the next time we enter Game, we should fully reinitialize player state and arena.
             PlayerPrefs.SetInt("NewGamePending", 1);

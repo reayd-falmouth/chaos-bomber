@@ -14,6 +14,12 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         /// <summary>Serialized <see cref="AvatarStartingPerk"/> int; default 0 = <see cref="AvatarStartingPerk.None"/>.</summary>
         public const string AvatarStartingPerkKey = "AvatarStartingPerk";
 
+        /// <summary>
+        /// 1 = apply <see cref="AvatarStartingPerkKey"/> as a gameplay perk on the next new arena session (online avatar confirm).
+        /// 0 = inspector-only loadout for local starts. Written by avatar confirm / title local / menu start.
+        /// </summary>
+        public const string ApplyAvatarStartingPerkNextGameKey = "ApplyAvatarStartingPerkNextGame";
+
         /// <summary>0-based 30-sprite block in <see cref="PlayerSpriteSheet"/> for hybrid player 1 (menu → arena).</summary>
         public const string Player1SpriteBlockKey = "Player1SpriteBlock";
 

@@ -938,6 +938,9 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         // -------- Core --------
         public void GoTo(FlowState next)
         {
+            if (next == FlowState.Standings && SessionManager.Instance != null)
+                SessionManager.Instance.ClearShopUpgradesPreserveCoinsAndWins();
+
             var previous = state;
             UnityEngine.Debug.Log($"[Flow] {previous} → {next}");
             state = next;
