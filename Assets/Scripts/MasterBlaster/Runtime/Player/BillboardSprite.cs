@@ -112,7 +112,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardCameraTransform(cam);
+            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(cam);
             if (billboardCam == null)
                 return;
 
@@ -141,7 +141,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(GameModeManager.GameMode.FPS, out var cam))
                 return;
 
-            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardCameraTransform(cam);
+            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(cam);
             if (billboardCam == null)
                 return;
 

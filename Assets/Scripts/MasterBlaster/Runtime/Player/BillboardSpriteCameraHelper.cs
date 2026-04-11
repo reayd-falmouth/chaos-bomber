@@ -52,5 +52,48 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return UnityEngine.Camera.main.transform;
             return resolvedCam != null ? resolvedCam.transform : null;
         }
+
+        static bool s_LoggedOrthoMainWhileFpsWarning;
+
+        /// <summary>
+        /// FPS billboard facing: prefers a <b>perspective</b> gameplay camera. When <see cref="HybridCameraManager"/> is
+        /// missing from the scene or <c>MainCamera</c> was not retagged after switching to FPS, <see cref="UnityEngine.Camera.main"/>
+        /// can still be the orthographic Bomberman camera — bombs/explosions would keep grid euler-style facing without this fallback.
+        /// </summary>
+        public static Transform GetFpsBillboardFacingTransform(UnityEngine.Camera resolvedFromModeResolver)
+        {
+            var main = UnityEngine.Camera.main;
+            if (main != null && !main.orthographic)
+                return main.transform;
+
+            if (HybridCameraManager.Instance != null &&
+                HybridCameraManager.Instance.fpsCamera != null &&
+                HybridCameraManager.Instance.fpsCamera.gameObject.activeInHierarchy)
+                return HybridCameraManager.Instance.fpsCamera.transform;
+
+            if (resolvedFromModeResolver != null && !resolvedFromModeResolver.orthographic)
+                return resolvedFromModeResolver.transform;
+
+            var cameras = UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsSortMode.None);
+            for (int i = 0; i < cameras.Length; i++)
+            {
+                var c = cameras[i];
+                if (c == null || !c.enabled || !c.gameObject.activeInHierarchy || c.orthographic)
+                    continue;
+                if (!s_LoggedOrthoMainWhileFpsWarning && main != null && main.orthographic)
+                {
+                    s_LoggedOrthoMainWhileFpsWarning = true;
+                    Debug.LogWarning(
+                        "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using first enabled perspective camera (" +
+                        c.gameObject.name +
+                        "). Add <HybridCameraManager> to the scene or ensure MainCamera tags the FPS view after mode switch.",
+                        c);
+                }
+
+                return c.transform;
+            }
+
+            return GetFpsBillboardCameraTransform(resolvedFromModeResolver);
+        }
     }
 }
