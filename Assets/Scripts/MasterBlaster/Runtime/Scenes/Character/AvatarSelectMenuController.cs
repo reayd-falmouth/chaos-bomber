@@ -99,7 +99,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             persistSelectedAvatarToPlayerPrefs = persistAvatarPrefs;
         }
 
-        void Awake()
+        protected virtual void Awake()
         {
             if (avatarController == null)
                 avatarController = GetComponentInParent<AvatarController>();

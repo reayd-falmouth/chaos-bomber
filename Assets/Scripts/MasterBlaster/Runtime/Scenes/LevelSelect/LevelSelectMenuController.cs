@@ -9,7 +9,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
     /// </summary>
     public class LevelSelectMenuController : AvatarSelectMenuController
     {
-        void Awake()
+        protected override void Awake()
         {
             ConfigureFlowForTests(FlowState.Countdown, FlowState.AvatarSelect, persistAvatarPrefs: false);
             base.Awake();
