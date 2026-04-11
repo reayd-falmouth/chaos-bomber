@@ -30,19 +30,6 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         }
 
         /// <summary>
-        /// Sets <paramref name="t"/>.localPosition.y from grid vs FPS height (preserves local X/Z).
-        /// Matches <see cref="PlayerDualModeController"/> Billbox Y semantics; unit-tested.
-        /// </summary>
-        public static void ApplyBillboxLocalY(Transform t, bool gridPresentation, float yGrid, float yFps)
-        {
-            if (t == null)
-                return;
-            var lp = t.localPosition;
-            lp.y = gridPresentation ? yGrid : yFps;
-            t.localPosition = lp;
-        }
-
-        /// <summary>
         /// Resolves which camera should drive billboard facing for <paramref name="mode"/>.
         /// </summary>
         public static bool TryResolveBillboardCamera(GameModeManager.GameMode mode, out UnityEngine.Camera cam)
