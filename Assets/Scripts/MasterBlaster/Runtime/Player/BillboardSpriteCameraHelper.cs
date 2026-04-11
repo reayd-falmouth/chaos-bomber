@@ -8,7 +8,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 {
     /// <summary>
     /// Shared camera resolution for <see cref="BillboardSprite"/> (and unit tests).
-    /// Prefer <see cref="HybridCameraManager"/> when present; always fall back to <see cref="Camera.main"/>.
+    /// Prefer <see cref="HybridCameraManager"/> when present; many Master Blaster scenes use Cinemachine only (no HybridCameraManager).
+    /// Then <see cref="CinemachineBrain"/> gameplay cameras; finally <see cref="Camera.main"/>.
     /// </summary>
     public static class BillboardSpriteCameraHelper
     {
@@ -102,6 +103,43 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         }
 
         /// <summary>
+        /// Scenes that use Cinemachine without <see cref="HybridCameraManager"/>: the active Brain lives on the Unity
+        /// Camera that renders the virtual rigs — use that transform for FPS billboards when mode is FPS.
+        /// </summary>
+        static bool TryGetCinemachineBrainGameplayCameraTransform(out Transform t)
+        {
+            t = null;
+            var brains = UnityEngine.Object.FindObjectsByType<CinemachineBrain>(FindObjectsSortMode.None);
+            UnityEngine.Camera fallback = null;
+
+            for (int i = 0; i < brains.Length; i++)
+            {
+                var brain = brains[i];
+                if (brain == null || !brain.isActiveAndEnabled) continue;
+                var c = brain.GetComponent<UnityEngine.Camera>();
+                if (c == null || !c.enabled || c.orthographic) continue;
+                if (ShouldSkipCameraForFpsBillboardFacing(c)) continue;
+
+                if (c.CompareTag("MainCamera"))
+                {
+                    t = c.transform;
+                    return true;
+                }
+
+                if (fallback == null)
+                    fallback = c;
+            }
+
+            if (fallback != null)
+            {
+                t = fallback.transform;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// FPS billboard facing: prefers a <b>perspective</b> gameplay camera. When <see cref="HybridCameraManager"/> is
         /// missing from the scene or <c>MainCamera</c> was not retagged after switching to FPS, <see cref="UnityEngine.Camera.main"/>
         /// can still be the orthographic Bomberman camera — bombs/explosions would keep grid euler-style facing without this fallback.
@@ -119,6 +157,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 if (fps.gameObject.activeInHierarchy && fps.enabled)
                     return fps.transform;
             }
+
+            if (gmm != null && gmm.CurrentMode == GameModeManager.GameMode.FPS &&
+                TryGetCinemachineBrainGameplayCameraTransform(out var cmCam))
+                return cmCam;
 
             var main = UnityEngine.Camera.main;
             if (main != null && !main.orthographic)
@@ -149,7 +191,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                     UnityEngine.Debug.LogWarning(
                         "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using CinemachineBrain camera (" +
                         c.gameObject.name +
-                        "). Add <HybridCameraManager> to the scene or ensure MainCamera tags the FPS view after mode switch.",
+                        "). Ensure a perspective camera with CinemachineBrain is tagged MainCamera after switching to FPS, or add <HybridCameraManager>.",
                         c);
                 }
 
@@ -170,7 +212,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                     UnityEngine.Debug.LogWarning(
                         "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using first enabled gameplay perspective camera (" +
                         c.gameObject.name +
-                        "). Add <HybridCameraManager> to the scene or ensure MainCamera tags the FPS view after mode switch.",
+                        "). Ensure MainCamera tags the FPS view after mode switch, or add <HybridCameraManager> with fpsCamera assigned.",
                         c);
                 }
 
