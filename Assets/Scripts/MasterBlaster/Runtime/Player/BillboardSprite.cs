@@ -43,7 +43,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private void OnEnable()
         {
             GameModeManager.OnModeChanged += HandleGameModeChanged;
-            if (GameModeManager.Instance != null)
+            if (TryGetGameModeManager() != null)
                 ApplyBillboardOrientation();
         }
 
@@ -85,13 +85,14 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             transform.localScale = m_BombermanScale;
 
-            if (GameModeManager.Instance == null)
+            var gmm = TryGetGameModeManager();
+            if (gmm == null)
             {
                 ApplyBillboardWithoutGameModeManager();
                 return;
             }
 
-            var mode = GameModeManager.Instance.CurrentMode;
+            var mode = gmm.CurrentMode;
             if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(mode, out var cam))
                 return;
 
@@ -119,34 +120,44 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 transform.position, billboardCam);
         }
 
+        /// <summary>
+        /// When <see cref="GameModeManager.Instance"/> is null (Awake order, missing scene object, or duplicate destroyed),
+        /// infer grid vs FPS from the tagged <see cref="UnityEngine.Camera.main"/> first. The previous implementation
+        /// resolved <see cref="HybridGame.MasterBlaster.Scripts.Camera.BillboardCameraResolver"/> as if mode were FPS while
+        /// <c>Camera.main</c> was still orthographic, and applied FPS rotation using the disabled perspective FPS camera.
+        /// </summary>
         private void ApplyBillboardWithoutGameModeManager()
         {
+            var main = UnityEngine.Camera.main;
+            if (main == null)
+                return;
+
+            if (main.orthographic)
+            {
+                transform.rotation = Quaternion.Euler(bombermanEulerAngles);
+                return;
+            }
+
             if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(GameModeManager.GameMode.FPS, out var cam))
                 return;
 
-            bool mainPerspective = UnityEngine.Camera.main != null && !UnityEngine.Camera.main.orthographic;
-            if (mainPerspective)
-            {
-                var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardCameraTransform(cam);
-                if (billboardCam == null)
-                    return;
-
-                transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                    transform.position, billboardCam);
+            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardCameraTransform(cam);
+            if (billboardCam == null)
                 return;
-            }
 
-            if (cam.orthographic)
-                transform.rotation = Quaternion.Euler(bombermanEulerAngles);
-            else
-            {
-                var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardCameraTransform(cam);
-                if (billboardCam == null)
-                    return;
+            transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                transform.position, billboardCam);
+        }
 
-                transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                    transform.position, billboardCam);
-            }
+        /// <summary>
+        /// Prefer <see cref="GameModeManager.Instance"/>; if not yet registered (script order), find any component in the scene.
+        /// </summary>
+        private static GameModeManager TryGetGameModeManager()
+        {
+            if (GameModeManager.Instance != null)
+                return GameModeManager.Instance;
+
+            return UnityEngine.Object.FindFirstObjectByType<GameModeManager>(FindObjectsInactive.Include);
         }
 
         private void ComputeBombermanScale()
