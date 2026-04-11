@@ -1,4 +1,3 @@
-using HybridGame.MasterBlaster.Scripts.Player;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -15,7 +14,7 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
     {
         [Header("Destruction")]
         public float destructionAnimTime = 0.5f;
-        public AnimatedSpriteRenderer destroyFX;
+        public MultiFaceDestroySpriteAnimation destroyVfx;
 
         [Header("Health")]
         [Min(1f)]
@@ -92,13 +91,12 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             var mr = GetComponent<MeshRenderer>();
             if (mr != null) mr.enabled = false;
 
-            // Play destruction sprite animation
-            if (destroyFX != null)
+            // Play destruction sprite animation on all configured faces
+            if (destroyVfx != null)
             {
-                destroyFX.gameObject.SetActive(true);
-                destroyFX.enabled = true;
-                destroyFX.idle = false;
-                destroyFX.StartAnimation();
+                destroyVfx.gameObject.SetActive(true);
+                destroyVfx.enabled = true;
+                destroyVfx.Play();
             }
 
             if (!_destroyStarted)
