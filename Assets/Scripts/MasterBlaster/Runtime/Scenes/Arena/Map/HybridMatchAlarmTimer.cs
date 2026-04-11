@@ -213,6 +213,44 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 _backgroundPulseCamera.backgroundColor = originalBg;
         }
 
+        /// <summary>Restores alarm lights/camera/audio when the same scene starts a new round.</summary>
+        public void ResetMatchStateForNewRound()
+        {
+            StopAllCoroutines();
+            timerRunning = false;
+            endingTriggered = false;
+            timeRemaining = 0f;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
+                _netTimeRemaining.Value = 0f;
+            ForceRestoreAlarmPresentationAndCamera();
+        }
+
+        private void ForceRestoreAlarmPresentationAndCamera()
+        {
+            if (_alarmLightsCached && alarmLightsRoot != null)
+            {
+                AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                    alarmLightsRoot,
+                    _alarmLights,
+                    _alarmLightBaseIntensities
+                );
+            }
+            else if (alarmLightsRoot != null)
+                alarmLightsRoot.gameObject.SetActive(false);
+
+            alarmStopFeedbacks?.PlayFeedbacks();
+            if (_audioSource != null)
+            {
+                _audioSource.Stop();
+                _audioSource.clip = null;
+            }
+
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera != null)
+                _backgroundPulseCamera.backgroundColor = originalBg;
+            alarmActive = false;
+        }
+
         private float GetDisplayedTimeRemaining()
         {
             if (

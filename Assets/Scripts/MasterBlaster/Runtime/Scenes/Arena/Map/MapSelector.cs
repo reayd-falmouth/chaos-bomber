@@ -47,8 +47,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             // Stop and hide the inactive map/shrinker
             if (disableGO != null && disableGO.activeSelf)
             {
-                // var offShrinker = disableGO.GetComponentInChildren<ArenaShrinker>(true);
-                // offShrinker?.StopTimerAndAlarm();   // guarantees siren stops
+                foreach (var s in disableGO.GetComponentsInChildren<ArenaShrinker>(true))
+                    s.ResetMatchStateForNewRound();
+                foreach (var f in disableGO.GetComponentsInChildren<FpsArenaShrinker>(true))
+                    f.ResetMatchStateForNewRound();
                 disableGO.SetActive(false);
             }
 

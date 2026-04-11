@@ -1064,6 +1064,30 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         /// Destroys bombs, explosions, pickups, debris, and any orphan arena spawns still at scene root.
         /// Call when leaving the match (Standings/Shop/Overs) so single-scene mode does not leave world sprites over UI.
         /// </summary>
+        /// <summary>
+        /// Ensures alarm emergency lights and related shrinker/timer presentation reset when staying in the same scene.
+        /// </summary>
+        private static void ResetArenaAlarmPresentationForNewRound()
+        {
+            foreach (var s in FindObjectsByType<ArenaShrinker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (s != null)
+                    s.ResetMatchStateForNewRound();
+            }
+
+            foreach (var f in FindObjectsByType<FpsArenaShrinker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (f != null)
+                    f.ResetMatchStateForNewRound();
+            }
+
+            foreach (var h in FindObjectsByType<HybridMatchAlarmTimer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (h != null)
+                    h.ResetMatchStateForNewRound();
+            }
+        }
+
         public void ClearMatchTransientObjects()
         {
             for (int i = _arenaBombs.Count - 1; i >= 0; i--)
@@ -1285,6 +1309,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             _roundEndProcessed = false;
 
             ClearMatchTransientObjects();
+            ResetArenaAlarmPresentationForNewRound();
 
             // Restore the destructible tilemap to its initial layout.
             if (_destructibleTilemap != null && _initialDestructibleTiles.Count > 0)

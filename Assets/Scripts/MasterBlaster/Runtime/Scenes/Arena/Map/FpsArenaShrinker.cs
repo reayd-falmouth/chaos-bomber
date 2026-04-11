@@ -12,8 +12,8 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 {
     /// <summary>
-    /// 3D / hybrid FPS arena shrink: same schedule + boustrophedon snake as <see cref="ArenaShrinker"/>,
-    /// but uses <see cref="HybridArenaGrid"/> + <see cref="ArenaGrid3D"/> instead of Tilemaps.
+    /// 3D / hybrid FPS arena shrink: same schedule as <see cref="ArenaShrinker"/> (snake or spiral fill),
+    /// using <see cref="HybridArenaGrid"/> + <see cref="ArenaGrid3D"/> instead of Tilemaps.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AudioSource))]
@@ -32,21 +32,34 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private float matchDuration = 180f;
 
         [Header("Schedule")]
+        [Tooltip(
+            "If true: Alarm Remaining Seconds / Shrink Remaining Seconds are absolute seconds (same unit as Match Duration). " +
+            "If false: use the fraction fields — thresholds are matchDuration × fraction (e.g. 0.10 = last 10% of the match)."
+        )]
         [SerializeField]
         private bool useRemainingSecondsSchedule = true;
 
+        [Tooltip("When Use Remaining Seconds Schedule is on: alarm audio/visuals when time left ≤ this many seconds.")]
         [SerializeField]
         private float alarmRemainingSeconds = 10f;
 
+        [Tooltip(
+            "When Use Remaining Seconds Schedule is on: shrink can start when time left ≤ this (unless Shrink Delay After Alarm is set)."
+        )]
         [SerializeField]
         private float shrinkRemainingSeconds = 27f;
 
+        [Tooltip("Used only when Use Remaining Seconds Schedule is off: alarm when remaining ≤ matchDuration × this.")]
         [SerializeField]
         private float alarmThresholdFraction = 0.10f;
 
+        [Tooltip("Used only when Use Remaining Seconds Schedule is off: shrink when remaining ≤ matchDuration × this.")]
         [SerializeField]
         private float shrinkThresholdFraction = 0.15f;
 
+        [Tooltip(
+            "If > 0: shrink starts this many seconds after the alarm starts (real time). When set, Shrink Remaining Seconds / fraction shrink threshold is not used."
+        )]
         [SerializeField]
         private float shrinkDelaySecondsAfterAlarm;
 
@@ -90,6 +103,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private MMF_Player alarmStopFeedbacks;
 
         [Header("Alarm audio")]
+        [Tooltip("Loop played on the required AudioSource while the alarm is active. If empty, visuals still run but no alarm sound.")]
         [SerializeField]
         private AudioClip alarmLoopClip;
 
@@ -100,8 +114,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private Transform shrinkBlocksParent;
 
+        [Tooltip("Seconds of real time between each new block (lower = faster fill). Same units as Match Duration.")]
         [SerializeField]
         private float shrinkDelay = 0.08f;
+
+        [Tooltip("How cells are visited: boustrophedon rows vs perimeter spiral inward.")]
+        [SerializeField]
+        private ArenaShrinkPattern shrinkPattern = ArenaShrinkPattern.BoustrophedonSnake;
+
+        [Tooltip(
+            "Snake only: if true, boustrophedon walks row index from min→max (match when grid row 0 is the outer ‘top’ edge). " +
+            "If false, rows run max→min (fills from the opposite edge first in index space)."
+        )]
+        [SerializeField]
+        private bool snakeIterateYFromMinToMax;
+
+        [Tooltip("Optional one-shot when a block is placed. If set, overrides AudioSource.clip on the spawned prefab.")]
+        [SerializeField]
+        private AudioClip blockPlaceClip;
 
         [SerializeField]
         private Vector3 overlapHalfExtents = new Vector3(0.45f, 0.45f, 0.45f);
@@ -227,7 +257,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             else if (!timerRunning && remaining <= 0f && !shrinkingStarted)
                 line2 = "Timer not started";
             else if (shrinkingStarted && !shrinkingComplete)
-                line2 = "Wall closing in (snake fill)";
+                line2 = shrinkPattern == ArenaShrinkPattern.SpiralInward
+                    ? "Wall closing in (spiral)"
+                    : "Wall closing in (snake)";
             else if (remaining <= 0f)
                 line2 = "Time's up";
             else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
@@ -316,6 +348,44 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             RefreshBackgroundPulseCamera();
             if (_backgroundPulseCamera)
                 _backgroundPulseCamera.backgroundColor = originalBg;
+        }
+
+        /// <summary>
+        /// Stops timer/shrink coroutines and restores alarm lights, camera tint, and audio for a new round in the same scene.
+        /// </summary>
+        public void ResetMatchStateForNewRound()
+        {
+            StopAllCoroutines();
+            timerRunning = false;
+            endingTriggered = false;
+            shrinkingStarted = false;
+            shrinkingComplete = false;
+            _alarmHasFiredForDelay = false;
+            timeRemaining = 0f;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
+                _netTimeRemaining.Value = 0f;
+            ForceRestoreAlarmPresentationAndCamera();
+        }
+
+        private void ForceRestoreAlarmPresentationAndCamera()
+        {
+            if (_alarmLightsCached && alarmLightsRoot != null)
+            {
+                AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                    alarmLightsRoot,
+                    _alarmLights,
+                    _alarmLightBaseIntensities
+                );
+            }
+            else if (alarmLightsRoot != null)
+                alarmLightsRoot.gameObject.SetActive(false);
+
+            alarmStopFeedbacks?.PlayFeedbacks();
+            StopAlarmAudio();
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera != null)
+                _backgroundPulseCamera.backgroundColor = originalBg;
+            alarmActive = false;
         }
 
         private IEnumerator TimerRoutine()
@@ -448,7 +518,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             ComputeInsideBoundsFromGrid();
 
-            foreach (var cell in ArenaShrinkSnakeOrder.EnumerateCells(minX, maxX, minY, maxY))
+            foreach (
+                var cell in ArenaShrinkCellOrder.EnumerateCells(
+                    shrinkPattern,
+                    minX,
+                    maxX,
+                    minY,
+                    maxY,
+                    snakeIterateYFromMinToMax
+                )
+            )
             {
                 var c2 = new Vector2Int(cell.x, cell.y);
                 if (g.IsIndestructible(c2))
@@ -470,6 +549,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 return;
             var parent = shrinkBlocksParent != null ? shrinkBlocksParent : transform;
             Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, parent);
+            PlayBlockPlaceSound();
         }
 
         private void PlaceBlock(Vector2Int cell)
@@ -548,7 +628,25 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
                 PlaceBlockClientRpc(worldCenter);
 
-            var src = go.GetComponent<AudioSource>();
+            PlayBlockPlaceSoundOnBlock(go);
+        }
+
+        private void PlayBlockPlaceSound()
+        {
+            if (blockPlaceClip == null || _arenaAudioSource == null)
+                return;
+            _arenaAudioSource.PlayOneShot(blockPlaceClip);
+        }
+
+        private void PlayBlockPlaceSoundOnBlock(GameObject blockInstance)
+        {
+            if (blockPlaceClip != null && _arenaAudioSource != null)
+            {
+                _arenaAudioSource.PlayOneShot(blockPlaceClip);
+                return;
+            }
+
+            var src = blockInstance != null ? blockInstance.GetComponent<AudioSource>() : null;
             if (src != null && src.clip != null)
                 src.Play();
         }

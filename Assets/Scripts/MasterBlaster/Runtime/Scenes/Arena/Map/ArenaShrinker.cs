@@ -122,9 +122,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private Tilemap destructiblesTilemap; // usually child: "Destructibles"
 
-        [Tooltip("Delay between placing each block (snake speed).")]
+        [Tooltip("Seconds of real time between each new block (lower = faster fill). Same units as match duration.")]
         [SerializeField]
         private float shrinkDelay = 0.08f;
+
+        [Tooltip("How cells are visited: boustrophedon rows vs perimeter spiral inward.")]
+        [SerializeField]
+        private ArenaShrinkPattern shrinkPattern = ArenaShrinkPattern.BoustrophedonSnake;
+
+        [Tooltip(
+            "Snake only: if true, boustrophedon walks Y from min→max (use when tilemap Y+ points down). " +
+            "If false, Y runs max→min (typical when Y+ is up), matching DestructibleGenerator’s outer-row-first feel."
+        )]
+        [SerializeField]
+        private bool snakeIterateYFromMinToMax;
+
+        [Tooltip("Optional one-shot when a block is placed. If set, overrides relying on AudioSource on the block prefab.")]
+        [SerializeField]
+        private AudioClip blockPlaceClip;
 
         [Tooltip("3D overlap half-extents (XZ + height) used to resolve bombs/items/players under each new block.")]
         [SerializeField]
@@ -561,6 +576,45 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             StopAlarmPresentation();
         }
 
+        /// <summary>
+        /// Clears timer/shrink coroutines and restores alarm lights, camera tint, and audio.
+        /// Call when the same scene starts a new round (e.g. GameManager after countdown).
+        /// </summary>
+        public void ResetMatchStateForNewRound()
+        {
+            StopAllCoroutines();
+            timerRunning = false;
+            endingTriggered = false;
+            shrinkingStarted = false;
+            shrinkingComplete = false;
+            _alarmHasFiredForDelay = false;
+            timeRemaining = 0f;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
+                _netTimeRemaining.Value = 0f;
+            ForceRestoreAlarmPresentationAndCamera();
+        }
+
+        private void ForceRestoreAlarmPresentationAndCamera()
+        {
+            if (_alarmLightsCached && alarmLightsRoot != null)
+            {
+                AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                    alarmLightsRoot,
+                    _alarmLights,
+                    _alarmLightBaseIntensities
+                );
+            }
+            else if (alarmLightsRoot != null)
+                alarmLightsRoot.gameObject.SetActive(false);
+
+            alarmStopFeedbacks?.PlayFeedbacks();
+            StopAlarmAudio();
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera != null)
+                _backgroundPulseCamera.backgroundColor = originalBg;
+            alarmActive = false;
+        }
+
         public override void OnDestroy()
         {
             if (_alarmLightsCached && alarmLightsRoot != null)
@@ -591,6 +645,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 UnityEngine.Debug.LogError("[ArenaShrinker] No Indestructibles Tilemap assigned.");
                 return;
             }
+
+            // Match DestructibleGenerator / spawn bounds — shrink bounds to painted tiles first.
+            indestructiblesTilemap.CompressBounds();
 
             // IMPORTANT: cellBounds.xMax/yMax are EXCLUSIVE
             BoundsInt b = indestructiblesTilemap.cellBounds;
@@ -626,7 +683,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield break;
             }
 
-            foreach (var cell in ArenaShrinkSnakeOrder.EnumerateCells(minX, maxX, minY, maxY))
+            ComputeInsideBounds();
+
+            foreach (
+                var cell in ArenaShrinkCellOrder.EnumerateCells(
+                    shrinkPattern,
+                    minX,
+                    maxX,
+                    minY,
+                    maxY,
+                    snakeIterateYFromMinToMax
+                )
+            )
             {
                 if (indestructiblesTilemap.HasTile(cell))
                     continue;
@@ -646,6 +714,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 return;
             if (indestructiblePrefab != null)
                 Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, indestructiblesTilemap.transform);
+            PlayBlockPlaceSound();
         }
 
         private void PlaceBlock(Vector3Int cell)
@@ -699,16 +768,28 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
                 PlaceBlockClientRpc(worldCenter);
 
-            // 3) Play its SFX
-            var src = go.GetComponent<AudioSource>();
-            if (src != null)
+            // 3) Block placement SFX (explicit clip preferred; else prefab AudioSource)
+            PlayBlockPlaceSoundOnBlock(go);
+        }
+
+        private void PlayBlockPlaceSound()
+        {
+            if (blockPlaceClip == null || _arenaAudioSource == null)
+                return;
+            _arenaAudioSource.PlayOneShot(blockPlaceClip);
+        }
+
+        private void PlayBlockPlaceSoundOnBlock(GameObject blockInstance)
+        {
+            if (blockPlaceClip != null && _arenaAudioSource != null)
             {
-                if (src.clip != null)
-                {
-                    // prefab already has clip assigned
-                    src.Play();
-                }
+                _arenaAudioSource.PlayOneShot(blockPlaceClip);
+                return;
             }
+
+            var src = blockInstance != null ? blockInstance.GetComponent<AudioSource>() : null;
+            if (src != null && src.clip != null)
+                src.Play();
         }
 
         // ---- Debug gizmo for inside bounds ----
