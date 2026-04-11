@@ -91,9 +91,9 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                         $"ctrlInstance={(OnlineFpsInterludeController.Instance != null)} pickup={gameObject.name}");
                 }
 
+                var ctrl = OnlineFpsInterludeController.Instance;
                 if (online)
                 {
-                    var ctrl = OnlineFpsInterludeController.Instance;
                     var began = ctrl != null && ctrl.TryBeginInterludeFromServer();
                     if (OnlineFpsInterludeController.DiagnosticsEnabled)
                         UnityEngine.Debug.Log($"[FPSInterlude] ItemPickup3D.TryBeginInterludeFromServer -> {began} (ctrl={(ctrl != null)})");
@@ -103,6 +103,15 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                     if (ctrl == null)
                         UnityEngine.Debug.LogWarning(
                             "[ItemPickup3D] Online Random pickup but OnlineFpsInterludeController is missing — falling back to ApplyRandom.");
+                }
+                else
+                {
+                    var beganOffline = ctrl != null && ctrl.TryBeginInterludeWhenOffline();
+                    if (OnlineFpsInterludeController.DiagnosticsEnabled)
+                        UnityEngine.Debug.Log($"[FPSInterlude] ItemPickup3D.TryBeginInterludeWhenOffline -> {beganOffline} (ctrl={(ctrl != null)})");
+
+                    if (ctrl != null && beganOffline)
+                        return;
                 }
 
                 if (OnlineFpsInterludeController.DiagnosticsEnabled)

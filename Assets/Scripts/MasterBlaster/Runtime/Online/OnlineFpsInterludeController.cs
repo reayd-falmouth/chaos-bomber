@@ -7,9 +7,9 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.Scripts.Online
 {
     /// <summary>
-    /// Online-only: when a Random <see cref="ItemPickup3D"/> is collected, switches all peers to FPS,
-    /// runs a server-replicated countdown, then returns to Bomberman. Place on the same networked object as
-    /// <see cref="GameModeManager"/> (e.g. GameManager with <see cref="NetworkObject"/>).
+    /// When a Random <see cref="ItemPickup3D"/> is collected: if Netcode is listening, the host runs a
+    /// replicated FPS interlude; if not listening (local/solo), an optional offline interlude drives
+    /// <see cref="GameModeManager"/> only on this machine. Place on the same object as <see cref="GameModeManager"/>.
     /// </summary>
     [DisallowMultipleComponent]
     public class OnlineFpsInterludeController : NetworkBehaviour
@@ -43,6 +43,12 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         [Min(0.05f)]
         private float secondsPerTick = 1f;
 
+        [Header("Offline / solo")]
+        [Tooltip("When Netcode is not listening, Random pickups still run FPS interlude + countdown locally. " +
+                 "Disable to use classic ApplyRandom() only when offline.")]
+        [SerializeField]
+        private bool fpsInterludeWhenOffline = true;
+
         [Header("Debug")]
         [Tooltip("Logs [FPSInterlude] lines to the Console (filter by FPSInterlude). Disable to silence.")]
         [SerializeField]
@@ -53,6 +59,9 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             Instance != null && Instance.logFpsInterludeDiagnostics;
 
         private bool _interludeRoutineRunning;
+
+        private bool _offlineInterludeActive;
+        private int _offlineCountdown;
 
         private static void LogDiag(string message)
         {
@@ -152,10 +161,19 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
         /// <summary>True when the HUD should show the current countdown number.</summary>
         public bool IsCountdownDisplayActive =>
-            IsSpawned && _interludeActive.Value && _countdownRemaining.Value > 0;
+            (_offlineInterludeActive && _offlineCountdown > 0)
+            || (IsSpawned && _interludeActive.Value && _countdownRemaining.Value > 0);
 
         /// <summary>Current number to show (0 = hide number).</summary>
-        public int CountdownDisplayValue => IsSpawned ? _countdownRemaining.Value : 0;
+        public int CountdownDisplayValue
+        {
+            get
+            {
+                if (_offlineInterludeActive && _offlineCountdown > 0)
+                    return _offlineCountdown;
+                return IsSpawned ? _countdownRemaining.Value : 0;
+            }
+        }
 
         /// <summary>
         /// Server-only: starts the FPS interlude. Returns true if this pickup should not apply a random roll.
@@ -222,6 +240,58 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             GameModeManager.Instance?.SetExternalModeLock(false);
             _interludeRoutineRunning = false;
             LogDiag("ServerInterludeCoroutine: end returned to Bomberman, lock off");
+        }
+
+        /// <summary>
+        /// Local/solo: when <see cref="NetworkManager"/> is not listening, runs FPS interlude on this machine only
+        /// (no Netcode). Returns false if interlude is disabled or a session is active (use online path instead).
+        /// </summary>
+        public bool TryBeginInterludeWhenOffline()
+        {
+            if (!fpsInterludeWhenOffline)
+            {
+                LogDiag("TryBeginInterludeWhenOffline: skipped (fpsInterludeWhenOffline is false)");
+                return false;
+            }
+
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                LogDiag("TryBeginInterludeWhenOffline: skipped (IsListening — use TryBeginInterludeFromServer)");
+                return false;
+            }
+
+            if (_interludeRoutineRunning)
+            {
+                LogDiag("TryBeginInterludeWhenOffline: already running");
+                return true;
+            }
+
+            _interludeRoutineRunning = true;
+            LogDiag("TryBeginInterludeWhenOffline: starting OfflineInterludeCoroutine");
+            StartCoroutine(OfflineInterludeCoroutine());
+            return true;
+        }
+
+        private IEnumerator OfflineInterludeCoroutine()
+        {
+            GameModeManager.Instance?.SetExternalModeLock(true);
+            _offlineInterludeActive = true;
+            GameModeManager.Instance?.SwitchMode(GameModeManager.GameMode.FPS);
+            LogDiag("OfflineInterludeCoroutine: switched to FPS");
+
+            int[] sequence = FpsInterludeCountdownMath.BuildCountdownSequence(countdownSeconds);
+            foreach (int n in sequence)
+            {
+                _offlineCountdown = n;
+                yield return new WaitForSeconds(secondsPerTick);
+            }
+
+            _offlineCountdown = 0;
+            _offlineInterludeActive = false;
+            GameModeManager.Instance?.SwitchMode(GameModeManager.GameMode.Bomberman);
+            GameModeManager.Instance?.SetExternalModeLock(false);
+            _interludeRoutineRunning = false;
+            LogDiag("OfflineInterludeCoroutine: back to Bomberman");
         }
     }
 }
