@@ -83,5 +83,21 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
             return Quaternion.Euler(-90f, camera.eulerAngles.y, 0f);
         }
+
+        /// <summary>
+        /// FPS: full billboard — transform forward (+Z) points toward the camera. Typical quad faces +Z; euler X is often
+        /// near 0 when the camera is level (unlike <see cref="ComputeFpsBillboardRotation"/> cylindrical -90° pitch).
+        /// </summary>
+        public static Quaternion ComputeFpsBillboardLookAtRotation(Vector3 spriteWorldPosition, Transform camera)
+        {
+            if (camera == null)
+                return Quaternion.identity;
+
+            Vector3 toCam = camera.position - spriteWorldPosition;
+            if (toCam.sqrMagnitude <= MinDirSqrMag)
+                return Quaternion.LookRotation(camera.forward, Vector3.up);
+
+            return Quaternion.LookRotation(toCam.normalized, Vector3.up);
+        }
     }
 }
