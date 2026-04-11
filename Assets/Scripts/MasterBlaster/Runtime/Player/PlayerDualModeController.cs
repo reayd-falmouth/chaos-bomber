@@ -1,6 +1,8 @@
 using System;
-using System.Reflection;
+using System.Collections;
 using System.IO;
+using System.Reflection;
+using System.Text;
 using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Bomb;
@@ -76,6 +78,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [SerializeField] private float billboxLocalYGrid = 2f;
         [Tooltip("Local Y of the Billbox transform in FPS mode (eye-level billboard).")]
         [SerializeField] private float billboxLocalYFps = 1f;
+
+        [Header("Debug")]
+        [Tooltip("When enabled, one log per mode change on the next frame (after cameras update): Billbox transform, Camera.main, BillboardSprite eulers under the player.")]
+        [SerializeField] private bool debugLogBillboxOnModeChange;
 
         // ── private state ──────────────────────────────────────────────────────────
         private Transform m_BillboxRoot;
@@ -444,6 +450,42 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 DisableActions();
                 EnableActions(); // FPS: only SwitchMode for owner; never shared Move (FPS uses PlayerInputHandler)
             }
+
+            if (debugLogBillboxOnModeChange)
+                StartCoroutine(CoLogBillboxAfterModeChangeCamerasReady(newMode));
+        }
+
+        /// <summary>
+        /// <see cref="GameModeManager.ApplyMode"/> runs player <see cref="OnModeChanged"/> before <see cref="HybridCameraManager.SetMode"/>,
+        /// so we wait one frame so <see cref="Camera.main"/> matches the new view when logging.
+        /// </summary>
+        private IEnumerator CoLogBillboxAfterModeChangeCamerasReady(GameModeManager.GameMode newMode)
+        {
+            yield return null;
+            if (!debugLogBillboxOnModeChange)
+                yield break;
+
+            var main = UnityEngine.Camera.main;
+            string camInfo = main != null ? $"{main.name} ortho={main.orthographic}" : "Camera.main=null";
+
+            string billboxLine = m_BillboxRoot != null
+                ? $"localPos={m_BillboxRoot.localPosition} localEuler={m_BillboxRoot.localRotation.eulerAngles}"
+                : "Billbox not found";
+
+            var boards = GetComponentsInChildren<BillboardSprite>(true);
+            var boardsSb = new StringBuilder();
+            for (int i = 0; i < boards.Length; i++)
+            {
+                if (i > 0) boardsSb.Append("; ");
+                boardsSb.Append(boards[i].gameObject.name).Append(" euler=").Append(boards[i].transform.rotation.eulerAngles);
+            }
+
+            UnityEngine.Debug.Log(
+                "[PlayerDualModeController] Billbox mode debug (next frame after mode change) player=" + gameObject.name +
+                " mode=" + newMode + " mainCam=" + camInfo +
+                "\n  " + billboxLine +
+                "\n  BillboardSprite (" + boards.Length + "): " + (boards.Length == 0 ? "(none)" : boardsSb.ToString()),
+                this);
         }
 
         // ── Bomberman grid movement ────────────────────────────────────────────────

@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
+using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Debug;
 using HybridGame.MasterBlaster.Scripts.Player;
@@ -38,6 +40,10 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
 
         [Header("Input (assign PlayerControls InputActionAsset)")]
         public InputActionAsset inputActions;
+
+        [Header("Debug")]
+        [Tooltip("When enabled, each successful bomb spawn logs player Billbox, bomb BillBox directional sprites, and BillboardSprite roots (mode/camera path).")]
+        [SerializeField] private bool debugLogBombBillBoxOnSpawn;
 
         // ── runtime state ──────────────────────────────────────────────────────────
         private int m_BombsRemaining;
@@ -207,6 +213,69 @@ namespace HybridGame.MasterBlaster.Scripts.Bomb
             }
             else
                 StartCoroutine(FuseBomb(bomb));
+
+            LogBombBillBoxSpawnDebug(bomb);
+        }
+
+        private void LogBombBillBoxSpawnDebug(GameObject bomb)
+        {
+            if (!debugLogBombBillBoxOnSpawn || bomb == null)
+                return;
+
+            var gmm = GameModeManager.Instance;
+            string mode = gmm != null ? gmm.CurrentMode.ToString() : "GameModeManager=null";
+            var main = UnityEngine.Camera.main;
+            string camInfo = main != null ? $"{main.name} ortho={main.orthographic}" : "Camera.main=null";
+
+            Transform playerBillbox = null;
+            foreach (var t in GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "Billbox")
+                {
+                    playerBillbox = t;
+                    break;
+                }
+            }
+
+            string playerBillboxLine = playerBillbox != null
+                ? $"localPos={playerBillbox.localPosition} localEuler={playerBillbox.localRotation.eulerAngles}"
+                : "Billbox (player) not found";
+
+            Transform bombBillBox = bomb.transform.Find("BillBox");
+            string bombBillBoxLine = bombBillBox != null
+                ? $"BillBox worldEuler={bombBillBox.rotation.eulerAngles} localEuler={bombBillBox.localRotation.eulerAngles}"
+                : "BillBox (bomb) missing under prefab";
+
+            var boards = bomb.GetComponentsInChildren<BillboardSprite>(true);
+            var boardsSb = new StringBuilder();
+            for (int i = 0; i < boards.Length; i++)
+            {
+                var bb = boards[i];
+                boardsSb.Append(bb.gameObject.name).Append(" euler=").Append(bb.transform.rotation.eulerAngles);
+                if (i < boards.Length - 1) boardsSb.Append("; ");
+            }
+
+            var spritesSb = new StringBuilder();
+            if (bombBillBox != null)
+            {
+                foreach (var asr in bombBillBox.GetComponentsInChildren<AnimatedSpriteRenderer>(true))
+                {
+                    var go = asr.gameObject;
+                    if (spritesSb.Length > 0) spritesSb.Append("; ");
+                    spritesSb.Append(go.name).Append(": active=").Append(go.activeSelf)
+                        .Append(" asr.enabled=").Append(asr.enabled).Append(" idle=").Append(asr.idle);
+                }
+            }
+
+            UnityEngine.Debug.Log(
+                "[BombController3D] BillBox spawn debug — player=" + gameObject.name +
+                " mode=" + mode + " mainCam=" + camInfo +
+                " remoteBomb=" + remoteBomb + " timeBomb=" + timeBomb +
+                "\n  player " + playerBillboxLine +
+                "\n  bomb " + bomb.name + " " + bombBillBoxLine +
+                "\n  BillboardSprite (" + boards.Length + "): " + (boards.Length == 0 ? "(none)" : boardsSb.ToString()) +
+                "\n  BillBox AnimatedSpriteRenderer: " + (spritesSb.Length == 0 ? "(none under BillBox)" : spritesSb.ToString()),
+                this);
         }
 
         /// <summary>
