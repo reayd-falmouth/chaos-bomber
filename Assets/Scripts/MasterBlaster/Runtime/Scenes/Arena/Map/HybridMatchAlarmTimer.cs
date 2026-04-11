@@ -46,7 +46,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         [Header("Alarm visuals")]
         [SerializeField]
-        private Camera targetCamera;
+        private UnityEngine.Camera targetCamera;
 
         [SerializeField]
         private Color alarmColor = Color.red;
@@ -86,7 +86,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             _audioSource = GetComponent<AudioSource>();
 
             if (!targetCamera)
-                targetCamera = Camera.main;
+                targetCamera = UnityEngine.Camera.main;
             if (targetCamera)
                 originalBg = targetCamera.backgroundColor;
         }
