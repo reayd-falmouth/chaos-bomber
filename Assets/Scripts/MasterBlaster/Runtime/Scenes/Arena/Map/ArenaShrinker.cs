@@ -122,6 +122,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private Tilemap destructiblesTilemap; // usually child: "Destructibles"
 
+        [Tooltip("Parent for runtime shrink cubes (ephemeral; cleared when the match ends). If unset, a child named ArenaShrinkBlocks is created under the indestructibles tilemap.")]
+        [SerializeField]
+        private Transform shrinkBlocksParent;
+
         [Tooltip("Seconds of real time between each new block (lower = faster fill). Same units as match duration.")]
         [SerializeField]
         private float shrinkDelay = 0.08f;
@@ -184,6 +188,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private float _alarmStartTime;
         private bool _alarmHasFiredForDelay;
 
+        private const string ShrinkBlocksRootName = "ArenaShrinkBlocks";
+
         // shrink bounds (inclusive)
         private int minX,
             maxX,
@@ -220,6 +226,40 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 UnityEngine.Debug.LogError("[ArenaShrinker] Indestructibles Tilemap not found/assigned.");
 
             ComputeInsideBounds();
+            EnsureShrinkBlocksRoot();
+        }
+
+        private void EnsureShrinkBlocksRoot()
+        {
+            if (shrinkBlocksParent != null)
+                return;
+            if (!indestructiblesTilemap)
+                return;
+            var go = new GameObject(ShrinkBlocksRootName);
+            go.transform.SetParent(indestructiblesTilemap.transform, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+            shrinkBlocksParent = go.transform;
+        }
+
+        private Transform GetShrinkBlocksParent()
+        {
+            EnsureShrinkBlocksRoot();
+            return shrinkBlocksParent;
+        }
+
+        /// <summary>Destroys all blocks spawned during arena shrink (children of the shrink root).</summary>
+        public void ClearShrinkSpawnedBlocks()
+        {
+            if (shrinkBlocksParent == null)
+                return;
+            for (int i = shrinkBlocksParent.childCount - 1; i >= 0; i--)
+            {
+                var c = shrinkBlocksParent.GetChild(i);
+                if (c != null)
+                    Destroy(c.gameObject);
+            }
         }
 
         void Start()
@@ -440,13 +480,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                     continue;
                 }
 
-                if (timeRemaining <= 0f)
-                    break;
-
                 timeRemaining -= Time.deltaTime;
+                if (timeRemaining < 0f)
+                    timeRemaining = 0f;
 
                 if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                     _netTimeRemaining.Value = timeRemaining;
+
+                if (ArenaShrinkSchedule.ShouldExitMainTimerWhenTimeReachesZero(shrinkingEnabled) && timeRemaining <= 0f)
+                    break;
 
                 if (!alarmActive && ArenaShrinkSchedule.ShouldAlarmBeOn(timeRemaining, alarmThreshold))
                 {
@@ -486,9 +528,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield return null;
             }
 
-            if (shrinkingStarted && !shrinkingComplete)
+            if (shrinkingEnabled && shrinkingStarted && !shrinkingComplete)
             {
-                while (timerRunning && !shrinkingComplete)
+                while (!shrinkingComplete)
                     yield return null;
             }
 
@@ -497,6 +539,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             RefreshBackgroundPulseCamera();
             if (_backgroundPulseCamera)
                 _backgroundPulseCamera.backgroundColor = originalBg;
+
+            ClearShrinkSpawnedBlocks();
 
             if (!endingTriggered)
             {
@@ -591,6 +635,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             timeRemaining = 0f;
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                 _netTimeRemaining.Value = 0f;
+            ClearShrinkSpawnedBlocks();
             ForceRestoreAlarmPresentationAndCamera();
         }
 
@@ -683,6 +728,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield break;
             }
 
+            EnsureShrinkBlocksRoot();
             ComputeInsideBounds();
 
             foreach (
@@ -713,7 +759,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (IsServer)
                 return;
             if (indestructiblePrefab != null)
-                Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, indestructiblesTilemap.transform);
+                Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, GetShrinkBlocksParent());
             PlayBlockPlaceSound();
         }
 
@@ -761,7 +807,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 indestructiblePrefab,
                 worldCenter,
                 Quaternion.identity,
-                indestructiblesTilemap.transform
+                GetShrinkBlocksParent()
             );
 
             bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;

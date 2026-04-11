@@ -12,6 +12,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             return matchDuration * Mathf.Clamp01(fraction);
         }
 
+        /// <param name="useRemainingSeconds">
+        /// When true, <paramref name="alarmRemainingSeconds"/> is used as a direct “seconds left” threshold (same unit as the match clock).
+        /// When false, <paramref name="alarmThresholdFraction"/> × <paramref name="matchDuration"/> is used.
+        /// </param>
         public static float GetAlarmThresholdRemaining(
             float matchDuration,
             bool useRemainingSeconds,
@@ -63,6 +67,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (!alarmHasFired || delaySeconds <= 0f)
                 return false;
             return timeNow >= alarmStartTime + delaySeconds;
+        }
+
+        /// <summary>
+        /// When arena shrink is enabled, the timer may sit at 0 while waiting for shrink to start/finish — do not exit the main loop on time alone.
+        /// </summary>
+        public static bool ShouldExitMainTimerWhenTimeReachesZero(bool shrinkingEnabled)
+        {
+            return !shrinkingEnabled;
         }
     }
 }

@@ -1176,6 +1176,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 if (ex3 != null)
                     Destroy(ex3.gameObject);
             }
+
+            foreach (var shrinker in FindObjectsByType<ArenaShrinker>(
+                         FindObjectsInactive.Include,
+                         FindObjectsSortMode.None
+                     ))
+            {
+                if (shrinker != null)
+                    shrinker.ClearShrinkSpawnedBlocks();
+            }
+
+            foreach (var fpsShrink in FindObjectsByType<FpsArenaShrinker>(
+                         FindObjectsInactive.Include,
+                         FindObjectsSortMode.None
+                     ))
+            {
+                if (fpsShrink != null)
+                    fpsShrink.ClearShrinkSpawnedBlocks();
+            }
         }
 
         /// <summary>
