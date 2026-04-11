@@ -1,5 +1,7 @@
+using System;
 using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Camera;
+using Unity.Cinemachine;
 using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Player
@@ -56,6 +58,22 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         static bool s_LoggedOrthoMainWhileFpsWarning;
 
         /// <summary>
+        /// URP stack / UI overlay cameras (e.g. GameObject "UI Canvas") are perspective but are not the gameplay view.
+        /// </summary>
+        static bool ShouldSkipCameraForFpsBillboardFacing(UnityEngine.Camera c)
+        {
+            if (c == null)
+                return true;
+            string n = c.gameObject.name;
+            if (n.IndexOf("UI Canvas", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            if (n.IndexOf("Overlay", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                n.IndexOf("UI", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+            return false;
+        }
+
+        /// <summary>
         /// FPS billboard facing: prefers a <b>perspective</b> gameplay camera. When <see cref="HybridCameraManager"/> is
         /// missing from the scene or <c>MainCamera</c> was not retagged after switching to FPS, <see cref="UnityEngine.Camera.main"/>
         /// can still be the orthographic Bomberman camera — bombs/explosions would keep grid euler-style facing without this fallback.
@@ -80,11 +98,37 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 var c = cameras[i];
                 if (c == null || !c.enabled || !c.gameObject.activeInHierarchy || c.orthographic)
                     continue;
+                if (ShouldSkipCameraForFpsBillboardFacing(c))
+                    continue;
+                if (c.GetComponent<CinemachineBrain>() == null)
+                    continue;
+
                 if (!s_LoggedOrthoMainWhileFpsWarning && main != null && main.orthographic)
                 {
                     s_LoggedOrthoMainWhileFpsWarning = true;
                     UnityEngine.Debug.LogWarning(
-                        "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using first enabled perspective camera (" +
+                        "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using CinemachineBrain camera (" +
+                        c.gameObject.name +
+                        "). Add <HybridCameraManager> to the scene or ensure MainCamera tags the FPS view after mode switch.",
+                        c);
+                }
+
+                return c.transform;
+            }
+
+            for (int i = 0; i < cameras.Length; i++)
+            {
+                var c = cameras[i];
+                if (c == null || !c.enabled || !c.gameObject.activeInHierarchy || c.orthographic)
+                    continue;
+                if (ShouldSkipCameraForFpsBillboardFacing(c))
+                    continue;
+
+                if (!s_LoggedOrthoMainWhileFpsWarning && main != null && main.orthographic)
+                {
+                    s_LoggedOrthoMainWhileFpsWarning = true;
+                    UnityEngine.Debug.LogWarning(
+                        "[BillboardSpriteCameraHelper] FPS billboard: Camera.main is still orthographic; using first enabled gameplay perspective camera (" +
                         c.gameObject.name +
                         "). Add <HybridCameraManager> to the scene or ensure MainCamera tags the FPS view after mode switch.",
                         c);

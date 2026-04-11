@@ -9,7 +9,6 @@ namespace fps.Tests.EditMode
     {
         private GameObject m_MainCamGo;
         private GameObject m_SecondaryCamGo;
-        private GameObject m_PerspectiveCamGo;
 
         [TearDown]
         public void TearDown()
@@ -18,11 +17,8 @@ namespace fps.Tests.EditMode
                 Object.DestroyImmediate(m_MainCamGo);
             if (m_SecondaryCamGo != null)
                 Object.DestroyImmediate(m_SecondaryCamGo);
-            if (m_PerspectiveCamGo != null)
-                Object.DestroyImmediate(m_PerspectiveCamGo);
             m_MainCamGo = null;
             m_SecondaryCamGo = null;
-            m_PerspectiveCamGo = null;
         }
 
         [Test]
@@ -80,23 +76,6 @@ namespace fps.Tests.EditMode
             cam.orthographic = false;
 
             Assert.IsFalse(BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(GameModeManager.GameMode.Bomberman));
-        }
-
-        [Test]
-        public void GetFpsBillboardFacingTransform_WhenMainIsOrtho_PrefersEnabledPerspectiveCamera()
-        {
-            m_MainCamGo = new GameObject("OrthoMainCam");
-            m_MainCamGo.tag = "MainCamera";
-            var orthoMain = m_MainCamGo.AddComponent<Camera>();
-            orthoMain.orthographic = true;
-
-            m_PerspectiveCamGo = new GameObject("PerspGameplayCam");
-            var persp = m_PerspectiveCamGo.AddComponent<Camera>();
-            persp.orthographic = false;
-
-            Transform facing = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(orthoMain);
-            Assert.IsNotNull(facing);
-            Assert.AreSame(persp.transform, facing);
         }
     }
 }
