@@ -89,7 +89,7 @@ namespace HybridGame.MasterBlaster.Scripts
                 Cursor.visible = true;
             }
 
-            // 4. Broadcast for any other listeners (HUD, audio, etc.)
+            // 4. Broadcast for any other listeners (HUD, audio, BillboardSprite, etc.). After HybridCameraManager.SetMode so Camera.main matches the active mode.
             OnModeChanged?.Invoke(mode);
 
             // #region agent log
