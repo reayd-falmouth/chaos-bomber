@@ -43,6 +43,17 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         }
 
         /// <summary>
+        /// World position for a shrink indestructible cube (1×CellSize tall): same XZ as <see cref="CellToWorld"/>,
+        /// which already uses this project’s cell-center convention; Y is floor (<see cref="GridOrigin"/>.y) plus half cube height.
+        /// </summary>
+        public static Vector3 CellToWorldShrinkBlock(Vector2Int cell)
+        {
+            float s = CellSize;
+            Vector3 xz = CellToWorld(cell);
+            return new Vector3(xz.x, GridOrigin.y + 0.5f * s, xz.z);
+        }
+
+        /// <summary>
         /// Movement delta in XZ for one frame.
         /// direction.x maps to world X, direction.y maps to world Z.
         /// </summary>

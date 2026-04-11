@@ -7,6 +7,28 @@ namespace fps.Tests.EditMode
     public class WallBlock3DItemDropSpawnTests
     {
         [Test]
+        public void CellToWorldShrinkBlock_MatchesCellToWorldXZ_AndHalfCubeOnY()
+        {
+            var prevOrigin = ArenaGrid3D.GridOrigin;
+            var prevCellSize = ArenaGrid3D.CellSize;
+            try
+            {
+                ArenaGrid3D.GridOrigin = new Vector3(1f, 5f, -2f);
+                ArenaGrid3D.CellSize = 1f;
+                var cell = new Vector2Int(2, 3);
+                Vector3 xz = ArenaGrid3D.CellToWorld(cell);
+                Vector3 expected = new Vector3(xz.x, ArenaGrid3D.GridOrigin.y + 0.5f * ArenaGrid3D.CellSize, xz.z);
+                Vector3 actual = ArenaGrid3D.CellToWorldShrinkBlock(cell);
+                Assert.That(Vector3.Distance(actual, expected), Is.LessThan(0.0001f));
+            }
+            finally
+            {
+                ArenaGrid3D.GridOrigin = prevOrigin;
+                ArenaGrid3D.CellSize = prevCellSize;
+            }
+        }
+
+        [Test]
         public void GetItemDropSpawnY_UsesHalfCellHeightAboveGridOrigin()
         {
             var prevOrigin = ArenaGrid3D.GridOrigin;
