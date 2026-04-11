@@ -98,6 +98,17 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
             MaybeDebugLogBillboardState(mode, cam);
 
+            if (BillboardSpriteCameraHelper.ShouldUseFpsBillboardRotation(mode, cam))
+            {
+                var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(cam);
+                if (billboardCam == null)
+                    return;
+
+                transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                    transform.position, billboardCam);
+                return;
+            }
+
             if (BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(mode))
             {
                 if (BillboardSpriteOrientationMath.UseFixedTopDownStyle(mode, cam.orthographic))
@@ -112,12 +123,14 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 return;
             }
 
-            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(cam);
-            if (billboardCam == null)
-                return;
-
-            transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                transform.position, billboardCam);
+            // ArenaPerspective with a perspective resolved camera: UseTopDownGrid is false (not ortho), but sprites
+            // should still use pitch-compensated grid euler — not cylindrical FPS billboarding.
+            if (GameModeManager.IsGridPresentationMode(mode))
+            {
+                float camPitchX = BillboardSpriteOrientationMath.NormalizeEulerX(cam.transform.eulerAngles.x);
+                var euler = BillboardSpriteOrientationMath.ComputePerspectiveGridEuler(bombermanEulerAngles, camPitchX);
+                transform.rotation = Quaternion.Euler(euler);
+            }
         }
 
         /// <summary>
@@ -132,21 +145,26 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (main == null)
                 return;
 
-            if (main.orthographic)
+            if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(GameModeManager.GameMode.Bomberman, out var bomResolved))
+                bomResolved = main;
+
+            if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(GameModeManager.GameMode.FPS, out var fpsResolved))
+                fpsResolved = main;
+
+            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(fpsResolved);
+            if (billboardCam != null)
             {
-                transform.rotation = Quaternion.Euler(bombermanEulerAngles);
-                return;
+                var fc = billboardCam.GetComponent<UnityEngine.Camera>();
+                if (fc != null && !fc.orthographic)
+                {
+                    transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
+                        transform.position, billboardCam);
+                    return;
+                }
             }
 
-            if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(GameModeManager.GameMode.FPS, out var cam))
-                return;
-
-            var billboardCam = BillboardSpriteCameraHelper.GetFpsBillboardFacingTransform(cam);
-            if (billboardCam == null)
-                return;
-
-            transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
-                transform.position, billboardCam);
+            if (main.orthographic)
+                transform.rotation = Quaternion.Euler(bombermanEulerAngles);
         }
 
         /// <summary>

@@ -55,5 +55,22 @@ namespace fps.Tests.EditMode
         {
             Assert.IsFalse(BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(GameModeManager.GameMode.FPS));
         }
+
+        [Test]
+        public void ShouldUseFpsBillboardRotation_FpsMode_IsTrue()
+        {
+            Assert.IsTrue(BillboardSpriteCameraHelper.ShouldUseFpsBillboardRotation(
+                GameModeManager.GameMode.FPS, null));
+        }
+
+        [Test]
+        public void ShouldUseFpsBillboardRotation_ArenaPerspective_IsFalse()
+        {
+            m_MainCamGo = new GameObject("ArenaPerspectiveCamTest");
+            var cam = m_MainCamGo.AddComponent<Camera>();
+
+            Assert.IsFalse(BillboardSpriteCameraHelper.ShouldUseFpsBillboardRotation(
+                GameModeManager.GameMode.ArenaPerspective, cam));
+        }
     }
 }

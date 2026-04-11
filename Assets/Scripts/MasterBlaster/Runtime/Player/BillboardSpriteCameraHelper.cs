@@ -45,6 +45,34 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         }
 
         /// <summary>
+        /// Use cylindrical FPS-style billboard math (face gameplay camera on XZ) when the view is first-person or
+        /// when <see cref="GameModeManager.CurrentMode"/> is still <see cref="GameModeManager.GameMode.Bomberman"/> but
+        /// the active camera is already perspective (Cinemachine / view switched without updating mode, or stale MainCamera tag).
+        /// <see cref="GameModeManager.GameMode.ArenaPerspective"/> keeps grid-style billboarding with pitch compensation.
+        /// </summary>
+        public static bool ShouldUseFpsBillboardRotation(
+            GameModeManager.GameMode mode,
+            UnityEngine.Camera resolvedForCurrentMode)
+        {
+            if (mode == GameModeManager.GameMode.FPS)
+                return true;
+            if (mode == GameModeManager.GameMode.ArenaPerspective)
+                return false;
+            if (mode != GameModeManager.GameMode.Bomberman)
+                return false;
+
+            var main = UnityEngine.Camera.main;
+            if (main != null && !main.orthographic)
+                return true;
+
+            var facing = GetFpsBillboardFacingTransform(resolvedForCurrentMode);
+            if (facing == null)
+                return false;
+            var fc = facing.GetComponent<UnityEngine.Camera>();
+            return fc != null && !fc.orthographic;
+        }
+
+        /// <summary>
         /// FPS: after <see cref="HybridCameraManager.SetMode"/>, <see cref="Camera.main"/> is the authoritative
         /// gameplay view; use it when available so billboards match the tagged main camera even if references diverge.
         /// </summary>
