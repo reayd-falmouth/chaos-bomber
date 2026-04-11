@@ -140,6 +140,8 @@ namespace HybridGame.MasterBlaster.Tests
             Release(keyboard.downArrowKey);
             yield return null;
 
+            Assert.That(menu.IsBackRowActive, Is.True);
+
             Press(keyboard.spaceKey);
             yield return null;
             Release(keyboard.spaceKey);

@@ -70,6 +70,11 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         Vector2 _lastMoveInput;
         int _menuRow;
 
+        /// <summary>
+        /// Row 1 is Back; when true, the Player map PlaceBomb action should not start the match (e.g. level carousel).
+        /// </summary>
+        public bool IsBackRowActive => _menuRow == 1;
+
         /// <summary>Optional explicit bind when the menu is not parented under the avatar root.</summary>
         public void BindAvatarController(AvatarController controller) => avatarController = controller;
 

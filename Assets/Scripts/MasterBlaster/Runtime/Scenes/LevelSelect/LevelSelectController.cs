@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
@@ -43,10 +44,16 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
         private InputAction _submitAction;
         private Vector2 _lastMoveInput;
 
+        [SerializeField, Tooltip("Optional. When set (or found in children), PlaceBomb does not start countdown while the menu highlight is on Back.")]
+        AvatarSelectMenuController _selectMenu;
+
         private void Awake()
         {
             if (retroStreamer == null)
                 retroStreamer = GetComponent<RetroTerminalStreamer>();
+
+            if (_selectMenu == null)
+                _selectMenu = GetComponentInChildren<AvatarSelectMenuController>(true);
             
             if (inputActions == null)
             {
@@ -110,7 +117,12 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
             }
 
             if (_submitAction.WasPressedThisFrame())
+            {
+                // Same binding as SelectMenu; when user confirms Back, only the menu must navigate — not countdown.
+                if (_selectMenu != null && _selectMenu.IsBackRowActive)
+                    return;
                 AdvanceToNextFlowState();
+            }
 
             _lastMoveInput = moveInput;
         }
