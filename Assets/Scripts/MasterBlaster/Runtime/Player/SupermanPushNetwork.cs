@@ -62,7 +62,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             SyncSupermanPushGridClientRpc(blockCell.x, blockCell.y, destCell.x, destCell.y, wall.NetworkObjectId);
         }
 
-        [ServerRpc(RequireOwnership = true)]
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         private void RequestSupermanPushServerRpc(int pcx, int pcy, int dirX, int dirY)
         {
             var reported = new Vector2Int(pcx, pcy);

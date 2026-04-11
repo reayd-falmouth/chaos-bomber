@@ -13,13 +13,13 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         /// <summary>
         /// Resolves which camera should drive billboard facing for <paramref name="mode"/>.
         /// </summary>
-        public static bool TryResolveBillboardCamera(GameModeManager.GameMode mode, out Camera cam)
+        public static bool TryResolveBillboardCamera(GameModeManager.GameMode mode, out UnityEngine.Camera cam)
         {
             cam = null;
             if (HybridCameraManager.Instance != null)
                 HybridCameraManager.Instance.TryGetCameraForBillboards(mode, out cam);
             if (cam == null)
-                cam = Camera.main;
+                cam = UnityEngine.Camera.main;
             return cam != null;
         }
 
@@ -27,10 +27,10 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         /// FPS: after <see cref="HybridCameraManager.SetMode"/>, <see cref="Camera.main"/> is the authoritative
         /// gameplay view; use it when available so billboards match the tagged main camera even if references diverge.
         /// </summary>
-        public static Transform GetFpsBillboardCameraTransform(Camera resolvedCam)
+        public static Transform GetFpsBillboardCameraTransform(UnityEngine.Camera resolvedCam)
         {
-            if (Camera.main != null)
-                return Camera.main.transform;
+            if (UnityEngine.Camera.main != null)
+                return UnityEngine.Camera.main.transform;
             return resolvedCam != null ? resolvedCam.transform : null;
         }
     }

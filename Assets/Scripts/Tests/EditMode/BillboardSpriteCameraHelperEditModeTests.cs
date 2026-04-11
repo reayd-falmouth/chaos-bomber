@@ -44,7 +44,7 @@ namespace fps.Tests.EditMode
             m_MainCamGo.AddComponent<Camera>();
 
             bool ok = BillboardSpriteCameraHelper.TryResolveBillboardCamera(
-                GameModeManager.GameMode.FPS, out Camera cam);
+                GameModeManager.GameMode.FPS, out UnityEngine.Camera cam);
 
             Assert.IsTrue(ok);
             Assert.IsNotNull(cam);
