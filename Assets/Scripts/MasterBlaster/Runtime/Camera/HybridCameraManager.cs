@@ -9,6 +9,7 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
     /// <summary>
     /// Switches between FPS, orthographic overhead Bomberman, and optional perspective arena cameras.
     /// Camera.main always refers to the active camera because depth values are swapped.
+    /// Only one enabled camera should be tagged MainCamera at a time; do not tag disabled helper cameras (e.g. under the player).
     /// </summary>
     public class HybridCameraManager : MonoBehaviour
     {

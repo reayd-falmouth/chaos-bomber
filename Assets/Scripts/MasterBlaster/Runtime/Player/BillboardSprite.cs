@@ -1,6 +1,7 @@
 using System.Collections;
 using HybridGame.MasterBlaster.Scripts;
 using HybridGame.MasterBlaster.Scripts.Arena;
+using HybridGame.MasterBlaster.Scripts.Debug;
 using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Player
@@ -10,7 +11,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     ///
     /// Bomberman — sprite lies flat in the XZ plane, front face pointing UP (+Y) so it is
     ///             correctly visible to the overhead orthographic camera (forward = -Y).
-    ///             Use <see cref="bombermanEulerAngles"/> per prefab (bombs use X = 90°).
+    ///             Use <see cref="bombermanEulerAngles"/> per prefab (aligned with player Billbox for grid ortho).
     ///             Scale uses <see cref="targetWorldSize"/> or one cell when 0.
     ///
     /// ArenaPerspective — same scale as grid; if MainCamera is perspective, pitch follows the camera
@@ -19,7 +20,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// FPS (or any time <see cref="UnityEngine.Camera.main"/> is perspective) — euler (-90, yaw, 0): yaw toward
     /// gameplay camera on XZ. Grid euler is used only for true top-down (orthographic main) grid modes.
     /// </summary>
-    [DefaultExecutionOrder(100)]
+    [DefaultExecutionOrder(500)]
     public class BillboardSprite : MonoBehaviour
     {
         [Tooltip("Desired uniform world scale in Bomberman mode. 0 = use ArenaGrid3D.CellSize.")]
@@ -28,7 +29,11 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("Applied every LateUpdate in Bomberman mode (e.g. bombs: X = 90).")]
         [SerializeField] private Vector3 bombermanEulerAngles = new Vector3(0f, 0f, 0f);
 
+        [Tooltip("When enabled, logs mode/camera/top-down path about once per second (Editor + Development builds).")]
+        [SerializeField] private bool debugBillboardOrientation;
+
         private Vector3 m_BombermanScale = Vector3.one;
+        private float m_NextBillboardDebugLogTime;
 
         private void Start()
         {
@@ -67,6 +72,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             var mode = GameModeManager.Instance.CurrentMode;
             if (!BillboardSpriteCameraHelper.TryResolveBillboardCamera(mode, out var cam))
                 return;
+
+            MaybeDebugLogBillboardState(mode, cam);
 
             if (BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(mode))
             {
@@ -124,6 +131,35 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         {
             float size = targetWorldSize > 0.001f ? targetWorldSize : ArenaGrid3D.CellSize;
             m_BombermanScale = new Vector3(size, size, size);
+        }
+
+        private void MaybeDebugLogBillboardState(GameModeManager.GameMode mode, UnityEngine.Camera resolvedCam)
+        {
+            if (!debugBillboardOrientation)
+                return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Time.unscaledTime < m_NextBillboardDebugLogTime)
+                return;
+            m_NextBillboardDebugLogTime = Time.unscaledTime + 1f;
+
+            bool topDown = BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(mode);
+            var main = UnityEngine.Camera.main;
+            string mainName = main != null ? main.name : "null";
+            string mainOrtho = main != null ? main.orthographic.ToString() : "n/a";
+            string resolvedName = resolvedCam != null ? resolvedCam.name : "null";
+            string resolvedOrtho = resolvedCam != null ? resolvedCam.orthographic.ToString() : "n/a";
+            string d = "{\"mode\":\"" + mode + "\",\"topDownGrid\":" + (topDown ? "true" : "false") +
+                       ",\"mainName\":\"" + mainName + "\",\"mainOrtho\":" + mainOrtho +
+                       ",\"resolvedName\":\"" + resolvedName + "\",\"resolvedOrtho\":" + resolvedOrtho +
+                       ",\"go\":\"" + gameObject.name.Replace("\"", "'") + "\"}";
+            AgentDebugNdjson.Log("BB", "BillboardSprite.MaybeDebugLogBillboardState", "tick", d);
+            UnityEngine.Debug.Log(
+                "[BillboardSprite] mode=" + mode + " topDownGrid=" + topDown +
+                " main=" + mainName + " ortho=" + mainOrtho +
+                " resolved=" + resolvedName + " ortho=" + resolvedOrtho +
+                " on " + gameObject.name,
+                this);
+#endif
         }
     }
 }
