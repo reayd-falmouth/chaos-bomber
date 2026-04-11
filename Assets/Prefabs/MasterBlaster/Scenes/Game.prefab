@@ -187,7 +187,7 @@ MonoBehaviour:
   shrinkingEnabled: 1
   matchDuration: 180
   useRemainingSecondsSchedule: 1
-  alarmRemainingSeconds: 18
+  alarmRemainingSeconds: 10
   shrinkRemainingSeconds: 27
   alarmThresholdFraction: 0.1
   shrinkThresholdFraction: 0.15
@@ -197,6 +197,8 @@ MonoBehaviour:
   targetCamera: {fileID: 0}
   alarmColor: {r: 1, g: 0, b: 0, a: 1}
   pulseSpeed: 5
+  alarmLightsRoot: {fileID: 0}
+  alarmLightPhaseSpreadPerIndex: 0.35
   alarmStartFeedbacks: {fileID: 0}
   alarmStopFeedbacks: {fileID: 0}
   alarmLoopClip: {fileID: 8300000, guid: efa31b7496286b643b4c8ab5de0df906, type: 3}
@@ -212,6 +214,7 @@ MonoBehaviour:
   destructiblesName: Destructibles
   drawGizmos: 0
   gizmoColor: {r: 1, g: 0.3, b: 0.2, a: 0.35}
+  showAlarmCountdownDebug: 1
   inset: 1
 --- !u!1 &2056249827072536138
 GameObject:
@@ -3528,7 +3531,7 @@ MonoBehaviour:
   shrinkingEnabled: 1
   matchDuration: 180
   useRemainingSecondsSchedule: 1
-  alarmRemainingSeconds: 18
+  alarmRemainingSeconds: 10
   shrinkRemainingSeconds: 27
   alarmThresholdFraction: 0.1
   shrinkThresholdFraction: 0.15
@@ -3538,6 +3541,8 @@ MonoBehaviour:
   targetCamera: {fileID: 0}
   alarmColor: {r: 1, g: 0, b: 0, a: 1}
   pulseSpeed: 5
+  alarmLightsRoot: {fileID: 0}
+  alarmLightPhaseSpreadPerIndex: 0.35
   alarmStartFeedbacks: {fileID: 0}
   alarmStopFeedbacks: {fileID: 0}
   alarmLoopClip: {fileID: 8300000, guid: efa31b7496286b643b4c8ab5de0df906, type: 3}
@@ -3553,6 +3558,7 @@ MonoBehaviour:
   destructiblesName: Destructibles
   drawGizmos: 1
   gizmoColor: {r: 1, g: 0.3, b: 0.2, a: 0.35}
+  showAlarmCountdownDebug: 1
   inset: 1
 --- !u!1 &3301163794437193958
 GameObject:

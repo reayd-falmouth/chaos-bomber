@@ -36,7 +36,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         [Tooltip("Alarm when remaining time is less than or equal to this (seconds).")]
         [SerializeField]
-        private float alarmRemainingSeconds = 18f;
+        private float alarmRemainingSeconds = 10f;
 
         [Tooltip(
             "Shrink when remaining time is less than or equal to this (seconds). Ignored if Shrink Delay After Alarm is set."
@@ -82,6 +82,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         [SerializeField]
         private float pulseSpeed = 5f; // sin speed
+
+        [Tooltip("Parent of spot/point lights to enable and pulse while the alarm is active (optional).")]
+        [SerializeField]
+        private Transform alarmLightsRoot;
+
+        [Tooltip("Phase offset per light index (radians) for a staggered flash.")]
+        [SerializeField]
+        private float alarmLightPhaseSpreadPerIndex = 0.35f;
 
         [Header("Alarm Feedbacks")]
         [SerializeField]
@@ -136,6 +144,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private Color gizmoColor = new Color(1f, 0.3f, 0.2f, 0.35f);
 
+        [Tooltip("Draw on-screen match / alarm countdown (uses OnGUI). Disable for shipping builds.")]
+        [SerializeField]
+        private bool showAlarmCountdownDebug = true;
+
         // Fix 5: pre-allocated overlap buffer — avoids OverlapBoxAll array alloc during shrink
         private static readonly Collider[] _overlapBuffer = new Collider[16];
 
@@ -147,6 +159,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private bool timerRunning;
         private bool endingTriggered;
         private Color originalBg;
+        private UnityEngine.Camera _backgroundPulseCamera;
+        private Light[] _alarmLights;
+        private float[] _alarmLightBaseIntensities;
+        private bool _alarmLightsCached;
         private float _alarmStartTime;
         private bool _alarmHasFiredForDelay;
 
@@ -166,10 +182,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             _arenaAudioSource = GetComponent<AudioSource>();
 
-            if (!targetCamera)
-                targetCamera = UnityEngine.Camera.main;
-            if (targetCamera)
-                originalBg = targetCamera.backgroundColor;
+            RefreshBackgroundPulseCamera();
 
             if (!indestructiblesTilemap)
             {
@@ -193,20 +206,96 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         void Start()
         {
+            AlarmEmergencyLightPresentation.TryCache(
+                alarmLightsRoot,
+                ref _alarmLights,
+                ref _alarmLightBaseIntensities,
+                ref _alarmLightsCached
+            );
             if (shrinkingEnabled && autoStartTimer)
                 StartTimer();
         }
 
         void Update()
         {
+            RefreshBackgroundPulseCamera();
             SyncClientAlarmFromNetworkIfNeeded();
 
-            // background pulse while alarm is active
-            if (alarmActive && targetCamera)
+            if (alarmActive && _backgroundPulseCamera)
             {
-                float t = (Mathf.Sin(Time.time * pulseSpeed) + 1f) * 0.5f;
-                targetCamera.backgroundColor = Color.Lerp(originalBg, alarmColor, t);
+                float t = AlarmPresentationPulse.SinPulse01(Time.time, pulseSpeed);
+                _backgroundPulseCamera.backgroundColor = Color.Lerp(originalBg, alarmColor, t);
             }
+
+            if (alarmActive && alarmLightsRoot != null && _alarmLightsCached)
+            {
+                AlarmEmergencyLightPresentation.ApplyIntensityPulse(
+                    _alarmLights,
+                    _alarmLightBaseIntensities,
+                    Time.time,
+                    pulseSpeed,
+                    alarmLightPhaseSpreadPerIndex
+                );
+            }
+        }
+
+        private void RefreshBackgroundPulseCamera()
+        {
+            UnityEngine.Camera cam = targetCamera != null ? targetCamera : UnityEngine.Camera.main;
+            if (cam == _backgroundPulseCamera)
+                return;
+            _backgroundPulseCamera = cam;
+            if (cam != null)
+                originalBg = cam.backgroundColor;
+        }
+
+        private void OnGUI()
+        {
+            if (!showAlarmCountdownDebug)
+                return;
+
+            float remaining = GetDisplayedTimeRemaining();
+            float alarmTh = ComputeAlarmThresholdRemaining();
+            string line1 = $"Match remaining: {remaining:F1}s";
+            string line2;
+            if (!shrinkingEnabled)
+                line2 = "Shrinking / timer disabled";
+            else if (!timerRunning && remaining <= 0f)
+                line2 = "Timer not started";
+            else if (remaining <= 0f)
+                line2 = "Time's up";
+            else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
+                line2 = "ALARM (last " + alarmTh.ToString("F0") + "s)";
+            else
+            {
+                float untilAlarm = Mathf.Max(0f, remaining - alarmTh);
+                line2 = "Until alarm: " + untilAlarm.ToString("F1") + "s";
+            }
+
+            const float pad = 12f;
+            var box = new Rect(pad, pad, 420f, 52f);
+            GUI.Box(box, GUIContent.none);
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 16,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.UpperLeft,
+                normal = { textColor = Color.white },
+            };
+            GUI.Label(new Rect(pad + 8f, pad + 6f, 400f, 22f), line1, style);
+            GUI.Label(new Rect(pad + 8f, pad + 28f, 400f, 22f), line2, style);
+        }
+
+        /// <summary>Host/offline uses local timer; clients use replicated value.</summary>
+        private float GetDisplayedTimeRemaining()
+        {
+            if (
+                NetworkManager.Singleton != null
+                && NetworkManager.Singleton.IsListening
+                && !IsServer
+            )
+                return _netTimeRemaining.Value;
+            return timeRemaining;
         }
 
         private void SyncClientAlarmFromNetworkIfNeeded()
@@ -278,8 +367,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         {
             timerRunning = false;
             StopAlarmPresentation();
-            if (targetCamera)
-                targetCamera.backgroundColor = originalBg;
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera)
+                _backgroundPulseCamera.backgroundColor = originalBg;
         }
 
         // -------------------- Internals --------------------
@@ -361,8 +451,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             // timer expired
             StopAlarmPresentation();
-            if (targetCamera)
-                targetCamera.backgroundColor = originalBg;
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera)
+                _backgroundPulseCamera.backgroundColor = originalBg;
 
             if (!endingTriggered)
             {
@@ -390,11 +481,26 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             alarmActive = active;
             if (active)
             {
+                AlarmEmergencyLightPresentation.TryCache(
+                    alarmLightsRoot,
+                    ref _alarmLights,
+                    ref _alarmLightBaseIntensities,
+                    ref _alarmLightsCached
+                );
+                AlarmEmergencyLightPresentation.ActivateAlarmRoot(alarmLightsRoot);
                 alarmStartFeedbacks?.PlayFeedbacks();
                 PlayAlarmAudio();
             }
             else
             {
+                if (_alarmLightsCached && alarmLightsRoot != null)
+                {
+                    AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                        alarmLightsRoot,
+                        _alarmLights,
+                        _alarmLightBaseIntensities
+                    );
+                }
                 alarmStopFeedbacks?.PlayFeedbacks();
                 StopAlarmAudio();
             }
@@ -429,6 +535,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         public override void OnDestroy()
         {
+            if (_alarmLightsCached && alarmLightsRoot != null)
+            {
+                AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                    alarmLightsRoot,
+                    _alarmLights,
+                    _alarmLightBaseIntensities
+                );
+            }
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera != null)
+                _backgroundPulseCamera.backgroundColor = originalBg;
             base.OnDestroy();
             alarmStopFeedbacks?.PlayFeedbacks();
             StopAlarmAudio();

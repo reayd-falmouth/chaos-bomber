@@ -54,6 +54,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private float pulseSpeed = 5f;
 
+        [Tooltip("Parent of spot/point lights to enable and pulse while the alarm is active (optional).")]
+        [SerializeField]
+        private Transform alarmLightsRoot;
+
+        [Tooltip("Phase offset per light index (radians) for a staggered flash.")]
+        [SerializeField]
+        private float alarmLightPhaseSpreadPerIndex = 0.35f;
+
         [Header("Alarm feedbacks (optional)")]
         [SerializeField]
         private MMF_Player alarmStartFeedbacks;
@@ -75,6 +83,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private bool timerRunning;
         private bool endingTriggered;
         private Color originalBg;
+        private UnityEngine.Camera _backgroundPulseCamera;
+        private Light[] _alarmLights;
+        private float[] _alarmLightBaseIntensities;
+        private bool _alarmLightsCached;
 
         private void Awake()
         {
@@ -85,27 +97,52 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             _audioSource = GetComponent<AudioSource>();
 
-            if (!targetCamera)
-                targetCamera = UnityEngine.Camera.main;
-            if (targetCamera)
-                originalBg = targetCamera.backgroundColor;
+            RefreshBackgroundPulseCamera();
         }
 
         private void Start()
         {
+            AlarmEmergencyLightPresentation.TryCache(
+                alarmLightsRoot,
+                ref _alarmLights,
+                ref _alarmLightBaseIntensities,
+                ref _alarmLightsCached
+            );
             if (matchTimerEnabled && autoStartTimer)
                 StartTimer();
         }
 
         private void Update()
         {
+            RefreshBackgroundPulseCamera();
             SyncClientAlarmFromNetworkIfNeeded();
 
-            if (alarmActive && targetCamera)
+            if (alarmActive && _backgroundPulseCamera)
             {
-                float t = (Mathf.Sin(Time.time * pulseSpeed) + 1f) * 0.5f;
-                targetCamera.backgroundColor = Color.Lerp(originalBg, alarmColor, t);
+                float t = AlarmPresentationPulse.SinPulse01(Time.time, pulseSpeed);
+                _backgroundPulseCamera.backgroundColor = Color.Lerp(originalBg, alarmColor, t);
             }
+
+            if (alarmActive && alarmLightsRoot != null && _alarmLightsCached)
+            {
+                AlarmEmergencyLightPresentation.ApplyIntensityPulse(
+                    _alarmLights,
+                    _alarmLightBaseIntensities,
+                    Time.time,
+                    pulseSpeed,
+                    alarmLightPhaseSpreadPerIndex
+                );
+            }
+        }
+
+        private void RefreshBackgroundPulseCamera()
+        {
+            UnityEngine.Camera cam = targetCamera != null ? targetCamera : UnityEngine.Camera.main;
+            if (cam == _backgroundPulseCamera)
+                return;
+            _backgroundPulseCamera = cam;
+            if (cam != null)
+                originalBg = cam.backgroundColor;
         }
 
         private void OnGUI()
@@ -160,8 +197,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         {
             timerRunning = false;
             StopAlarmPresentation();
-            if (targetCamera)
-                targetCamera.backgroundColor = originalBg;
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera)
+                _backgroundPulseCamera.backgroundColor = originalBg;
         }
 
         private float GetDisplayedTimeRemaining()
@@ -237,8 +275,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             }
 
             StopAlarmPresentation();
-            if (targetCamera)
-                targetCamera.backgroundColor = originalBg;
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera)
+                _backgroundPulseCamera.backgroundColor = originalBg;
 
             if (!endingTriggered)
             {
@@ -266,6 +305,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             alarmActive = active;
             if (active)
             {
+                AlarmEmergencyLightPresentation.TryCache(
+                    alarmLightsRoot,
+                    ref _alarmLights,
+                    ref _alarmLightBaseIntensities,
+                    ref _alarmLightsCached
+                );
+                AlarmEmergencyLightPresentation.ActivateAlarmRoot(alarmLightsRoot);
                 alarmStartFeedbacks?.PlayFeedbacks();
                 if (_audioSource != null && alarmLoopClip != null)
                 {
@@ -276,6 +322,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             }
             else
             {
+                if (_alarmLightsCached && alarmLightsRoot != null)
+                {
+                    AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                        alarmLightsRoot,
+                        _alarmLights,
+                        _alarmLightBaseIntensities
+                    );
+                }
                 alarmStopFeedbacks?.PlayFeedbacks();
                 if (_audioSource != null)
                 {
@@ -287,6 +341,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         public override void OnDestroy()
         {
+            if (_alarmLightsCached && alarmLightsRoot != null)
+            {
+                AlarmEmergencyLightPresentation.RestoreAndHideRoot(
+                    alarmLightsRoot,
+                    _alarmLights,
+                    _alarmLightBaseIntensities
+                );
+            }
+            RefreshBackgroundPulseCamera();
+            if (_backgroundPulseCamera != null)
+                _backgroundPulseCamera.backgroundColor = originalBg;
             base.OnDestroy();
             alarmStopFeedbacks?.PlayFeedbacks();
             if (_audioSource != null)
