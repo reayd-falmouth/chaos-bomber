@@ -77,5 +77,21 @@ namespace fps.Tests.EditMode
 
             Assert.IsFalse(BillboardSpriteCameraHelper.UseTopDownGridBillboardRotation(GameModeManager.GameMode.Bomberman));
         }
+
+        [Test]
+        public void ApplyBillboxLocalY_GridAndFps_SetsLocalYPreservesXZ()
+        {
+            var go = new GameObject("BillboxYTest");
+            go.transform.localPosition = new Vector3(1.5f, 9f, -2f);
+            BillboardSpriteCameraHelper.ApplyBillboxLocalY(go.transform, gridPresentation: true, yGrid: 0.3f, yFps: 0.35f);
+            Assert.AreEqual(0.3f, go.transform.localPosition.y, 0.0001f);
+            Assert.AreEqual(1.5f, go.transform.localPosition.x, 0.0001f);
+            Assert.AreEqual(-2f, go.transform.localPosition.z, 0.0001f);
+
+            BillboardSpriteCameraHelper.ApplyBillboxLocalY(go.transform, gridPresentation: false, yGrid: 0.3f, yFps: 0.35f);
+            Assert.AreEqual(0.35f, go.transform.localPosition.y, 0.0001f);
+
+            Object.DestroyImmediate(go);
+        }
     }
 }

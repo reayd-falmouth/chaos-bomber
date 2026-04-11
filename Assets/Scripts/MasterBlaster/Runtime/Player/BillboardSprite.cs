@@ -19,6 +19,9 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     ///
     /// FPS (or any time <see cref="UnityEngine.Camera.main"/> is perspective) — euler (-90, yaw, 0): yaw toward
     /// gameplay camera on XZ. Grid euler is used only for true top-down (orthographic main) grid modes.
+    ///
+    /// Optional: <see cref="adjustLocalYByPresentationMode"/> — same idea as <see cref="PlayerDualModeController"/>
+    /// Billbox local Y for grid vs FPS (bombs/explosions); off by default on player (controller drives Y there).
     /// </summary>
     [DefaultExecutionOrder(500)]
     public class BillboardSprite : MonoBehaviour
@@ -28,6 +31,13 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         [Tooltip("Applied every LateUpdate in Bomberman mode (e.g. bombs: X = 90).")]
         [SerializeField] private Vector3 bombermanEulerAngles = new Vector3(0f, 0f, 0f);
+
+        [Header("Optional Billbox height (e.g. props)")]
+        [Tooltip("When enabled, sets local Y from grid vs FPS using GameModeManager.IsGridPresentationMode (like PlayerDualModeController).")]
+        [SerializeField] private bool adjustLocalYByPresentationMode;
+
+        [SerializeField] private float billboxLocalYGrid = 0.3f;
+        [SerializeField] private float billboxLocalYFps = 0.35f;
 
         [Tooltip("When enabled, logs mode/camera/top-down path about once per second (Editor + Development builds).")]
         [SerializeField] private bool debugBillboardOrientation;
@@ -62,6 +72,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private void ApplyBillboardOrientation()
         {
             transform.localScale = m_BombermanScale;
+            ApplyOptionalBillboxLocalY();
 
             if (GameModeManager.Instance == null)
             {
@@ -125,6 +136,19 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 transform.rotation = BillboardSpriteOrientationMath.ComputeFpsBillboardRotation(
                     transform.position, billboardCam);
             }
+        }
+
+        private void ApplyOptionalBillboxLocalY()
+        {
+            if (!adjustLocalYByPresentationMode)
+                return;
+            if (GameModeManager.Instance != null)
+            {
+                bool grid = GameModeManager.IsGridPresentationMode(GameModeManager.Instance.CurrentMode);
+                BillboardSpriteCameraHelper.ApplyBillboxLocalY(transform, grid, billboxLocalYGrid, billboxLocalYFps);
+            }
+            else
+                BillboardSpriteCameraHelper.ApplyBillboxLocalY(transform, false, billboxLocalYGrid, billboxLocalYFps);
         }
 
         private void ComputeBombermanScale()
