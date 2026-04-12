@@ -1,19 +1,29 @@
-# MasterBlaster — Game prototype
+# MasterBlaster — IGO721 indie prototype
 
 ![Unity 6](https://img.shields.io/badge/Unity-6000.3.9f1%20(URP%2017.3.0)-blue)
 
-Single-player–focused prototype: **Bomberman-style arena combat** and **first-person combat** in one session, built on the **Unity FPS Microgame** template with a hybrid mode switch. Primary scene for play in-editor: [`Assets/Scenes/MasterBlaster/MasterBlaster_FPS.unity`](Assets/Scenes/MasterBlaster/MasterBlaster_FPS.unity).
+**MasterBlaster** is a single-player prototype that combines **Bomberman-style arena combat** (top-down) and **first-person combat** in one session. It extends the [Unity FPS Microgame](https://learn.unity.com/project/fps-microgame) with a hybrid mode switch so you can move between grid-based bombing and FPS shooting without leaving the run.
+
+**Primary scene (play in Editor):** [`Assets/Scenes/MasterBlaster/MasterBlaster_FPS.unity`](Assets/Scenes/MasterBlaster/MasterBlaster_FPS.unity)
+
+**Unity version:** `6000.3.9f1` — see [`ProjectSettings/ProjectVersion.txt`](ProjectSettings/ProjectVersion.txt).
 
 ---
 
-## Deliverables (coursework)
+## How to run
+
+1. Open this folder as a Unity 6 project (version above).
+2. Open **`MasterBlaster_FPS`** (path above) and press **Play**.
+3. **Vendor-only assets:** `Assets/3rdParty/` is not committed to git (see [Third-party assets](#third-party-assets)). For a full local copy, extract the same archive used in CI (e.g. `3rdparty-ci.zip` at the repo root) so that `Assets/3rdParty/` exists, or run the project’s third-party setup step if you use one.
+
+---
+
+## Coursework deliverables (IGO721)
 
 | Item | Link |
 |------|------|
-| **Windows (or similar) build** | [Add your uploaded build URL here](https://REPLACE-WITH-YOUR-WINDOWS-BUILD-LINK.example.com) |
-| **Project source (backup)** | [Add your uploaded source archive URL here](https://REPLACE-WITH-YOUR-SOURCE-BACKUP-LINK.example.com) |
-
-Replace the placeholder URLs after you publish your build and a zip of the project.
+| **Windows& macOS build** | [https://reayd-falmouth.itch.io/masterblaster](https://reayd-falmouth.itch.io/masterblaster) |
+| **Project sourc** | [https://github.com/reayd-falmouth/MasterBlaster_FPS](https://github.com/reayd-falmouth/MasterBlaster_FPS) |
 
 ---
 
@@ -72,14 +82,17 @@ Used when the hybrid player is in FPS mode (`PlayerDualModeController` enables t
 
 ---
 
-## Third-party assets and packages
+## Third-party assets
 
-### Unity Package Manager ([`Packages/manifest.json`](Packages/manifest.json))
+### Unity Package Manager
 
-| Package | Version |
-|---------|---------|
-| com.rmc.rmc-readme | 1.2.2 (in-editor Read Me — npm scoped registry) |
-| com.coplaydev.unity-mcp | Git `main` (MCPForUnity) |
+Authoritative list: [`Packages/manifest.json`](Packages/manifest.json). The table below lists **package dependencies** (excluding `com.unity.modules.*` engine modules — those remain in the manifest).
+
+| Package | Version / source |
+|---------|------------------|
+| com.coplaydev.unity-mcp | Git `main` ([MCPForUnity](https://github.com/CoplayDev/unity-mcp)) |
+| com.rmc.rmc-readme | 1.2.2 (npm scoped registry) |
+| com.unity.2d.animation | 13.0.4 |
 | com.unity.2d.sprite | 1.0.0 |
 | com.unity.ai.navigation | 2.0.12 |
 | com.unity.cinemachine | 3.1.6 |
@@ -94,25 +107,61 @@ Used when the hybrid player is in FPS mode (`PlayerDualModeController` enables t
 | com.unity.multiplayer.center | 1.0.1 |
 | com.unity.multiplayer.tools | 2.2.8 |
 | com.unity.netcode.gameobjects | 2.10.0 |
+| com.unity.postprocessing | 3.5.4 |
 | com.unity.probuilder | 6.0.8 |
 | com.unity.progrids | 3.0.3-preview.6 |
+| com.unity.recorder | 5.1.6 |
 | com.unity.render-pipelines.universal | 17.3.0 |
 | com.unity.services.multiplayer | 2.1.3 |
 | com.unity.test-framework | 1.6.0 |
 | com.unity.timeline | 1.8.10 |
 | com.unity.ugui | 2.0.0 |
 
-Also **com.unity.modules.*** entries (engine modules) — see `manifest.json` for the full list.
+**Notable stack:** URP (`com.unity.render-pipelines.universal`), Input System, Cinemachine, AI Navigation, ugui, Post Processing, Recorder — plus optional multiplayer/ML packages as above.
 
-### Embedded / third-party content in this repo
+### Embedded in the repository (tracked assets)
 
 | Asset / library | Location / note |
 |-----------------|-----------------|
-| **Unity FPS Microgame** | Base project and gameplay template ([Unity Learn / FPS Microgame](https://learn.unity.com/project/fps-microgame)); see also `Assets/App/FPS/FPSMicrogame_README.txt`. |
-| **Feel** (More Mountains) | `Assets/Feel/` — feedback and juice utilities (e.g. MMFeedbacks). |
-| **TextMesh Pro** | `Assets/TextMesh Pro/` — TMP resources shipped with the project. |
-| **NavMesh Components** | `Assets/App/NavMeshComponents/` — see `LICENSE` in that folder. |
+| **Unity FPS Microgame** | Base template and FPS content under [`Assets/App/FPS/`](Assets/App/FPS); see [`Assets/App/FPS/FPSMicrogame_README.txt`](Assets/App/FPS/FPSMicrogame_README.txt) and [`Assets/App/FPS/Third-PartyNotice.txt`](Assets/App/FPS/Third-PartyNotice.txt) (fonts: Roboto Apache 2.0, EmojiOne, LiberationSans, etc.). |
+| **NavMesh Components** | [`Assets/App/NavMeshComponents/`](Assets/App/NavMeshComponents) (license/README) and runtime/editor scripts under [`Assets/Scripts/NavMeshComponents/`](Assets/Scripts/NavMeshComponents). |
+
+### `Assets/3rdParty/` (vendor plugins — local / CI only)
+
+The folder [`Assets/3rdParty/`](Assets/3rdParty) is **gitignored** so licensed Asset Store or third-party packs are not committed. CI downloads an archive (see [`.github/actions/setup-thirdparty-assets/action.yml`](.github/actions/setup-thirdparty-assets/action.yml)) and extracts it under `Assets/`.
+
+After extraction (e.g. from `3rdparty-ci.zip`), vendor content typically lives under **`Assets/3rdParty/Vendor/`**, including (folder names from the current archive layout):
+
+| Vendor folder | Description (from package structure) |
+|---------------|--------------------------------------|
+| **DAVFX** | *Realistic 6D Lighting Explosions* (VFX assets) |
+| **Feel** | More Mountains Feel (feedback / juice) |
+| **ithappy** | Third-party art/content pack |
+| **Nebula Skyboxes** | Skybox assets |
+| **ParallelCascades** | Third-party assets |
+| **PicaVoxel** | Voxel-related tools/content |
+| **PlayFabSDK** | PlayFab SDK |
+| **SpriteExporter** | Editor/tooling |
+| **TextMesh Pro** | TMP resources (may duplicate or supplement Unity’s TMP package usage) |
+| **Universal Sound FX** | Audio library |
+| **VolFx** | Volume/post-style effects pack |
+
+If you submit a **source zip** for assessment, include `Assets/3rdParty/` if your build depends on these assets, or document that tutors must run the same extraction step.
 
 ---
 
-*In-editor welcome (RMC pattern, like [unity-project-template-uitoolkit](https://github.com/SamuelAsherRivello/unity-project-template-uitoolkit)): [`Assets/Documentation/ReadMe.asset`](Assets/Documentation/ReadMe.asset) uses **com.rmc.rmc-readme**; it is selected on editor load (see `ReadMeInitializeOnLoad`). Reopen via **Window → MasterBlaster → Documentation → Open ReadMe**. Extended coursework + architecture content (Mermaid, extra fields) remains on [`ProjectArchitectureReadme.asset`](Assets/Documentation/ProjectArchitectureReadme.asset) — **Tools → MasterBlaster → Open Project Readme (Documentation)**.*
+## Generative AI disclosure (module requirement)
+
+The IGO721 brief requires you to **declare** any generative AI used (text, code, images, audio, ideation, etc.): tools, purpose, and what was incorporated. Undisclosed use may be treated as academic misconduct.
+
+| Tool | Purpose | What was incorporated |
+|------|---------|------------------------|
+| **Cursor** | Coding assistance in the editor | AI-assisted suggestions for C#/Unity code (generation, edits, refactors, debugging); outputs were reviewed and integrated where appropriate. |
+| **Google Gemini** | Concept art | Generative concept imagery for visual development; selected or adapted pieces used as reference or basis for project art direction. |
+
+---
+
+
+## In-editor documentation
+
+[`Assets/Documentation/ReadMe.asset`](Assets/Documentation/ReadMe.asset) uses **com.rmc.rmc-readme**; extended architecture notes are on [`Assets/Documentation/ProjectArchitectureReadme.asset`](Assets/Documentation/ProjectArchitectureReadme.asset). Open via **Window → MasterBlaster → Documentation → Open ReadMe** or **Tools → MasterBlaster → Open Project Readme (Documentation)**.
