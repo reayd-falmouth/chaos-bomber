@@ -36,21 +36,25 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                 Mathf.RoundToInt(local.z / CellSize));
         }
 
-        /// <summary>Convert grid indices to the world-space cell centre.</summary>
+        /// <summary>
+        /// Minimum XZ corner of the cell (same convention as destructible wall placement in the hybrid arena).
+        /// Y is <see cref="GridOrigin"/>.y (floor height).
+        /// </summary>
         public static Vector3 CellToWorld(Vector2Int cell)
         {
             return GridOrigin + new Vector3(cell.x * CellSize, 0f, cell.y * CellSize);
         }
 
         /// <summary>
-        /// World position for a shrink indestructible cube (1×CellSize tall): same XZ as <see cref="CellToWorld"/>,
-        /// which already uses this project’s cell-center convention; Y is floor (<see cref="GridOrigin"/>.y) plus half cube height.
+        /// World position for a center-pivoted shrink indestructible cube (1×CellSize tall):
+        /// XZ at the geometric centre of the cell, Y at <see cref="GridOrigin"/>.y plus half cube height so a unit cube rests on the floor.
         /// </summary>
         public static Vector3 CellToWorldShrinkBlock(Vector2Int cell)
         {
             float s = CellSize;
-            Vector3 xz = CellToWorld(cell);
-            return new Vector3(xz.x, GridOrigin.y + 0.5f * s, xz.z);
+            Vector3 corner = CellToWorld(cell);
+            float half = 0.5f * s;
+            return new Vector3(corner.x + half, GridOrigin.y + half, corner.z + half);
         }
 
         /// <summary>

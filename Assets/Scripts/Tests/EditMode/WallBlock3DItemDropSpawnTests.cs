@@ -7,7 +7,7 @@ namespace fps.Tests.EditMode
     public class WallBlock3DItemDropSpawnTests
     {
         [Test]
-        public void CellToWorldShrinkBlock_MatchesCellToWorldXZ_AndHalfCubeOnY()
+        public void CellToWorldShrinkBlock_PlacesCenterPivotedUnitCubeAtCellCenterXZ()
         {
             var prevOrigin = ArenaGrid3D.GridOrigin;
             var prevCellSize = ArenaGrid3D.CellSize;
@@ -16,8 +16,13 @@ namespace fps.Tests.EditMode
                 ArenaGrid3D.GridOrigin = new Vector3(1f, 5f, -2f);
                 ArenaGrid3D.CellSize = 1f;
                 var cell = new Vector2Int(2, 3);
-                Vector3 xz = ArenaGrid3D.CellToWorld(cell);
-                Vector3 expected = new Vector3(xz.x, ArenaGrid3D.GridOrigin.y + 0.5f * ArenaGrid3D.CellSize, xz.z);
+                Vector3 corner = ArenaGrid3D.CellToWorld(cell);
+                float s = ArenaGrid3D.CellSize;
+                float half = 0.5f * s;
+                Vector3 expected = new Vector3(
+                    corner.x + half,
+                    ArenaGrid3D.GridOrigin.y + half,
+                    corner.z + half);
                 Vector3 actual = ArenaGrid3D.CellToWorldShrinkBlock(cell);
                 Assert.That(Vector3.Distance(actual, expected), Is.LessThan(0.0001f));
             }
