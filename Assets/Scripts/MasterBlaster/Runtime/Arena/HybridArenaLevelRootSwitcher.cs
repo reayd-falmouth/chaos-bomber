@@ -23,6 +23,15 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         [SerializeField]
         private LevelWallRoots[] levelWallRoots = new LevelWallRoots[0];
 
+        [Header("Ground plane (optional)")]
+        [Tooltip("The ProBuilder / mesh renderer for the arena floor. Wall roots are often parented under this object; swapping walls does not change its material unless configured here.")]
+        [SerializeField]
+        private MeshRenderer arenaGroundPlaneRenderer;
+
+        [Tooltip("One material per arena index (same order as levelWallRoots / Level Select). Applied to the ground renderer when the active level changes.")]
+        [SerializeField]
+        private Material[] groundMaterialsByArenaIndex;
+
         private HybridArenaGrid _grid;
 
         private bool HasAnyConfiguredPair()
@@ -134,6 +143,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             _grid.RepublishGridOrigin();
             _grid.ResetDestructibleBaselineState();
 
+            ApplyGroundMaterialForArenaIndex(idx);
+
             if (rebindBaselineForRuntime)
                 _grid.RecaptureBaselineAndRestoreLayout();
 
@@ -155,6 +166,18 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
                     : "false") +
                 "}");
             // #endregion
+        }
+
+        private void ApplyGroundMaterialForArenaIndex(int arenaIndex)
+        {
+            if (arenaGroundPlaneRenderer == null)
+                return;
+            if (groundMaterialsByArenaIndex == null || groundMaterialsByArenaIndex.Length == 0)
+                return;
+            int i = Mathf.Clamp(arenaIndex, 0, groundMaterialsByArenaIndex.Length - 1);
+            var mat = groundMaterialsByArenaIndex[i];
+            if (mat != null)
+                arenaGroundPlaneRenderer.sharedMaterial = mat;
         }
     }
 }
