@@ -34,6 +34,25 @@ namespace fps.Tests.EditMode
         }
 
         [Test]
+        public void WorldToCell_MapsWorldXZToGridIndices_YIgnored()
+        {
+            var prevOrigin = ArenaGrid3D.GridOrigin;
+            var prevCellSize = ArenaGrid3D.CellSize;
+            try
+            {
+                ArenaGrid3D.GridOrigin = new Vector3(-8f, 0f, -6f);
+                ArenaGrid3D.CellSize = 1f;
+                // Same mapping designers use for FPS manual shrink start from world (-8, 0, 6).
+                Assert.AreEqual(new Vector2Int(0, 12), ArenaGrid3D.WorldToCell(new Vector3(-8f, 999f, 6f)));
+            }
+            finally
+            {
+                ArenaGrid3D.GridOrigin = prevOrigin;
+                ArenaGrid3D.CellSize = prevCellSize;
+            }
+        }
+
+        [Test]
         public void GetItemDropSpawnY_UsesHalfCellHeightAboveGridOrigin()
         {
             var prevOrigin = ArenaGrid3D.GridOrigin;

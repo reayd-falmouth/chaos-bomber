@@ -141,9 +141,20 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private bool useManualSnakeStart;
 
-        [Tooltip("Grid cell (x, y) for the first shrink block when Use Manual Snake Start is enabled.")]
+        [Tooltip("Grid cell (x, y) for the first shrink block when Use Manual Snake Start is enabled and Use Manual Snake Start From World is off.")]
         [SerializeField]
         private Vector2Int manualSnakeStartCell;
+
+        [Tooltip(
+            "When Use Manual Snake Start is on: if true, Manual Snake Start World is converted with ArenaGrid3D.WorldToCell (XZ only; Y ignored). " +
+            "If false, Manual Snake Start Cell is used instead."
+        )]
+        [SerializeField]
+        private bool useManualSnakeStartFromWorld;
+
+        [Tooltip("World-space point; only X and Z determine the grid cell (same rounding as WorldToCell). Y is ignored for cell lookup.")]
+        [SerializeField]
+        private Vector3 manualSnakeStartWorld;
 
         [Tooltip("Optional one-shot when a block is placed. If set, overrides AudioSource.clip on the spawned prefab.")]
         [SerializeField]
@@ -612,11 +623,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                     maxY,
                     snakeIterateYFromMinToMax
                 );
+                Vector2Int startCell = useManualSnakeStartFromWorld
+                    ? ArenaGrid3D.WorldToCell(manualSnakeStartWorld)
+                    : manualSnakeStartCell;
                 if (
                     ArenaShrinkOrderUtilities.TryRotateToStart(
                         order,
-                        manualSnakeStartCell.x,
-                        manualSnakeStartCell.y,
+                        startCell.x,
+                        startCell.y,
                         out var rotated
                     )
                 )
@@ -626,7 +640,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 else
                 {
                     UnityEngine.Debug.LogWarning(
-                        $"[FpsArenaShrinker] Manual snake start ({manualSnakeStartCell.x},{manualSnakeStartCell.y}) "
+                        $"[FpsArenaShrinker] Manual snake start ({startCell.x},{startCell.y}) "
                         + "not found in computed shrink order; using unrotated order."
                     );
                     visit = order;
