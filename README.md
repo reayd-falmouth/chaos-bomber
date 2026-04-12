@@ -22,7 +22,7 @@
 
 | Item | Link |
 |------|------|
-| **Windows& macOS build** | [https://reayd-falmouth.itch.io/masterblaster](https://reayd-falmouth.itch.io/masterblaster) |
+| **Windows & macOS build** | [https://reayd-falmouth.itch.io/masterblaster](https://reayd-falmouth.itch.io/masterblaster) |
 | **Project sourc** | [https://github.com/reayd-falmouth/MasterBlaster_FPS](https://github.com/reayd-falmouth/MasterBlaster_FPS) |
 
 ---
