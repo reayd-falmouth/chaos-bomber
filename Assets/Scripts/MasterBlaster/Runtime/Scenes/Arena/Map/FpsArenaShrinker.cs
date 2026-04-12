@@ -134,40 +134,36 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private bool snakeIterateYFromMinToMax;
 
-        [Tooltip(
-            "When true, fill order is the same snake/spiral as below, but rotated so Manual Snake Start Cell is visited first. " +
-            "Coordinates match hybrid grid cell indices (inclusive inner bounds after inset); if the cell is not in the order, the rotation is skipped."
-        )]
-        [SerializeField]
-        private bool useManualSnakeStart;
-
-        [Tooltip("Grid cell (x, y) for the first shrink block when Use Manual Snake Start is enabled and Use Manual Snake Start From World is off.")]
-        [SerializeField]
-        private Vector2Int manualSnakeStartCell;
-
-        [Tooltip(
-            "When Use Manual Snake Start is on: if true, Manual Snake Start World is converted with ArenaGrid3D.WorldToCell (XZ only; Y ignored). " +
-            "If false, Manual Snake Start Cell is used instead."
-        )]
-        [SerializeField]
-        private bool useManualSnakeStartFromWorld;
-
-        [Tooltip("World-space point; only X and Z determine the grid cell (same rounding as WorldToCell). Y is ignored for cell lookup.")]
-        [SerializeField]
-        private Vector3 manualSnakeStartWorld;
-
         [Tooltip("Optional one-shot when a block is placed. If set, overrides AudioSource.clip on the spawned prefab.")]
         [SerializeField]
         private AudioClip blockPlaceClip;
 
+        [Tooltip(
+            "Per-axis half-extent for the physics overlap query when a shrink block is placed, as a fraction of " +
+            nameof(ArenaGrid3D) + "." + nameof(ArenaGrid3D.CellSize) + " (default 0.45 ⇒ ~0.9 m box for 1 m cells). " +
+            "Slightly below 0.5 avoids grabbing colliders in neighboring cells."
+        )]
         [SerializeField]
-        private Vector3 overlapHalfExtents = new Vector3(0.45f, 0.45f, 0.45f);
+        [Range(0.35f, 0.49f)]
+        private float overlapQueryHalfExtentFactor = 0.45f;
 
+        [Header("Advanced")]
+        [Tooltip("Layers included when querying bombs, walls, pickups, and players in the shrink cell. Default: everything.")]
         [SerializeField]
         private LayerMask overlapMask = ~0;
 
-        [SerializeField]
-        private int inset = 1;
+        [Header("Irregular Grid Padding")]
+        [Tooltip("How many cells to skip on the left edge (Min X)")]
+        [SerializeField] private int padLeft = 0;
+
+        [Tooltip("How many cells to skip on the right edge (Max X)")]
+        [SerializeField] private int padRight = 1;
+
+        [Tooltip("How many cells to skip on the bottom edge (Min Y/Z)")]
+        [SerializeField] private int padBottom = 0;
+
+        [Tooltip("How many cells to skip on the top edge (Max Y/Z)")]
+        [SerializeField] private int padTop = 1;
 
         [Header("Debug")]
         [SerializeField]
@@ -494,20 +490,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             while (timerRunning)
             {
-                if (shrinkingStarted)
-                {
-                    timeRemaining = 0f;
-                    if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
-                        _netTimeRemaining.Value = 0f;
-                    if (shrinkingComplete)
-                        break;
-                    yield return null;
-                    continue;
-                }
+                if (shrinkingStarted && shrinkingComplete)
+                    break;
 
-                timeRemaining -= Time.deltaTime;
-                if (timeRemaining < 0f)
-                    timeRemaining = 0f;
+                if (timeRemaining > 0f)
+                {
+                    timeRemaining -= Time.deltaTime;
+                    if (timeRemaining < 0f)
+                        timeRemaining = 0f;
+                }
 
                 if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                     _netTimeRemaining.Value = timeRemaining;
@@ -569,35 +560,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private void ComputeInsideBoundsFromGrid()
         {
             var g = Grid;
-            if (g == null)
-            {
-                minX = maxX = minY = maxY = 0;
-                return;
-            }
+            if (g == null) return;
 
-            int c = g.columns;
-            int r = g.rows;
-            minX = inset;
-            maxX = c - 1 - inset;
-            minY = inset;
-            maxY = r - 1 - inset;
+            // Use the asymmetrical padding to trim the bounds perfectly
+            minX = padLeft;
+            maxX = g.columns - 1 - padRight;
+            minY = padBottom;
+            maxY = g.rows - 1 - padTop;
 
-            // One more step toward grid edges; walls are skipped via IsIndestructible (fixes off-by-one start vs. outer ring).
-            minX = Mathf.Max(0, minX - 1);
-            maxX = Mathf.Min(c - 1, maxX + 1);
-            minY = Mathf.Max(0, minY - 1);
-            maxY = Mathf.Min(r - 1, maxY + 1);
-
-            if (minX > maxX)
-            {
-                int mid = (minX + maxX) / 2;
-                minX = maxX = mid;
-            }
-            if (minY > maxY)
-            {
-                int mid = (minY + maxY) / 2;
-                minY = maxY = mid;
-            }
+            // Safety catch to prevent inverted boundaries
+            if (minX > maxX) minX = maxX = (minX + maxX) / 2;
+            if (minY > maxY) minY = maxY = (minY + maxY) / 2;
         }
 
         private IEnumerator ShrinkRoutine()
@@ -612,57 +585,25 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             EnsureShrinkBlocksRoot();
             ComputeInsideBoundsFromGrid();
 
-            IEnumerable<Vector3Int> visit;
-            if (useManualSnakeStart)
-            {
-                var order = ArenaShrinkOrderUtilities.ToOrderedList(
-                    shrinkPattern,
-                    minX,
-                    maxX,
-                    minY,
-                    maxY,
-                    snakeIterateYFromMinToMax
-                );
-                Vector2Int startCell = useManualSnakeStartFromWorld
-                    ? ArenaGrid3D.WorldToCell(manualSnakeStartWorld)
-                    : manualSnakeStartCell;
-                if (
-                    ArenaShrinkOrderUtilities.TryRotateToStart(
-                        order,
-                        startCell.x,
-                        startCell.y,
-                        out var rotated
-                    )
-                )
-                {
-                    visit = rotated;
-                }
-                else
-                {
-                    UnityEngine.Debug.LogWarning(
-                        $"[FpsArenaShrinker] Manual snake start ({startCell.x},{startCell.y}) "
-                        + "not found in computed shrink order; using unrotated order."
-                    );
-                    visit = order;
-                }
-            }
-            else
-            {
-                visit = ArenaShrinkCellOrder.EnumerateCells(
-                    shrinkPattern,
-                    minX,
-                    maxX,
-                    minY,
-                    maxY,
-                    snakeIterateYFromMinToMax
-                );
-            }
-
-            foreach (var cell in visit)
+            foreach (var cell in ArenaShrinkCellOrder.EnumerateCells(
+                         shrinkPattern,
+                         minX,
+                         maxX,
+                         minY,
+                         maxY,
+                         snakeIterateYFromMinToMax
+                     ))
             {
                 var c2 = new Vector2Int(cell.x, cell.y);
+        
                 if (g.IsIndestructible(c2))
+                {
+                    // By yielding here, the shrinker sweeps over permanent walls 
+                    // at the exact same visual speed as empty floor tiles.
+                    // No more teleporting blocks!
+                    yield return new WaitForSeconds(shrinkDelay);
                     continue;
+                }
 
                 PlaceBlock(c2);
                 yield return new WaitForSeconds(shrinkDelay);
@@ -685,7 +626,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private void PlaceBlock(Vector2Int cell)
         {
             var g = Grid;
-            Vector3 worldCenter = ArenaGrid3D.CellToWorldShrinkBlock(cell);
+            // Use standard CellToWorld to prevent the unwanted 0.5 X/Z offset, 
+// but manually add 0.5 to the Y axis so the cube rests on top of the floor
+            Vector3 worldCenter = ArenaGrid3D.CellToWorld(cell);
+            worldCenter.y = ArenaGrid3D.GridOrigin.y + (0.5f * ArenaGrid3D.CellSize);
             // #region agent log
             AgentDebugNdjson_624424.Log(
                 "H4",
@@ -703,6 +647,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             var dest = g != null ? g.GetDestructible(cell) : null;
             if (dest != null)
                 dest.DestroyBlock();
+
+            float half = ArenaGrid3D.CellSize * overlapQueryHalfExtentFactor;
+            var overlapHalfExtents = new Vector3(half, half, half);
 
             int hitCount = Physics.OverlapBoxNonAlloc(
                 worldCenter,

@@ -481,20 +481,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
             while (timerRunning)
             {
-                if (shrinkingStarted)
-                {
-                    timeRemaining = 0f;
-                    if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
-                        _netTimeRemaining.Value = 0f;
-                    if (shrinkingComplete)
-                        break;
-                    yield return null;
-                    continue;
-                }
+                if (shrinkingStarted && shrinkingComplete)
+                    break;
 
-                timeRemaining -= Time.deltaTime;
-                if (timeRemaining < 0f)
-                    timeRemaining = 0f;
+                if (timeRemaining > 0f)
+                {
+                    timeRemaining -= Time.deltaTime;
+                    if (timeRemaining < 0f)
+                        timeRemaining = 0f;
+                }
 
                 if (isOnline && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && IsSpawned)
                     _netTimeRemaining.Value = timeRemaining;
