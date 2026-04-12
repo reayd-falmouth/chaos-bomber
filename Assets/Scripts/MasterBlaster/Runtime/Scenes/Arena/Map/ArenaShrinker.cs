@@ -430,6 +430,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 _backgroundPulseCamera.backgroundColor = originalBg;
         }
 
+        /// <summary>
+        /// Call after <see cref="ResetMatchStateForNewRound"/> when the same loaded scene begins a new round.
+        /// </summary>
+        public void TryStartTimerAfterRoundReset()
+        {
+            if (!isActiveAndEnabled)
+                return;
+            if (shrinkingEnabled && autoStartTimer)
+                StartTimer();
+        }
+
         // -------------------- Internals --------------------
         private IEnumerator TimerRoutine()
         {

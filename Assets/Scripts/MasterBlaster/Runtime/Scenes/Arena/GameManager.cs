@@ -1086,6 +1086,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 if (h != null)
                     h.ResetMatchStateForNewRound();
             }
+
+            // Reset clears timeRemaining / stops coroutines; Start()/OnNetworkSpawn do not run again in the same scene,
+            // so restart the match clock on active shrinkers (same idea as MapSelector after toggling map roots).
+            foreach (var s in FindObjectsByType<ArenaShrinker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                s?.TryStartTimerAfterRoundReset();
+            foreach (var f in FindObjectsByType<FpsArenaShrinker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                f?.TryStartTimerAfterRoundReset();
+            foreach (var h in FindObjectsByType<HybridMatchAlarmTimer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                h?.TryStartTimerAfterRoundReset();
         }
 
         public void ClearMatchTransientObjects()

@@ -396,6 +396,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         }
 
         /// <summary>
+        /// Call after <see cref="ResetMatchStateForNewRound"/> when the same loaded scene begins a new round
+        /// (e.g. <see cref="GameManager"/> after countdown). Mirrors <see cref="Start"/> / <see cref="OnNetworkSpawn"/> auto-start.
+        /// </summary>
+        public void TryStartTimerAfterRoundReset()
+        {
+            if (!isActiveAndEnabled)
+                return;
+            if (shrinkingEnabled && autoStartTimer)
+                StartTimer();
+        }
+
+        /// <summary>
         /// Stops timer/shrink coroutines and restores alarm lights, camera tint, and audio for a new round in the same scene.
         /// </summary>
         public void ResetMatchStateForNewRound()
