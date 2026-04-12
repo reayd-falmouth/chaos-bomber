@@ -19,6 +19,8 @@ jobs:
     name: Build Unity project ✨ on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      # Run every matrix leg to completion; default fail-fast cancels siblings when one fails.
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
