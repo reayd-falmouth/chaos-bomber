@@ -130,7 +130,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &9200000000000000002
 Transform:
   m_ObjectHideFlags: 0
@@ -165,14 +165,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Arena.MultiFaceDestroySpriteAnimation
   animationSprites:
-  - {fileID: 1384733519, guid: 4ef05f327f34de54096db462cd0b861c, type: 3}
-  - {fileID: 1781128592, guid: 4ef05f327f34de54096db462cd0b861c, type: 3}
-  - {fileID: 1642467547, guid: 4ef05f327f34de54096db462cd0b861c, type: 3}
-  - {fileID: 1378420485, guid: 4ef05f327f34de54096db462cd0b861c, type: 3}
-  - {fileID: -193547845, guid: 4ef05f327f34de54096db462cd0b861c, type: 3}
+  - {fileID: 2119433627, guid: aa7b28cf05ff1854ebb5a74a91af99b2, type: 3}
+  - {fileID: 1324389627, guid: aa7b28cf05ff1854ebb5a74a91af99b2, type: 3}
+  - {fileID: 750953348, guid: aa7b28cf05ff1854ebb5a74a91af99b2, type: 3}
+  - {fileID: 1974270242, guid: aa7b28cf05ff1854ebb5a74a91af99b2, type: 3}
+  - {fileID: -145566863, guid: aa7b28cf05ff1854ebb5a74a91af99b2, type: 3}
   animationTime: 0.1
   loop: 0
-  deactivateWhenNonLoopFinishes: 1
   faceRenderers:
   - {fileID: 9200000000000000012}
   - {fileID: 9200000000000000022}
@@ -180,7 +179,8 @@ MonoBehaviour:
   - {fileID: 9200000000000000042}
   - {fileID: 9200000000000000052}
   - {fileID: 9200000000000000062}
-
+  - {fileID: 0}
+  deactivateWhenNonLoopFinishes: 1
 --- !u!114 &9200000000000000004
 MonoBehaviour:
   m_ObjectHideFlags: 0

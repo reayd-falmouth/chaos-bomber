@@ -9123,7 +9123,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 965440716588849688}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -9359,9 +9359,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: HybridGame::HybridGame.HybridGame.Scripts.Player.BillboardSprite
   targetWorldSize: 6.25
-  bombermanEulerAngles: {x: 0, y: 0, z: 0}
+  bombermanEulerAngles: {x: 90, y: 0, z: 0}
   fpsUseFullLookAtBillboard: 1
-  debugBillboardOrientation: 0
+  debugBillboardOrientation: 1
 --- !u!1 &2375951142342543708
 GameObject:
   m_ObjectHideFlags: 0

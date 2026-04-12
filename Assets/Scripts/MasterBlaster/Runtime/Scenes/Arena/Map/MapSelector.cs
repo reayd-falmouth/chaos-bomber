@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using HybridGame.MasterBlaster.Scripts.Debug;
+using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 {
@@ -59,12 +60,38 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 enableGO.SetActive(true);
 
             var onShrinker = enableGO ? enableGO.GetComponentInChildren<ArenaShrinker>(true) : null;
+            var onFpsShrinker = enableGO ? enableGO.GetComponentInChildren<FpsArenaShrinker>(true) : null;
 
             // If the shrinker finds its own tilemaps in Awake, nothing else needed.
             // If you assign tilemaps manually in the inspector, they're already scoped to each root.
 
+            // #region agent log
+            AgentDebugNdjson_624424.Log(
+                "H1",
+                "MapSelector.Apply",
+                "shrinker_resolve",
+                "{\"hasArenaShrinker\":" + (onShrinker != null ? "true" : "false") +
+                ",\"hasFpsShrinker\":" + (onFpsShrinker != null ? "true" : "false") +
+                ",\"startTimerOnApply\":" + (startTimerOnApply ? "true" : "false") +
+                ",\"useNormal\":" + (useNormal ? "true" : "false") + "}",
+                "pre"
+            );
+            // #endregion
+
             if (startTimerOnApply)
+            {
                 onShrinker?.StartTimer();
+                onFpsShrinker?.StartTimer();
+                // #region agent log
+                AgentDebugNdjson_624424.Log(
+                    "H1b",
+                    "MapSelector.Apply",
+                    "after_StartTimer_both",
+                    "{\"calledFpsStartTimer\":" + (onFpsShrinker != null ? "true" : "false") + "}",
+                    "post-fix"
+                );
+                // #endregion
+            }
         }
     }
 }

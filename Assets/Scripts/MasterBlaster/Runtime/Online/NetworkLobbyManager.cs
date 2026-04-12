@@ -36,6 +36,9 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            if (TryGetComponent<NetworkManager>(out var nm))
+                RelayHandler.EnsureUnityTransportForNetworkManager(nm);
         }
 
         /// <summary>
