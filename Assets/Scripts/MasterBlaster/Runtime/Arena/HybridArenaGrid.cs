@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -23,7 +24,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         public GameObject destructibleWallsLayoutPrefab;
         public int safeZoneArmLength = 2;
         [Tooltip("Local-space XZ origin of cell (0,0) relative to destructibleWallsParent. " +
-                 "Match this to the arena's top-left corner. Default: (-8, 0, 0).")]
+                 "Match this to the arena's top-left corner. Default: (-8, 0, 0). " +
+                 "Use the HybridArenaGrid inspector alignment buttons or Context Menu → Diagnostics/Log Grid Alignment if shrink/walls look shifted.")]
         public Vector3 gridOriginLocal = new Vector3(-8f, 0f, 0f);
 
         [Header("Scene map thinning")]
@@ -248,6 +250,79 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         /// <see cref="gridOriginLocal"/> changes (e.g. multi-arena root switcher).
         /// </summary>
         public void RepublishGridOrigin() => RepublishGridOriginInternal();
+
+        /// <summary>
+        /// Samples wall world positions (destructible <see cref="WallBlock3D"/> + indestructible colliders),
+        /// compares them to <see cref="ArenaGrid3D"/> cell mapping, and logs min/max indices,
+        /// out-of-bounds count, and suggested <see cref="gridOriginLocal"/> delta (XZ) when the minimum
+        /// cell is not (0,0). Use in Play Mode or in the Editor with the active level roots enabled.
+        /// </summary>
+        [ContextMenu("Diagnostics/Log Grid Alignment")]
+        public void LogGridAlignmentDiagnostics()
+        {
+            var report = GetGridAlignmentReport();
+            if (!report.HasSamples)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[HybridArenaGrid] Grid alignment: no wall samples (assign destructible/indestructible parents and ensure roots are active).");
+                return;
+            }
+
+            var localDelta = ArenaGridAlignment.WorldDeltaToGridOriginLocalDelta(
+                destructibleWallsParent,
+                report.SuggestedGridOriginWorldDelta);
+            UnityEngine.Debug.Log(
+                "[HybridArenaGrid] Grid alignment — samples: " + report.SampleCount
+                + ", OOB vs columns/rows: " + report.OutOfBoundsCount
+                + ", MinCell: " + report.MinCell + ", MaxCell: " + report.MaxCell
+                + ", columns×rows: " + columns + "×" + rows
+                + ", GridOrigin: " + ArenaGrid3D.GridOrigin
+                + ", CellSize: " + ArenaGrid3D.CellSize
+                + "\n  Suggested GridOrigin world delta (anchors MinCell toward 0,0): "
+                + report.SuggestedGridOriginWorldDelta
+                + "\n  Same adjustment as gridOriginLocal delta (XZ, parent local): " + localDelta
+                + "\n  (Add the local delta to gridOriginLocal if MinCell should be (0,0) for your authored corner.)");
+        }
+
+        /// <summary>
+        /// Recomputes <see cref="ArenaGrid3D.GridOrigin"/> from current fields, samples wall positions,
+        /// and returns min/max cell indices vs <see cref="columns"/> / <see cref="rows"/>.
+        /// </summary>
+        public ArenaGridAlignment.Report GetGridAlignmentReport()
+        {
+            RepublishGridOrigin();
+            var samples = GatherAlignmentSampleWorldPositions(this, true);
+            return ArenaGridAlignment.AnalyzeWorldSamples(
+                samples,
+                ArenaGrid3D.GridOrigin,
+                ArenaGrid3D.CellSize,
+                columns,
+                rows);
+        }
+
+        private static List<Vector3> GatherAlignmentSampleWorldPositions(HybridArenaGrid grid, bool includeInactive)
+        {
+            var list = new List<Vector3>(256);
+            if (grid.destructibleWallsParent != null)
+            {
+                foreach (var w in grid.destructibleWallsParent.GetComponentsInChildren<WallBlock3D>(includeInactive))
+                {
+                    if (w != null)
+                        list.Add(w.transform.position);
+                }
+            }
+
+            if (grid.indestructibleWallsParent != null)
+            {
+                foreach (var c in grid.indestructibleWallsParent.GetComponentsInChildren<Collider>(includeInactive))
+                {
+                    if (c != null)
+                        list.Add(c.transform.position);
+                }
+            }
+
+            return list;
+        }
 
         /// <summary>
         /// Clears captured destructible baseline and logical grid so a new layout can be bound
