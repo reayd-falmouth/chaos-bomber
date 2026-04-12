@@ -23,9 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            targetPlatform: StandaloneLinux64
-            artifactName: Linux
           - os: macos-latest
             targetPlatform: StandaloneOSX
             artifactName: macOS
