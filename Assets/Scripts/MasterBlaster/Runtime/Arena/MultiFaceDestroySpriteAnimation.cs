@@ -15,6 +15,9 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
         [Header("Faces")]
         public SpriteRenderer[] faceRenderers;
 
+        [Tooltip("When loop is off, deactivate this GameObject after the last frame (e.g. shrink-block appear VFX).")]
+        public bool deactivateWhenNonLoopFinishes;
+
         private bool _animating;
         private int _animationFrame;
 
@@ -56,6 +59,8 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             if (!loop && _animationFrame >= animationSprites.Length)
             {
                 CancelInvoke(nameof(NextFrame));
+                if (deactivateWhenNonLoopFinishes)
+                    gameObject.SetActive(false);
                 return;
             }
 

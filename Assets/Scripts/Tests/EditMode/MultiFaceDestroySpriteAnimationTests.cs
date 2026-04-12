@@ -90,5 +90,40 @@ namespace fps.Tests.EditMode
                 Object.DestroyImmediate(root);
             }
         }
+
+        [Test]
+        public void NextFrame_WhenNonLoopCompletes_DeactivatesRootIfRequested()
+        {
+            var a = MakeSprite(Color.red);
+            var b = MakeSprite(Color.green);
+
+            var root = new GameObject("root");
+            try
+            {
+                var sr0 = new GameObject("f0").AddComponent<SpriteRenderer>();
+                sr0.transform.SetParent(root.transform, false);
+
+                var vfx = root.AddComponent<MultiFaceDestroySpriteAnimation>();
+                vfx.animationSprites = new[] { a, b };
+                vfx.animationTime = 0.1f;
+                vfx.loop = false;
+                vfx.deactivateWhenNonLoopFinishes = true;
+                vfx.faceRenderers = new[] { sr0 };
+
+                vfx.Play();
+                vfx.CancelInvoke(nameof(MultiFaceDestroySpriteAnimation.NextFrame));
+
+                vfx.NextFrame();
+                Assert.IsTrue(root.activeSelf);
+
+                vfx.NextFrame();
+                Assert.IsFalse(root.activeSelf);
+            }
+            finally
+            {
+                if (root != null)
+                    Object.DestroyImmediate(root);
+            }
+        }
     }
 }
