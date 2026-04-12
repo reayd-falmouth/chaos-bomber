@@ -238,6 +238,19 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             );
             if (shrinkingEnabled && autoStartTimer)
                 StartTimer();
+            // GameManager may reset the clock in OnEnable before this Start(); ensure host timer runs next frame.
+            StartCoroutine(CoEnsureMatchTimerAfterStartOrder());
+        }
+
+        private IEnumerator CoEnsureMatchTimerAfterStartOrder()
+        {
+            yield return null;
+            if (!shrinkingEnabled || !autoStartTimer)
+                yield break;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsServer)
+                yield break;
+            if (!timerRunning)
+                StartTimer();
         }
 
         public override void OnNetworkSpawn()
@@ -295,8 +308,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             string line2;
             if (!shrinkingEnabled)
                 line2 = "Shrinking / timer disabled";
-            else if (!timerRunning && remaining <= 0f && !shrinkingStarted)
-                line2 = "Timer not started";
+            else if (remaining <= 0f && !shrinkingStarted)
+            {
+                // Clients never run the countdown locally (timerRunning stays false); use replicated time only.
+                if (!IsLocalTimerAuthority() && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    line2 = "Waiting for host timer…";
+                else if (!timerRunning)
+                    line2 = "Timer not started";
+                else
+                    line2 = "Time's up";
+            }
             else if (remaining <= 0f)
                 line2 = "Time's up";
             else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
@@ -329,6 +350,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsServer)
                 return _netTimeRemaining.Value;
             return timeRemaining;
+        }
+
+        /// <summary>Host or offline play runs the match clock; clients read <see cref="_netTimeRemaining"/>.</summary>
+        private static bool IsLocalTimerAuthority()
+        {
+            return NetworkManager.Singleton == null
+                || !NetworkManager.Singleton.IsListening
+                || NetworkManager.Singleton.IsServer;
         }
 
         private void SyncClientAlarmFromNetworkIfNeeded()

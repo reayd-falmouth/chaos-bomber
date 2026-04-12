@@ -1086,15 +1086,26 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 if (h != null)
                     h.ResetMatchStateForNewRound();
             }
+        }
 
-            // Reset clears timeRemaining / stops coroutines; Start()/OnNetworkSpawn do not run again in the same scene,
-            // so restart the match clock on active shrinkers (same idea as MapSelector after toggling map roots).
+        /// <summary>
+        /// After <see cref="ResetArenaAlarmPresentationForNewRound"/>: restart match clocks on active shrinkers.
+        /// Called deferred so it runs after <see cref="FpsArenaShrinker"/> Start/OnNetworkSpawn (OnEnable reset runs first).
+        /// </summary>
+        private void RestartArenaTimersAfterRoundReset()
+        {
             foreach (var s in FindObjectsByType<ArenaShrinker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 s?.TryStartTimerAfterRoundReset();
             foreach (var f in FindObjectsByType<FpsArenaShrinker>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 f?.TryStartTimerAfterRoundReset();
             foreach (var h in FindObjectsByType<HybridMatchAlarmTimer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 h?.TryStartTimerAfterRoundReset();
+        }
+
+        private IEnumerator CoRestartArenaTimersAfterRoundResetNextFrame()
+        {
+            yield return null;
+            RestartArenaTimersAfterRoundReset();
         }
 
         public void ClearMatchTransientObjects()
@@ -1379,6 +1390,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 var bc = p.GetComponent<BombController>();
                 if (bc != null) bc.enabled = true; // OnEnable resets bombsRemaining
             }
+
+            // Defer timer restart until after FpsArenaShrinker/ArenaShrinker Start + OnNetworkSpawn (reset runs from OnEnable first).
+            StartCoroutine(CoRestartArenaTimersAfterRoundResetNextFrame());
         }
 
         /// <summary>
