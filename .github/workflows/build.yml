@@ -36,6 +36,13 @@ jobs:
         with:
           lfs: true
 
+      - name: Setup third-party assets from S3
+        uses: ./.github/actions/setup-thirdparty-assets
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          s3-object-key: ${{ vars.S3_THIRDPARTY_OBJECT_KEY || '3rdparty-ci.zip' }}
+
       - name: Cache
         uses: actions/cache@v4
         with:
