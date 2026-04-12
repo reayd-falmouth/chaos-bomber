@@ -1,3 +1,0 @@
-fix: title transition hitch
-
-Defer synchronous UI layout forcing during flow transitions.
