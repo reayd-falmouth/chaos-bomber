@@ -84,3 +84,5 @@ crashlytics-build.properties
 
 *.log
 /[Aa]ssets/[Vv]endor/
+.cursor/
+*.zip

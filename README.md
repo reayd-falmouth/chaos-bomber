@@ -150,7 +150,7 @@ If you submit a **source zip** for assessment, include `Assets/3rdParty/` if you
 
 ---
 
-## Generative AI disclosure (module requirement)
+## Generative AI disclosure
 
 The IGO721 brief requires you to **declare** any generative AI used (text, code, images, audio, ideation, etc.): tools, purpose, and what was incorporated. Undisclosed use may be treated as academic misconduct.
 
