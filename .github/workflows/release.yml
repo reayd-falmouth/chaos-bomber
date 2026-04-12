@@ -18,18 +18,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            targetPlatform: StandaloneLinux64
-            artifactName: Linux
-            channel: linux
           - os: macos-latest
             targetPlatform: StandaloneOSX
             artifactName: macOS
             channel: mac
+            customImage: ''
           - os: windows-latest
             targetPlatform: StandaloneWindows64
             artifactName: Windows
             channel: windows
+            customImage: unity-ci-win-blender:local
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,6 +49,27 @@ jobs:
           restore-keys: |
             Library-
 
+      - name: Install Blender (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install --cask blender
+          sudo ln -sf /Applications/Blender.app/Contents/MacOS/Blender /usr/local/bin/blender
+
+      - name: Build Unity Docker image with Blender (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $raw = Get-Content "ProjectSettings/ProjectVersion.txt" -Raw
+          if ($raw -notmatch '(?m)^m_EditorVersion:\s*(.+)\s*$') { throw "Could not read m_EditorVersion from ProjectSettings/ProjectVersion.txt" }
+          $version = $Matches[1].Trim()
+          $base = "unityci/editor:windows-$version-windows-il2cpp-3"
+          docker pull $base
+          docker build `
+            --build-arg "UNITY_IMAGE=$base" `
+            -f .github/docker/UnityEditorWindowsBlender.dockerfile `
+            -t unity-ci-win-blender:local `
+            .
+
       - name: Build project
         uses: game-ci/unity-builder@v4
         env:
@@ -60,6 +79,7 @@ jobs:
         with:
           targetPlatform: ${{ matrix.targetPlatform }}
           allowDirtyBuild: true
+          customImage: ${{ matrix.customImage }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -75,10 +95,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            targetPlatform: StandaloneLinux64
-            artifactName: Linux
-            channel: linux
           - os: macos-latest
             targetPlatform: StandaloneOSX
             artifactName: macOS
