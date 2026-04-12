@@ -131,17 +131,18 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
                 arenaPerspectiveCamera.depth = useDedicatedPerspective ? 0 : -1;
             }
 
-            SyncUiOverlayOnBaseCamera(fpsCamera, isFPS);
-            SyncUiOverlayOnBaseCamera(arenaPerspectiveCamera, useDedicatedPerspective);
+            RemoveUiCanvasOverlayFromBaseCameraStack(fpsCamera);
+            RemoveUiCanvasOverlayFromBaseCameraStack(bombermanCamera);
+            RemoveUiCanvasOverlayFromBaseCameraStack(arenaPerspectiveCamera);
 
             UiCanvasCameraBinder.RebindAll();
         }
 
         /// <summary>
-        /// Scene-authored bomberman base already lists the UI Canvas overlay in URP; FPS (and optional arena base) do not.
-        /// Add/remove the overlay on those bases so stacked UI renders and <see cref="UiCanvasCameraBinder"/> + <see cref="UnityEngine.Camera.main"/> stay consistent.
+        /// UI uses Screen Space - Camera on the gameplay Base camera. The legacy child <see cref="UnityEngine.Camera"/>
+        /// on <c>UI Canvas</c> must not stay in URP camera stacks (would duplicate UI / fight with SS-Camera rendering).
         /// </summary>
-        static void SyncUiOverlayOnBaseCamera(UnityEngine.Camera baseCamera, bool stackShouldIncludeOverlay)
+        static void RemoveUiCanvasOverlayFromBaseCameraStack(UnityEngine.Camera baseCamera)
         {
             if (baseCamera == null)
                 return;
@@ -154,16 +155,7 @@ namespace HybridGame.MasterBlaster.Scripts.Camera
             if (data == null)
                 return;
 
-            var stack = data.cameraStack;
-            if (stackShouldIncludeOverlay)
-            {
-                if (!stack.Contains(overlay))
-                    stack.Add(overlay);
-            }
-            else
-            {
-                stack.Remove(overlay);
-            }
+            data.cameraStack.Remove(overlay);
         }
 
         static UnityEngine.Camera ResolveUiCanvasOverlayCamera()
