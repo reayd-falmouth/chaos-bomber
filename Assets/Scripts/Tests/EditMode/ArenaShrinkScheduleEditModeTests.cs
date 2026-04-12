@@ -17,35 +17,42 @@ namespace fps.Tests.EditMode
             Assert.IsFalse(ArenaShrinkSchedule.ShouldExitMainTimerWhenTimeReachesZero(shrinkingEnabled: true));
         }
 
-        /// <summary>
-        /// Default prefabs use shrink at 27s and alarm at 10s remaining. The match clock must keep counting
-        /// after shrink begins so the last-10s alarm window is still reachable (TimerRoutine no longer zeros time when shrink starts).
-        /// </summary>
         [Test]
-        public void AlarmWindow_IsReachable_WhenShrinkThresholdExceedsAlarmThreshold()
+        public void AlarmThreshold_IsShrinkPlusLead_DefaultStyle()
         {
-            const float matchDuration = 180f;
-            float alarmTh = ArenaShrinkSchedule.GetAlarmThresholdRemaining(
-                matchDuration,
-                useRemainingSeconds: true,
-                alarmRemainingSeconds: 10f,
-                alarmThresholdFraction: 0.1f
-            );
-            float shrinkTh = ArenaShrinkSchedule.GetShrinkThresholdRemaining(
-                matchDuration,
-                useRemainingSeconds: true,
-                shrinkRemainingSeconds: 27f,
-                shrinkThresholdFraction: 0.15f
-            );
-            Assert.Greater(shrinkTh, alarmTh, "Sanity: reproduces default prefab ordering.");
+            float shrinkTh = ArenaShrinkSchedule.GetShrinkThresholdRemaining(27f);
+            float alarmTh = ArenaShrinkSchedule.GetAlarmThresholdRemainingBeforeShrink(27f, 3f);
+            Assert.AreEqual(27f, shrinkTh, 1e-5f);
+            Assert.AreEqual(30f, alarmTh, 1e-5f);
+            Assert.Greater(alarmTh, shrinkTh);
+        }
 
+        [Test]
+        public void AlarmStartsOnClockBeforeShrink_WhenLeadIsPositive()
+        {
+            float shrinkTh = ArenaShrinkSchedule.GetShrinkThresholdRemaining(27f);
+            float alarmTh = ArenaShrinkSchedule.GetAlarmThresholdRemainingBeforeShrink(27f, 3f);
+
+            Assert.IsTrue(ArenaShrinkSchedule.ShouldAlarmBeOn(30f, alarmTh), "Alarm at 30s left");
+            Assert.IsFalse(
+                ArenaShrinkSchedule.ShouldStartShrinkByRemaining(30f, shrinkTh),
+                "Shrink not yet at 30s left"
+            );
+            Assert.IsTrue(ArenaShrinkSchedule.ShouldAlarmBeOn(27.5f, alarmTh));
+            Assert.IsTrue(ArenaShrinkSchedule.ShouldStartShrinkByRemaining(27f, shrinkTh), "Shrink at 27s left");
+        }
+
+        [Test]
+        public void CountdownPassesThroughAlarmWindowWhileShrinkPossible()
+        {
+            float alarmTh = ArenaShrinkSchedule.GetAlarmThresholdRemainingBeforeShrink(27f, 3f);
             bool sawAlarm = false;
             for (float tr = 35f; tr > 0f; tr -= 0.25f)
             {
                 if (ArenaShrinkSchedule.ShouldAlarmBeOn(tr, alarmTh))
                     sawAlarm = true;
             }
-            Assert.IsTrue(sawAlarm, "Countdown must pass through the alarm window (last N seconds with time > 0).");
+            Assert.IsTrue(sawAlarm);
         }
     }
 }

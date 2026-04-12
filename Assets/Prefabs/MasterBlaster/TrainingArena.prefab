@@ -3252,11 +3252,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   shrinkingEnabled: 1
   matchDuration: 180
-  useRemainingSecondsSchedule: 1
-  alarmRemainingSeconds: 10
   shrinkRemainingSeconds: 27
-  alarmThresholdFraction: 0.1
-  shrinkThresholdFraction: 0.15
+  alarmLeadSecondsBeforeShrink: 3
   shrinkDelaySecondsAfterAlarm: 0
   editorQuickTestMatchDuration: 0
   autoStartTimer: 1
@@ -7990,11 +7987,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   shrinkingEnabled: 1
   matchDuration: 180
-  useRemainingSecondsSchedule: 1
-  alarmRemainingSeconds: 10
   shrinkRemainingSeconds: 27
-  alarmThresholdFraction: 0.1
-  shrinkThresholdFraction: 0.15
+  alarmLeadSecondsBeforeShrink: 3
   shrinkDelaySecondsAfterAlarm: 0
   editorQuickTestMatchDuration: 0
   autoStartTimer: 1
@@ -9623,14 +9617,6 @@ PrefabInstance:
       propertyPath: trainingAcademyObject
       value: 
       objectReference: {fileID: 5879029343202536486}
-    - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
-      propertyPath: alarmThresholdFraction
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
-      propertyPath: shrinkThresholdFraction
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
       propertyPath: useReinforcementLearning
       value: 1

@@ -34,33 +34,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         private float matchDuration = 180f;
 
         [Header("Schedule")]
-        [Tooltip(
-            "If true: Alarm Remaining Seconds / Shrink Remaining Seconds are absolute seconds (same unit as Match Duration). " +
-            "If false: use the fraction fields — thresholds are matchDuration × fraction (e.g. 0.10 = last 10% of the match)."
-        )]
-        [SerializeField]
-        private bool useRemainingSecondsSchedule = true;
-
-        [Tooltip("When Use Remaining Seconds Schedule is on: alarm audio/visuals when time left ≤ this many seconds.")]
-        [SerializeField]
-        private float alarmRemainingSeconds = 10f;
-
-        [Tooltip(
-            "When Use Remaining Seconds Schedule is on: shrink can start when time left ≤ this (unless Shrink Delay After Alarm is set)."
-        )]
+        [Tooltip("Seconds left on the match clock when the wall shrink begins.")]
         [SerializeField]
         private float shrinkRemainingSeconds = 27f;
 
-        [Tooltip("Used only when Use Remaining Seconds Schedule is off: alarm when remaining ≤ matchDuration × this.")]
+        [Tooltip(
+            "Alarm starts when time left ≤ (Shrink Remaining Seconds + this). Keeps the alarm slightly before shrink on the clock."
+        )]
         [SerializeField]
-        private float alarmThresholdFraction = 0.10f;
-
-        [Tooltip("Used only when Use Remaining Seconds Schedule is off: shrink when remaining ≤ matchDuration × this.")]
-        [SerializeField]
-        private float shrinkThresholdFraction = 0.15f;
+        private float alarmLeadSecondsBeforeShrink = 3f;
 
         [Tooltip(
-            "If > 0: shrink starts this many seconds after the alarm starts (real time). When set, Shrink Remaining Seconds / fraction shrink threshold is not used."
+            "If > 0: shrink starts this many seconds after the alarm starts (real time). When set, clock-based shrink trigger is not used."
         )]
         [SerializeField]
         private float shrinkDelaySecondsAfterAlarm;
@@ -312,14 +297,16 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 line2 = "Shrinking / timer disabled";
             else if (!timerRunning && remaining <= 0f && !shrinkingStarted)
                 line2 = "Timer not started";
+            else if (remaining <= 0f)
+                line2 = "Time's up";
+            else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
+                line2 = shrinkingStarted && !shrinkingComplete
+                    ? "ALARM — wall closing"
+                    : "ALARM — starts before shrink";
             else if (shrinkingStarted && !shrinkingComplete)
                 line2 = shrinkPattern == ArenaShrinkPattern.SpiralInward
                     ? "Wall closing in (spiral)"
                     : "Wall closing in (snake)";
-            else if (remaining <= 0f)
-                line2 = "Time's up";
-            else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
-                line2 = "ALARM (last " + alarmTh.ToString("F0") + "s)";
             else
                 line2 = "Until alarm: " + Mathf.Max(0f, remaining - alarmTh).ToString("F1") + "s";
 
@@ -364,24 +351,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         private float ComputeAlarmThresholdRemaining()
         {
-            float md = EffectiveMatchDuration();
-            return ArenaShrinkSchedule.GetAlarmThresholdRemaining(
-                md,
-                useRemainingSecondsSchedule,
-                alarmRemainingSeconds,
-                alarmThresholdFraction
+            return ArenaShrinkSchedule.GetAlarmThresholdRemainingBeforeShrink(
+                shrinkRemainingSeconds,
+                alarmLeadSecondsBeforeShrink
             );
         }
 
         private float ComputeShrinkThresholdRemaining()
         {
-            float md = EffectiveMatchDuration();
-            return ArenaShrinkSchedule.GetShrinkThresholdRemaining(
-                md,
-                useRemainingSecondsSchedule,
-                shrinkRemainingSeconds,
-                shrinkThresholdFraction
-            );
+            return ArenaShrinkSchedule.GetShrinkThresholdRemaining(shrinkRemainingSeconds);
         }
 
         public void StartTimer()
@@ -474,19 +452,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield break;
             }
 
-            float md = EffectiveMatchDuration();
-            float alarmThreshold = ArenaShrinkSchedule.GetAlarmThresholdRemaining(
-                md,
-                useRemainingSecondsSchedule,
-                alarmRemainingSeconds,
-                alarmThresholdFraction
-            );
-            float shrinkThreshold = ArenaShrinkSchedule.GetShrinkThresholdRemaining(
-                md,
-                useRemainingSecondsSchedule,
+            float alarmThreshold = ArenaShrinkSchedule.GetAlarmThresholdRemainingBeforeShrink(
                 shrinkRemainingSeconds,
-                shrinkThresholdFraction
+                alarmLeadSecondsBeforeShrink
             );
+            float shrinkThreshold = ArenaShrinkSchedule.GetShrinkThresholdRemaining(shrinkRemainingSeconds);
 
             while (timerRunning)
             {

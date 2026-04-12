@@ -186,11 +186,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   shrinkingEnabled: 1
   matchDuration: 180
-  useRemainingSecondsSchedule: 1
-  alarmRemainingSeconds: 10
   shrinkRemainingSeconds: 27
-  alarmThresholdFraction: 0.1
-  shrinkThresholdFraction: 0.15
+  alarmLeadSecondsBeforeShrink: 3
   shrinkDelaySecondsAfterAlarm: 0
   editorQuickTestMatchDuration: 0
   autoStartTimer: 1
@@ -3530,11 +3527,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   shrinkingEnabled: 1
   matchDuration: 180
-  useRemainingSecondsSchedule: 1
-  alarmRemainingSeconds: 10
   shrinkRemainingSeconds: 27
-  alarmThresholdFraction: 0.1
-  shrinkThresholdFraction: 0.15
+  alarmLeadSecondsBeforeShrink: 3
   shrinkDelaySecondsAfterAlarm: 0
   editorQuickTestMatchDuration: 0
   autoStartTimer: 1
@@ -10225,14 +10219,6 @@ PrefabInstance:
       propertyPath: indestructiblePrefab
       value: 
       objectReference: {fileID: 4437210315810945042, guid: da969a59e7f6c344b8d0830fc0c21254, type: 3}
-    - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
-      propertyPath: alarmThresholdFraction
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
-      propertyPath: shrinkThresholdFraction
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
       propertyPath: useReinforcementLearning
       value: 0

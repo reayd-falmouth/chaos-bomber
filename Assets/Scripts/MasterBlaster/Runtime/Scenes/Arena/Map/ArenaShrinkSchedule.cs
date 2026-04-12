@@ -4,40 +4,30 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 {
     /// <summary>
     /// Pure match clock math for arena alarm / shrink timing (testable without networking).
+    /// Alarm is always defined to start slightly before shrink: when remaining time ≤ shrink + lead.
     /// </summary>
     public static class ArenaShrinkSchedule
     {
-        public static float ThresholdRemainingFromFraction(float matchDuration, float fraction)
+        /// <summary>
+        /// Seconds left on the match clock when the wall shrink begins (remaining ≤ this value).
+        /// </summary>
+        public static float GetShrinkThresholdRemaining(float shrinkRemainingSeconds)
         {
-            return matchDuration * Mathf.Clamp01(fraction);
+            return Mathf.Max(0f, shrinkRemainingSeconds);
         }
 
-        /// <param name="useRemainingSeconds">
-        /// When true, <paramref name="alarmRemainingSeconds"/> is used as a direct “seconds left” threshold (same unit as the match clock).
-        /// When false, <paramref name="alarmThresholdFraction"/> × <paramref name="matchDuration"/> is used.
-        /// </param>
-        public static float GetAlarmThresholdRemaining(
-            float matchDuration,
-            bool useRemainingSeconds,
-            float alarmRemainingSeconds,
-            float alarmThresholdFraction
-        )
-        {
-            return useRemainingSeconds
-                ? Mathf.Max(0f, alarmRemainingSeconds)
-                : ThresholdRemainingFromFraction(matchDuration, alarmThresholdFraction);
-        }
-
-        public static float GetShrinkThresholdRemaining(
-            float matchDuration,
-            bool useRemainingSeconds,
+        /// <summary>
+        /// Alarm starts when remaining time ≤ shrink threshold + lead, so it begins before shrink by <paramref name="alarmLeadSecondsBeforeShrink"/> seconds of clock time.
+        /// </summary>
+        public static float GetAlarmThresholdRemainingBeforeShrink(
             float shrinkRemainingSeconds,
-            float shrinkThresholdFraction
+            float alarmLeadSecondsBeforeShrink
         )
         {
-            return useRemainingSeconds
-                ? Mathf.Max(0f, shrinkRemainingSeconds)
-                : ThresholdRemainingFromFraction(matchDuration, shrinkThresholdFraction);
+            return Mathf.Max(
+                0f,
+                GetShrinkThresholdRemaining(shrinkRemainingSeconds) + Mathf.Max(0f, alarmLeadSecondsBeforeShrink)
+            );
         }
 
         public static bool ShouldAlarmBeOn(float timeRemaining, float alarmThresholdRemaining)
@@ -46,10 +36,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             return timeRemaining > 0f && timeRemaining <= alarmThresholdRemaining;
         }
 
-        public static bool ShouldStartShrinkByRemaining(
-            float timeRemaining,
-            float shrinkThresholdRemaining
-        )
+        public static bool ShouldStartShrinkByRemaining(float timeRemaining, float shrinkThresholdRemaining)
         {
             return timeRemaining <= shrinkThresholdRemaining;
         }

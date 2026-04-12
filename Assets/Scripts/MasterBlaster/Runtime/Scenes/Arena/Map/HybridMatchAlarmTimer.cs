@@ -26,15 +26,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
         [SerializeField]
         private float matchDuration = 180f;
 
-        [Header("Schedule (same semantics as ArenaShrinker)")]
+        [Header("Schedule")]
+        [Tooltip("Alarm when remaining match time is ≤ this many seconds (no arena shrink in this component).")]
         [SerializeField]
-        private bool useRemainingSecondsSchedule = true;
-
-        [SerializeField]
-        private float alarmRemainingSeconds = 10f;
-
-        [SerializeField]
-        private float alarmThresholdFraction = 0.1f;
+        private float alarmWhenSecondsRemainingOrLess = 10f;
 
 #if UNITY_EDITOR
         [SerializeField]
@@ -170,7 +165,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
             else if (remaining <= 0f)
                 line2 = "Time's up";
             else if (ArenaShrinkSchedule.ShouldAlarmBeOn(remaining, alarmTh))
-                line2 = "ALARM (last " + alarmTh.ToString("F0") + "s)";
+                line2 = "ALARM (≤" + alarmTh.ToString("F0") + "s left)";
             else
             {
                 float untilAlarm = Mathf.Max(0f, remaining - alarmTh);
@@ -284,13 +279,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
 
         private float ComputeAlarmThresholdRemaining()
         {
-            float md = EffectiveMatchDuration();
-            return ArenaShrinkSchedule.GetAlarmThresholdRemaining(
-                md,
-                useRemainingSecondsSchedule,
-                alarmRemainingSeconds,
-                alarmThresholdFraction
-            );
+            return Mathf.Max(0f, alarmWhenSecondsRemainingOrLess);
         }
 
         private IEnumerator TimerRoutine()
@@ -302,13 +291,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map
                 yield break;
             }
 
-            float md = EffectiveMatchDuration();
-            float alarmThreshold = ArenaShrinkSchedule.GetAlarmThresholdRemaining(
-                md,
-                useRemainingSecondsSchedule,
-                alarmRemainingSeconds,
-                alarmThresholdFraction
-            );
+            float alarmThreshold = ComputeAlarmThresholdRemaining();
 
             while (timerRunning && timeRemaining > 0f)
             {
