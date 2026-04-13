@@ -22,8 +22,9 @@
 
 | Item | Link |
 |------|------|
-| **Windows & macOS build** | [https://reayd-falmouth.itch.io/masterblaster](https://reayd-falmouth.itch.io/masterblaster) |
-| **Project sourc** | [https://github.com/reayd-falmouth/MasterBlaster_FPS](https://github.com/reayd-falmouth/MasterBlaster_FPS) |
+| **Pitch video (Panopto)** | [DavidReay_IGO721_2026](https://falmouth.cloud.panopto.eu/Panopto/Pages/Viewer.aspx?id=a3713fcb-2db8-4d8d-931e-b42a00eb0952) |
+| **Google Drive folder (pitch video + prototype)** | [DavidReay_IGO721 — Google Drive](https://drive.google.com/drive/folders/11xjCfhYJwO3qSf5NiCT2jXfPoi4jaVCt?usp=drive_link) |
+| **Project source** | [https://github.com/reayd-falmouth/MasterBlaster_FPS](https://github.com/reayd-falmouth/MasterBlaster_FPS) |
 
 ---
 
@@ -53,12 +54,12 @@ The **GameUI** map (same asset) includes **Pause** on Esc, P, and Start.
 
 ### FPS mode (legacy Input Manager)
 
-Used when the hybrid player is in FPS mode (`PlayerDualModeController` enables the FPS Microgame controller).
+> Used when the hybrid player is in FPS mode (`PlayerDualModeController` enables the FPS Microgame controller).
 
 | Action | Keyboard / mouse | Notes |
 |--------|------------------|--------|
-| Move | **WASD** | Axes Horizontal / Vertical |
-| Look | **Mouse** | Mouse X / Mouse Y |
+| Move | **WASD** | Horizontal and Vertical axes |
+| Look | **Mouse** | Mouse X and Mouse Y |
 | Fire | **Left mouse** | |
 | Aim | **Right mouse** (hold) | |
 | Sprint | **Left Shift** | Also gamepad sprint where configured |
@@ -77,6 +78,12 @@ Used when the hybrid player is in FPS mode (`PlayerDualModeController` enables t
 - **Alternate “normal level” layouts** — When “Normal Level” is disabled in the menu, alternate map settings are not fully applied. `LoadAlternateLevelSettings()` in [`GameManager.cs`](Assets/Scripts/MasterBlaster/Runtime/Scenes/Arena/GameManager.cs) is still a stub (spawn offsets and related layout tweaks are TODO).
 
 - **Credits / “continue” flow** — If more than one [`ContinueOnAnyInput`](Assets/Scripts/MasterBlaster/Runtime/Core/ContinueOnAnyInput.cs) instance is active, a single keypress could advance the flow twice on screens that use “any input to continue.”
+
+- **Multiplayer** — Multiplayer was not completed; Netcode / multiplayer-related packages in the project do not translate to a working networked mode in this build.
+
+- **Title screen — asteroid particle** — The particle effect for the asteroid reads too large on the title screen.
+
+- **Load time after countdown** — The game takes too long to load or transition into play after the countdown.
 
 - **Optional tooling** — Packages such as **Netcode**, **ML-Agents**, **Multiplayer Services**, and **Unity MCP** (editor tooling) are present for development or experiments; they are **not** required for a local single-player prototype build.
 
