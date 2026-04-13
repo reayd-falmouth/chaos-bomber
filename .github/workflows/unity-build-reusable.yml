@@ -44,10 +44,10 @@ jobs:
             artifactName: macOS
             channel: mac
             customImage: ""
-          - os: macos-13
-            targetPlatform: StandaloneOSX
-            artifactName: macOS-Intel
-            channel: mac-intel
+          - os: macos-latest
+            targetPlatform: iOS
+            artifactName: iOS
+            channel: ""
             customImage: ""
           - os: windows-latest
             targetPlatform: StandaloneWindows64
@@ -140,8 +140,6 @@ jobs:
         include:
           - artifactName: macOS
             channel: mac
-          - artifactName: macOS-Intel
-            channel: mac-intel
           - artifactName: Windows
             channel: windows
     steps:
