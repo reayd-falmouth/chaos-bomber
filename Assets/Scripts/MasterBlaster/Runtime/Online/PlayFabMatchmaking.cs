@@ -19,7 +19,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         /// </summary>
         public static Task StartQueueSearchAsync(string queueName = null)
         {
-            Debug.LogWarning("[PlayFabMatchmaking] Not implemented — configure a Matchmaking Queue in PlayFab and implement CreateMatchmakingTicket here.");
+            UnityEngine.Debug.LogWarning("[PlayFabMatchmaking] Not implemented — configure a Matchmaking Queue in PlayFab and implement CreateMatchmakingTicket here.");
             return Task.FromException(new NotImplementedException("PlayFab Matchmaking ticket flow not implemented."));
         }
     }

@@ -82,7 +82,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
             uint err = SDK.PartyEndpointSendMessage(local, targets, options, queueCfg, buf);
             if (PartyError.FAILED(err))
-                Debug.LogWarning($"[PlayFabPartyTransport] Send failed: 0x{err:X}");
+                UnityEngine.Debug.LogWarning($"[PlayFabPartyTransport] Send failed: 0x{err:X}");
         }
 
         static PARTY_SEND_MESSAGE_OPTIONS MapDelivery(NetworkDelivery delivery)

@@ -209,8 +209,8 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             {
                 PlayFabMultiplayerAPI.DeleteLobby(
                     new DeleteLobbyRequest { LobbyId = _currentLobbyId },
-                    _ => Debug.Log("[PlayFabLobby] Lobby deleted."),
-                    e => Debug.LogWarning($"[PlayFabLobby] Delete failed: {e.GenerateErrorReport()}"));
+                    _ => UnityEngine.Debug.Log("[PlayFabLobby] Lobby deleted."),
+                    e => UnityEngine.Debug.LogWarning($"[PlayFabLobby] Delete failed: {e.GenerateErrorReport()}"));
                 _currentLobbyId = null;
                 LobbyConnectionString = null;
             }
@@ -232,7 +232,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             var gm = Scenes.Arena.GameManager.Instance;
             if (gm != null)
                 gm.AssignNetworkClient(clientId, playerId);
-            Debug.Log($"[PlayFabLobby] Client {clientId} assigned to player {playerId}.");
+            UnityEngine.Debug.Log($"[PlayFabLobby] Client {clientId} assigned to player {playerId}.");
         }
 
         PlayFab.MultiplayerModels.EntityKey GetEntityKey()
@@ -261,7 +261,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
                         LobbyData = new Dictionary<string, string>()
                     },
                     _ => { },
-                    e => Debug.LogWarning($"[PlayFabLobby] Heartbeat failed: {e.GenerateErrorReport()}"));
+                    e => UnityEngine.Debug.LogWarning($"[PlayFabLobby] Heartbeat failed: {e.GenerateErrorReport()}"));
             }
         }
 

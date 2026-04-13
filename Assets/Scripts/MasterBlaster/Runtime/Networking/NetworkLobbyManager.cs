@@ -23,7 +23,7 @@ namespace HybridGame.MasterBlaster.Scripts.Networking
 
         public Task InitializeAsync()
         {
-            Debug.Log("[Networking.NetworkLobbyManager] Stub — local UnityTransport only.");
+            UnityEngine.Debug.Log("[Networking.NetworkLobbyManager] Stub — local UnityTransport only.");
             return Task.CompletedTask;
         }
 
@@ -36,7 +36,7 @@ namespace HybridGame.MasterBlaster.Scripts.Networking
             if (nm.NetworkConfig != null)
                 nm.NetworkConfig.NetworkTransport = ut;
             nm.StartHost();
-            Debug.Log("[Networking.NetworkLobbyManager] Stub — started local host (UTP, no Party).");
+            UnityEngine.Debug.Log("[Networking.NetworkLobbyManager] Stub — started local host (UTP, no Party).");
         }
 
         public Task JoinLobbyAsync(string lobbyCode)
@@ -47,7 +47,7 @@ namespace HybridGame.MasterBlaster.Scripts.Networking
             if (nm.NetworkConfig != null)
                 nm.NetworkConfig.NetworkTransport = ut;
             nm.StartClient();
-            Debug.Log($"[Networking.NetworkLobbyManager] Stub — started local client (code ignored: {lobbyCode}).");
+            UnityEngine.Debug.Log($"[Networking.NetworkLobbyManager] Stub — started local client (code ignored: {lobbyCode}).");
             return Task.CompletedTask;
         }
 

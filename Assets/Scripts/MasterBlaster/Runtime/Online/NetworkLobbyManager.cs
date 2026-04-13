@@ -30,7 +30,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
 
         public Task InitializeAsync()
         {
-            Debug.LogWarning("[NetworkLobbyManager] Unity Services lobby path is disabled. Use PlayFabLobbyManager.");
+            UnityEngine.Debug.LogWarning("[NetworkLobbyManager] Unity Services lobby path is disabled. Use PlayFabLobbyManager.");
             return Task.CompletedTask;
         }
 
