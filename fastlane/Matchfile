@@ -1,0 +1,7 @@
+storage_mode("s3")
+s3_bucket(ENV["MATCH_S3_BUCKET"])
+s3_region(ENV["MATCH_S3_REGION"] || "eu-west-1")
+type("appstore")
+app_identifier(ENV["IOS_BUNDLE_ID"] || "com.stonesandice.masterblaster")
+username(ENV["APPLE_DEVELOPER_EMAIL"])
+s3_skip_encryption(true)

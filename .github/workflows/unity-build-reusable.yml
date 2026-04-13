@@ -26,6 +26,26 @@ on:
         required: true
       ITCHIO_API_KEY:
         required: false
+      APPLE_CONNECT_EMAIL:
+        required: false
+      APPLE_DEVELOPER_EMAIL:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      APPSTORE_ISSUER_ID:
+        required: false
+      APPSTORE_KEY_ID:
+        required: false
+      APPSTORE_P8:
+        required: false
+      IOS_BUNDLE_ID:
+        required: false
+      PROJECT_NAME:
+        required: false
+      MATCH_S3_BUCKET:
+        required: false
+      MATCH_S3_REGION:
+        required: false
 
 env:
   ITCHIO_USER: reayd-falmouth
@@ -161,3 +181,62 @@ jobs:
           channel: ${{ matrix.channel }}
           version: ${{ inputs.release_version != '' && inputs.release_version || github.ref_name }}
           api-key: ${{ secrets.ITCHIO_API_KEY }}
+
+  ios-testflight:
+    name: Publish iOS to TestFlight
+    if: inputs.do_release
+    needs: [build]
+    runs-on: macos-15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Ruby gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-
+
+      - name: Download iOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: iOS
+          path: build/iOS
+
+      - name: Install CocoaPods
+        run: |
+          cd build/iOS/iOS
+          pod install --repo-update
+
+      - name: Build and upload TestFlight with fastlane
+        env:
+          APPLE_CONNECT_EMAIL: ${{ secrets.APPLE_CONNECT_EMAIL }}
+          APPLE_DEVELOPER_EMAIL: ${{ secrets.APPLE_DEVELOPER_EMAIL }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
+          IOS_BUILD_PATH: ${{ format('{0}/build/iOS', github.workspace) }}
+          IOS_BUNDLE_ID: com.stonesandice.masterblaster
+          PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+          MATCH_S3_BUCKET: ${{ secrets.MATCH_S3_BUCKET }}
+          MATCH_S3_REGION: ${{ secrets.MATCH_S3_REGION }}
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_16.4.app
+          bundle config set path 'vendor/bundle'
+          bundle install
+          bundle exec fastlane ios beta
+
+      - name: Upload iOS publish logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-testflight-logs
+          path: |
+            fastlane/logs
+            fastlane/report.xml
+            ~/Library/Logs/gym
+            ~/Library/Logs/scan
+          if-no-files-found: warn
