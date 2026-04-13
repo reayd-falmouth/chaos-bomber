@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using PartyCSharpSDK;
 using PlayFab;
 using PlayFab.MultiplayerModels;
 using Unity.Netcode;
@@ -10,25 +11,23 @@ using UnityEngine;
 namespace HybridGame.MasterBlaster.Scripts.Online
 {
     /// <summary>
-    /// Replaces NetworkLobbyManager. Uses PlayFab Lobby for matchmaking and
-    /// Unity Relay for the actual network transport (NGO host/client).
-    ///
-    /// Flow:
-    ///   Host → CreateLobbyAsync() → allocates Relay → creates PlayFab Lobby (stores relay code) → StartHost()
-    ///   Client → JoinLobbyAsync(connectionString) → fetches relay code from PlayFab Lobby → StartClient()
+    /// PlayFab Lobby for discovery + PlayFab Party for NGO packets (no Unity Relay).
+    /// Host stores serialized Party network descriptor in lobby data; client joins Party then Netcode.
     /// </summary>
     public class PlayFabLobbyManager : MonoBehaviour
     {
         public static PlayFabLobbyManager Instance { get; private set; }
 
-        const string RelayJoinCodeKey  = "RelayJoinCode";
-        const float  HeartbeatInterval = 25f; // lobby expires after 60 s without an owner update
+        const string PartyNetworkDescriptorKey = "PartyNetworkDescriptor";
+        const float HeartbeatInterval = 25f;
 
-        string   _currentLobbyId;
+        string _currentLobbyId;
         Coroutine _heartbeatCoroutine;
 
         /// <summary>The connection string shown to the host after lobby creation. Share this with other players.</summary>
         public string LobbyConnectionString { get; private set; }
+
+        int _nextPlayerId = 2;
 
         void Awake()
         {
@@ -37,116 +36,170 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             DontDestroyOnLoad(gameObject);
 
             if (TryGetComponent<NetworkManager>(out var nm))
-                RelayHandler.EnsureUnityTransportForNetworkManager(nm);
+                PartyNetworkHelper.EnsurePartyTransportForNetworkManager(nm);
         }
 
-        // ── Public API ────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Creates a PlayFab Lobby, allocates Unity Relay, stores the relay join code
-        /// inside the lobby, then starts NGO as host.
-        /// </summary>
-        public async Task CreateLobbyAsync(int maxPlayers = 5)
+        public Task CreateLobbyAsync(int maxPlayers = 5)
         {
-            await WaitForLoginAsync();
-
-            // Allocate Unity Relay — host gets a join code for clients.
-            string relayJoinCode = await RelayHandler.AllocateAsync(maxPlayers - 1);
-
             var tcs = new TaskCompletionSource<bool>();
+            StartCoroutine(CoCreateLobby(maxPlayers, tcs));
+            return tcs.Task;
+        }
 
+        IEnumerator CoCreateLobby(int maxPlayers, TaskCompletionSource<bool> tcs)
+        {
+            yield return WaitForLogin();
+
+            var auth = PlayFabAuthManager.Instance;
+            PartyNetworkHelper.EnsurePartyTransportForNetworkManager(NetworkManager.Singleton);
+            PlayFabPartySession.IsHostRole = true;
+
+            uint err = PlayFabPartySession.Initialize(
+                PlayFabSettings.staticSettings.TitleId,
+                auth.EntityKey.Id,
+                auth.EntityTokenString);
+
+            if (PartyError.FAILED(err))
+            {
+                tcs.SetException(new Exception($"[PlayFabParty] Initialize failed: 0x{err:X}"));
+                yield break;
+            }
+
+            err = PlayFabPartySession.HostBeginPartyNetwork(maxPlayers);
+            if (PartyError.FAILED(err))
+            {
+                tcs.SetException(new Exception($"[PlayFabParty] HostBeginPartyNetwork failed: 0x{err:X}"));
+                yield break;
+            }
+
+            while (PlayFabPartySession.LocalEndpoint == null)
+                yield return null;
+
+            string descriptor = PlayFabPartySession.SerializedNetworkDescriptor;
+            if (string.IsNullOrEmpty(descriptor))
+            {
+                tcs.SetException(new Exception("[PlayFabParty] Missing serialized network descriptor."));
+                yield break;
+            }
+
+            var createTcs = new TaskCompletionSource<bool>();
             PlayFabMultiplayerAPI.CreateLobby(
                 new CreateLobbyRequest
                 {
                     MaxPlayers = (uint)maxPlayers,
                     Owner      = GetEntityKey(),
-                    LobbyData  = new Dictionary<string, string>
-                    {
-                        { RelayJoinCodeKey, relayJoinCode }
-                    },
+                    LobbyData  = new Dictionary<string, string> { { PartyNetworkDescriptorKey, descriptor } },
                     AccessPolicy = AccessPolicy.Public
                 },
-                result =>
+                lobbyResult =>
                 {
-                    _currentLobbyId      = result.LobbyId;
-                    LobbyConnectionString = result.ConnectionString;
-                    UnityEngine.Debug.Log($"[PlayFabLobby] Created. ID={_currentLobbyId}");
-                    tcs.SetResult(true);
+                    _currentLobbyId = lobbyResult.LobbyId;
+                    LobbyConnectionString = lobbyResult.ConnectionString;
+                    createTcs.SetResult(true);
                 },
-                error =>
-                {
-                    UnityEngine.Debug.LogError($"[PlayFabLobby] CreateLobby failed: {error.GenerateErrorReport()}");
-                    tcs.SetException(new Exception(error.GenerateErrorReport()));
-                }
-            );
+                e => createTcs.SetException(new Exception(e.GenerateErrorReport())));
 
-            await tcs.Task;
+            while (!createTcs.Task.IsCompleted)
+                yield return null;
+            if (createTcs.Task.IsFaulted)
+            {
+                tcs.SetException(createTcs.Task.Exception?.InnerException ?? createTcs.Task.Exception ?? new Exception("CreateLobby failed."));
+                yield break;
+            }
 
             _heartbeatCoroutine = StartCoroutine(HeartbeatRoutine());
+            _nextPlayerId = 2;
+
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.StartHost();
+            tcs.SetResult(true);
         }
 
-        /// <summary>
-        /// Joins an existing PlayFab Lobby by its connection string, retrieves the
-        /// Unity Relay join code stored in lobby data, then starts NGO as client.
-        /// </summary>
-        public async Task JoinLobbyAsync(string connectionString)
+        public Task JoinLobbyAsync(string connectionString)
         {
-            await WaitForLoginAsync();
+            var tcs = new TaskCompletionSource<bool>();
+            StartCoroutine(CoJoinLobby(connectionString, tcs));
+            return tcs.Task;
+        }
 
-            // --- Step 1: join the lobby ---
+        IEnumerator CoJoinLobby(string connectionString, TaskCompletionSource<bool> tcs)
+        {
+            yield return WaitForLogin();
+
+            var auth = PlayFabAuthManager.Instance;
+            PartyNetworkHelper.EnsurePartyTransportForNetworkManager(NetworkManager.Singleton);
+            PlayFabPartySession.IsHostRole = false;
+
+            uint err = PlayFabPartySession.Initialize(
+                PlayFabSettings.staticSettings.TitleId,
+                auth.EntityKey.Id,
+                auth.EntityTokenString);
+
+            if (PartyError.FAILED(err))
+            {
+                tcs.SetException(new Exception($"[PlayFabParty] Initialize failed: 0x{err:X}"));
+                yield break;
+            }
+
             var joinTcs = new TaskCompletionSource<bool>();
-
             PlayFabMultiplayerAPI.JoinLobby(
                 new JoinLobbyRequest
                 {
                     ConnectionString = connectionString,
                     MemberEntity     = GetEntityKey()
                 },
-                result =>
+                r =>
                 {
-                    _currentLobbyId       = result.LobbyId;
-                    LobbyConnectionString  = connectionString;
-                    UnityEngine.Debug.Log($"[PlayFabLobby] Joined lobby {result.LobbyId}");
+                    _currentLobbyId = r.LobbyId;
+                    LobbyConnectionString = connectionString;
                     joinTcs.SetResult(true);
                 },
-                error =>
-                {
-                    UnityEngine.Debug.LogError($"[PlayFabLobby] JoinLobby failed: {error.GenerateErrorReport()}");
-                    joinTcs.SetException(new Exception(error.GenerateErrorReport()));
-                }
-            );
+                e => joinTcs.SetException(new Exception(e.GenerateErrorReport())));
 
-            await joinTcs.Task;
+            while (!joinTcs.Task.IsCompleted)
+                yield return null;
+            if (joinTcs.Task.IsFaulted)
+            {
+                tcs.SetException(joinTcs.Task.Exception?.InnerException ?? joinTcs.Task.Exception ?? new Exception("JoinLobby failed."));
+                yield break;
+            }
 
-            // --- Step 2: read the relay join code from lobby data ---
-            var getTcs        = new TaskCompletionSource<string>();
-
+            var getTcs = new TaskCompletionSource<string>();
             PlayFabMultiplayerAPI.GetLobby(
                 new GetLobbyRequest { LobbyId = _currentLobbyId },
-                result =>
+                r =>
                 {
-                    if (result.Lobby.LobbyData != null &&
-                        result.Lobby.LobbyData.TryGetValue(RelayJoinCodeKey, out string code))
-                    {
-                        getTcs.SetResult(code);
-                    }
+                    if (r.Lobby.LobbyData != null &&
+                        r.Lobby.LobbyData.TryGetValue(PartyNetworkDescriptorKey, out string d) &&
+                        !string.IsNullOrEmpty(d))
+                        getTcs.SetResult(d);
                     else
-                    {
-                        getTcs.SetException(new Exception("[PlayFabLobby] Relay code missing from lobby data."));
-                    }
+                        getTcs.SetException(new Exception("[PlayFabLobby] Party network descriptor missing from lobby."));
                 },
-                error => getTcs.SetException(new Exception(error.GenerateErrorReport()))
-            );
+                e => getTcs.SetException(new Exception(e.GenerateErrorReport())));
 
-            string relayJoinCode = await getTcs.Task;
+            Task<string> getTask = getTcs.Task;
+            while (!getTask.IsCompleted)
+                yield return null;
 
-            // --- Step 3: join Unity Relay and start NGO client ---
-            await RelayHandler.JoinAsync(relayJoinCode);
+            string partyDesc;
+            try { partyDesc = getTask.Result; }
+            catch (Exception ex) { tcs.SetException(ex); yield break; }
+
+            err = PlayFabPartySession.ClientBeginPartyNetwork(partyDesc);
+            if (PartyError.FAILED(err))
+            {
+                tcs.SetException(new Exception($"[PlayFabParty] ClientBeginPartyNetwork failed: 0x{err:X}"));
+                yield break;
+            }
+
+            while (PlayFabPartySession.LocalEndpoint == null || PlayFabPartySession.RemoteEndpoint == null)
+                yield return null;
+
             NetworkManager.Singleton.StartClient();
+            tcs.SetResult(true);
         }
 
-        /// <summary>Deletes the lobby and shuts down NGO.</summary>
         public void LeaveLobby()
         {
             if (_heartbeatCoroutine != null)
@@ -156,33 +209,42 @@ namespace HybridGame.MasterBlaster.Scripts.Online
             {
                 PlayFabMultiplayerAPI.DeleteLobby(
                     new DeleteLobbyRequest { LobbyId = _currentLobbyId },
-                    _ => UnityEngine.Debug.Log("[PlayFabLobby] Lobby deleted."),
-                    error => UnityEngine.Debug.LogWarning($"[PlayFabLobby] Delete failed: {error.GenerateErrorReport()}")
-                );
-                _currentLobbyId       = null;
-                LobbyConnectionString  = null;
+                    _ => Debug.Log("[PlayFabLobby] Lobby deleted."),
+                    e => Debug.LogWarning($"[PlayFabLobby] Delete failed: {e.GenerateErrorReport()}"));
+                _currentLobbyId = null;
+                LobbyConnectionString = null;
             }
 
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
-                NetworkManager.Singleton.Shutdown();
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+                if (NetworkManager.Singleton.IsListening)
+                    NetworkManager.Singleton.Shutdown();
+            }
+
+            PlayFabPartySession.Shutdown();
+            PlayFabPartyNetcodeSession.Clear();
         }
 
-        // ── Internals ─────────────────────────────────────────────────────────────
+        void OnClientConnected(ulong clientId)
+        {
+            int playerId = _nextPlayerId++;
+            var gm = Scenes.Arena.GameManager.Instance;
+            if (gm != null)
+                gm.AssignNetworkClient(clientId, playerId);
+            Debug.Log($"[PlayFabLobby] Client {clientId} assigned to player {playerId}.");
+        }
 
         PlayFab.MultiplayerModels.EntityKey GetEntityKey()
         {
             var auth = PlayFabAuthManager.Instance;
-            return new PlayFab.MultiplayerModels.EntityKey
-            {
-                Id   = auth.EntityKey.Id,
-                Type = auth.EntityKey.Type
-            };
+            return new PlayFab.MultiplayerModels.EntityKey { Id = auth.EntityKey.Id, Type = auth.EntityKey.Type };
         }
 
-        static async Task WaitForLoginAsync()
+        IEnumerator WaitForLogin()
         {
             while (!PlayFabAuthManager.Instance || !PlayFabAuthManager.Instance.IsLoggedIn)
-                await Task.Delay(100);
+                yield return null;
         }
 
         IEnumerator HeartbeatRoutine()
@@ -192,7 +254,6 @@ namespace HybridGame.MasterBlaster.Scripts.Online
                 yield return new WaitForSeconds(HeartbeatInterval);
                 if (string.IsNullOrEmpty(_currentLobbyId)) yield break;
 
-                // Touching LobbyData resets the owner-inactivity timer.
                 PlayFabMultiplayerAPI.UpdateLobby(
                     new UpdateLobbyRequest
                     {
@@ -200,8 +261,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
                         LobbyData = new Dictionary<string, string>()
                     },
                     _ => { },
-                    error => UnityEngine.Debug.LogWarning($"[PlayFabLobby] Heartbeat failed: {error.GenerateErrorReport()}")
-                );
+                    e => Debug.LogWarning($"[PlayFabLobby] Heartbeat failed: {e.GenerateErrorReport()}"));
             }
         }
 

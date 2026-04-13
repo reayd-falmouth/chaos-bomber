@@ -23,6 +23,9 @@ namespace HybridGame.MasterBlaster.Scripts.Online
         /// <summary>Entity key used by the Multiplayer / Lobby APIs.</summary>
         public PlayFab.ClientModels.EntityKey EntityKey { get; private set; }
 
+        /// <summary>Title player entity token (required by PlayFab Party local user creation).</summary>
+        public string EntityTokenString { get; private set; }
+
         const string TitleId = "17918A";
 
         void Awake()
@@ -50,6 +53,7 @@ namespace HybridGame.MasterBlaster.Scripts.Online
                     IsLoggedIn = true;
                     PlayFabId  = result.PlayFabId;
                     EntityKey  = result.EntityToken.Entity;
+                    EntityTokenString = result.EntityToken.EntityToken;
                     UnityEngine.Debug.Log($"[PlayFabAuth] Signed in: {PlayFabId}");
                     OnLoggedIn?.Invoke();
                 },
