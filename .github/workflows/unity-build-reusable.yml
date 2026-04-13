@@ -210,7 +210,11 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd build/iOS/iOS
-          pod install --repo-update
+          if [ -f "Podfile" ]; then
+            pod install --repo-update
+          else
+            echo "No Podfile found, skipping pod install."
+          fi
 
       - name: Build and upload TestFlight with fastlane
         env:
