@@ -74,11 +74,12 @@ jobs:
             artifactName: iOS
             channel: ""
             customImage: ""
-          - os: windows-latest
-            targetPlatform: StandaloneWindows64
-            artifactName: Windows
-            channel: windows
-            customImage: unity-ci-win-blender:local
+          # Windows build temporarily disabled (re-enable when ready)
+          # - os: windows-latest
+          #   targetPlatform: StandaloneWindows64
+          #   artifactName: Windows
+          #   channel: windows
+          #   customImage: unity-ci-win-blender:local
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -167,8 +168,9 @@ jobs:
             channel: mac
           - artifactName: macOS-Intel
             channel: mac-intel
-          - artifactName: Windows
-            channel: windows
+          # Windows Itch upload temporarily disabled (matches Windows build above)
+          # - artifactName: Windows
+          #   channel: windows
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
