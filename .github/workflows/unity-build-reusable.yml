@@ -33,7 +33,7 @@ env:
 
 jobs:
   build:
-    name: Build Unity project ✨ [${{ matrix.targetPlatform }} | ${{ matrix.artifactName }}] on ${{ matrix.os }}
+    name: ${{ format('Build Unity project ({0} | {1}) on {2}', matrix.targetPlatform, matrix.artifactName, matrix.os) }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,7 +44,7 @@ jobs:
             artifactName: macOS
             channel: mac
             customImage: ""
-          - os: macos-13
+          - os: macos-15
             targetPlatform: StandaloneOSX
             artifactName: macOS-Intel
             channel: mac-intel
