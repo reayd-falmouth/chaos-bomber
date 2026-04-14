@@ -3,6 +3,8 @@ name: Build and Release 🚀🚀🚀
 on:
   workflow_dispatch:
   push:
+    branches:
+      - master # temporary: run build+release on master pushes while release flow is being stabilized
     tags:
       - '*'  # Runs on any tag push
 
