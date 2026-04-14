@@ -205,11 +205,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: iOS
-          path: build/iOS
+          path: build
 
       - name: Install CocoaPods
         run: |
-          cd build/iOS/iOS
+          cd build/iOS
           if [ -f "Podfile" ]; then
             pod install --repo-update
           else
@@ -224,7 +224,7 @@ jobs:
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
-          IOS_BUILD_PATH: ${{ format('{0}/build/iOS', github.workspace) }}
+          IOS_BUILD_PATH: ${{ format('{0}/build', github.workspace) }}
           IOS_BUNDLE_ID: com.stonesandice.masterblaster
           PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
           MATCH_S3_BUCKET: ${{ secrets.MATCH_S3_BUCKET }}
