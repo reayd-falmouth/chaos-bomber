@@ -13,6 +13,21 @@ on:
         required: false
         type: string
         default: ""
+      source_run_id:
+        description: Existing CI run ID to source artifacts from (skip local builds when set)
+        required: false
+        type: string
+        default: ""
+      source_build_sha:
+        description: Commit SHA to resolve latest successful build artifacts from
+        required: false
+        type: string
+        default: ""
+      s3_artifact_prefix:
+        description: Prefix in S3 bucket for CI artifacts
+        required: false
+        type: string
+        default: "ci-artifacts/"
     secrets:
       UNITY_LICENSE:
         required: true
@@ -50,9 +65,13 @@ on:
 env:
   ITCHIO_USER: reayd-falmouth
   ITCH_PROJECT: masterblaster
+  S3_ARTIFACT_BUCKET: ${{ vars.S3_ARTIFACT_BUCKET || vars.S3_THIRDPARTY_BUCKET || 'masterblaster-unity-3rdparty-assets-eu-west-1-093581297635' }}
+  S3_ARTIFACT_REGION: ${{ vars.S3_ARTIFACT_REGION || 'eu-west-1' }}
+  S3_ARTIFACT_PREFIX: ${{ inputs.s3_artifact_prefix }}
 
 jobs:
   build:
+    if: inputs.source_run_id == '' && inputs.source_build_sha == ''
     name: ${{ format('Build Unity project ({0} | {1}) on {2}', matrix.targetPlatform, matrix.artifactName, matrix.os) }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -156,6 +175,47 @@ jobs:
           name: ${{ matrix.artifactName }}
           path: build
 
+      - name: Configure AWS credentials for S3 artifact publish
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.S3_ARTIFACT_REGION }}
+
+      - name: Upload build artifact to S3 (decoupled build output)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT_NAME="${{ matrix.artifactName }}"
+          KEY_BASE="${S3_ARTIFACT_PREFIX}${GITHUB_REPOSITORY}/${GITHUB_RUN_ID}/${ARTIFACT_NAME}"
+          ARCHIVE_PATH="${RUNNER_TEMP}/${ARTIFACT_NAME}.tar.gz"
+
+          echo "Creating archive for build output: ${ARCHIVE_PATH}"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            tar -czf "${ARCHIVE_PATH}" -C build .
+          else
+            tar -czf "${ARCHIVE_PATH}" -C build .
+          fi
+
+          aws s3 cp "${ARCHIVE_PATH}" "s3://${S3_ARTIFACT_BUCKET}/${KEY_BASE}/bundle.tar.gz"
+          python3 - <<'PY' > "${RUNNER_TEMP}/metadata.json"
+          import json, os
+          print(json.dumps({
+            "repository": os.getenv("GITHUB_REPOSITORY"),
+            "run_id": os.getenv("GITHUB_RUN_ID"),
+            "sha": os.getenv("GITHUB_SHA"),
+            "ref": os.getenv("GITHUB_REF_NAME"),
+            "workflow": os.getenv("GITHUB_WORKFLOW"),
+            "platform": os.getenv("ARTIFACT_NAME"),
+            "artifact_name": os.getenv("ARTIFACT_NAME"),
+            "release_version": os.getenv("RELEASE_VERSION", ""),
+          }))
+          PY
+          aws s3 cp "${RUNNER_TEMP}/metadata.json" "s3://${S3_ARTIFACT_BUCKET}/${KEY_BASE}/metadata.json"
+        env:
+          ARTIFACT_NAME: ${{ matrix.artifactName }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+
   release:
     name: Release to Itch.io
     if: inputs.do_release
@@ -173,8 +233,55 @@ jobs:
           # - artifactName: Windows
           #   channel: windows
     steps:
-      - name: Download Artifacts
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.S3_ARTIFACT_REGION }}
+
+      - name: Resolve source run id
+        id: resolve_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.source_run_id }}" ]; then
+            echo "run_id=${{ inputs.source_run_id }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "${{ inputs.source_build_sha }}" ]; then
+            RID="$(gh run list --limit 50 --json databaseId,headSha,status,conclusion --jq '.[] | select(.headSha=="${{ inputs.source_build_sha }}" and .status=="completed" and .conclusion=="success") | .databaseId' | head -n1)"
+            if [ -n "${RID}" ]; then
+              echo "run_id=${RID}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Unable to resolve source run for sha ${{ inputs.source_build_sha }}" >&2
+            exit 1
+          fi
+          echo "run_id=${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Download ${{ matrix.artifactName }} artifact from S3
+        id: s3_download
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          ART="${{ matrix.artifactName }}"
+          RUN_ID="${{ steps.resolve_run.outputs.run_id }}"
+          KEY="s3://${S3_ARTIFACT_BUCKET}/${S3_ARTIFACT_PREFIX}${GITHUB_REPOSITORY}/${RUN_ID}/${ART}/bundle.tar.gz"
+          ARCHIVE="${RUNNER_TEMP}/${ART}.tar.gz"
+          aws s3 cp "${KEY}" "${ARCHIVE}"
+          mkdir -p "${ART}"
+          tar -xzf "${ARCHIVE}" -C "${ART}"
+
+      - name: Download ${{ matrix.artifactName }} artifact (GitHub fallback)
+        if: steps.s3_download.outcome == 'failure'
         uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifactName }}
+          path: ${{ matrix.artifactName }}
 
       - name: Deploy ${{ matrix.artifactName }} Build to Itch.io
         uses: robpc/itchio-upload-action@v1
@@ -197,6 +304,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.S3_ARTIFACT_REGION }}
+
+      - name: Resolve source run id
+        id: resolve_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.source_run_id }}" ]; then
+            echo "run_id=${{ inputs.source_run_id }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "${{ inputs.source_build_sha }}" ]; then
+            RID="$(gh run list --limit 50 --json databaseId,headSha,status,conclusion --jq '.[] | select(.headSha=="${{ inputs.source_build_sha }}" and .status=="completed" and .conclusion=="success") | .databaseId' | head -n1)"
+            if [ -n "${RID}" ]; then
+              echo "run_id=${RID}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Unable to resolve source run for sha ${{ inputs.source_build_sha }}" >&2
+            exit 1
+          fi
+          echo "run_id=${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+
       - name: Cache Ruby gems
         uses: actions/cache@v4
         with:
@@ -205,7 +341,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gems-
 
-      - name: Download iOS Artifact
+      - name: Download iOS artifact from S3
+        id: s3_download_ios
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="${{ steps.resolve_run.outputs.run_id }}"
+          KEY="s3://${S3_ARTIFACT_BUCKET}/${S3_ARTIFACT_PREFIX}${GITHUB_REPOSITORY}/${RUN_ID}/iOS/bundle.tar.gz"
+          ARCHIVE="${RUNNER_TEMP}/iOS.tar.gz"
+          aws s3 cp "${KEY}" "${ARCHIVE}"
+          mkdir -p build
+          tar -xzf "${ARCHIVE}" -C build
+
+      - name: Download iOS Artifact (GitHub fallback)
+        if: steps.s3_download_ios.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
           name: iOS

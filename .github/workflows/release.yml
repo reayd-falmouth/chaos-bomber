@@ -1,17 +1,38 @@
-name: Build and Release 🚀🚀🚀
+name: Build and release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Version label for Itch.io (optional; if empty, the branch name is used)"
+        required: false
+        type: string
+        default: ""
+      source_run_id:
+        description: "Optional existing run ID to source artifacts from"
+        required: false
+        type: string
+        default: ""
+      source_build_sha:
+        description: "Optional commit SHA to resolve latest successful build artifacts from"
+        required: false
+        type: string
+        default: ""
   push:
     branches:
-      - master # temporary: run build+release on master pushes while release flow is being stabilized
-    tags:
-      - '*'  # Runs on any tag push
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   call-shared-build-and-release:
     uses: ./.github/workflows/unity-build-reusable.yml
     with:
       do_release: true
-      release_version: ${{ github.ref_name }}
+      release_version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_version || github.ref_name }}
+      source_run_id: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_run_id || '' }}
+      source_build_sha: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_build_sha || '' }}
     secrets: inherit
