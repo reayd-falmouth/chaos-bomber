@@ -1,3 +1,22 @@
+require "json"
+
+def agent_debug_log(hypothesis_id:, message:, data: {}, run_id: "run1")
+  payload = {
+    sessionId: "b8269a",
+    runId: run_id,
+    hypothesisId: hypothesis_id,
+    location: "fastlane/Fastfile",
+    message: message,
+    data: data,
+    timestamp: (Time.now.to_f * 1000).to_i
+  }
+  # region agent log
+  File.open("debug-b8269a.log", "a") { |f| f.puts(payload.to_json) }
+  # endregion
+rescue StandardError
+  nil
+end
+
 platform :ios do
   desc "Sync codesigning certificates"
   lane :sync_certificates do
@@ -33,6 +52,21 @@ platform :ios do
 
     sync_certificates
 
+    workspace_path = "#{ENV['IOS_BUILD_PATH']}/iOS/Unity-iPhone.xcworkspace"
+    project_path = "#{ENV['IOS_BUILD_PATH']}/iOS/Unity-iPhone.xcodeproj"
+    use_workspace = File.directory?(workspace_path)
+    agent_debug_log(
+      hypothesis_id: "H1_workspace_missing",
+      message: "Resolved Xcode container paths",
+      data: {
+        ios_build_path: ENV["IOS_BUILD_PATH"],
+        workspace_path: workspace_path,
+        workspace_exists: use_workspace,
+        project_path: project_path,
+        project_exists: File.directory?(project_path)
+      }
+    )
+
     update_code_signing_settings(
       use_automatic_signing: true,
       path: "#{ENV['IOS_BUILD_PATH']}/iOS/Unity-iPhone.xcodeproj"
@@ -48,9 +82,26 @@ platform :ios do
       profile_uuid: ENV["sigh_#{ENV['IOS_BUNDLE_ID']}_appstore"]
     )
 
-    build_app(
-      workspace: "#{ENV['IOS_BUILD_PATH']}/iOS/Unity-iPhone.xcworkspace",
-      scheme: "Unity-iPhone"
-    )
+    if use_workspace
+      agent_debug_log(
+        hypothesis_id: "H2_workspace_branch",
+        message: "Using xcworkspace for build_app",
+        data: { path: workspace_path }
+      )
+      build_app(
+        workspace: workspace_path,
+        scheme: "Unity-iPhone"
+      )
+    else
+      agent_debug_log(
+        hypothesis_id: "H3_project_fallback",
+        message: "Using xcodeproj fallback for build_app",
+        data: { path: project_path }
+      )
+      build_app(
+        project: project_path,
+        scheme: "Unity-iPhone"
+      )
+    end
   end
 end
