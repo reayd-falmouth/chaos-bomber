@@ -50,8 +50,7 @@ platform :ios do
 
     build_app(
       workspace: "#{ENV['IOS_BUILD_PATH']}/iOS/Unity-iPhone.xcworkspace",
-      scheme: "Unity-iPhone",
-      sdk: "iphoneos18.5"
+      scheme: "Unity-iPhone"
     )
   end
 end

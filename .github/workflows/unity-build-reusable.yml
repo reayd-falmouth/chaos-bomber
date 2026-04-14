@@ -189,6 +189,9 @@ jobs:
     if: inputs.do_release
     needs: [build]
     runs-on: macos-15
+    env:
+      # Matches game-ci unity-builder layout: build/iOS/iOS/Unity-iPhone.xcodeproj (see Fastfile #{IOS_BUILD_PATH}/iOS/...)
+      IOS_BUILD_PATH: ${{ format('{0}/build/iOS', github.workspace) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -209,12 +212,15 @@ jobs:
 
       - name: Install CocoaPods
         run: |
-          cd build/iOS
+          cd "$IOS_BUILD_PATH/iOS"
           if [ -f "Podfile" ]; then
             pod install --repo-update
           else
             echo "No Podfile found, skipping pod install."
           fi
+
+      - name: List Xcode projects under build (diagnostic)
+        run: find build -name "*.xcodeproj" -maxdepth 8 2>/dev/null || true
 
       - name: Build and upload TestFlight with fastlane
         env:
@@ -224,7 +230,6 @@ jobs:
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_P8: ${{ secrets.APPSTORE_P8 }}
-          IOS_BUILD_PATH: ${{ format('{0}/build', github.workspace) }}
           IOS_BUNDLE_ID: com.stonesandice.masterblaster
           PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
           MATCH_S3_BUCKET: ${{ secrets.MATCH_S3_BUCKET }}
