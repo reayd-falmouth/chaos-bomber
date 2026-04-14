@@ -137,7 +137,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unity-editor-log-windows
-          path: C:\Users\runneradmin\AppData\Local\Unity\Editor\Editor.log
+          path: |
+            C:\Users\runneradmin\AppData\Local\Unity\Editor\Editor.log
+            C:\Users\ContainerAdministrator\AppData\Local\Unity\Editor\Editor.log
           if-no-files-found: warn
 
       - name: Upload Unity Editor.log (macOS)
