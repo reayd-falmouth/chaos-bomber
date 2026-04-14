@@ -74,12 +74,11 @@ jobs:
             artifactName: iOS
             channel: ""
             customImage: ""
-          # Windows build temporarily disabled (re-enable when ready)
-          # - os: windows-latest
-          #   targetPlatform: StandaloneWindows64
-          #   artifactName: Windows
-          #   channel: windows
-          #   customImage: unity-ci-win-blender:local
+          - os: windows-latest
+            targetPlatform: StandaloneWindows64
+            artifactName: Windows
+            channel: windows
+            customImage: unity-ci-win-blender:local
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
