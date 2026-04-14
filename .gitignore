@@ -86,3 +86,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Vv]endor/
 .cursor/
 *.zip
+
+# macOS debug symbol bundles (large; not for GitHub — symbolicate via Xcode / CI)
+**/*.dSYM/
