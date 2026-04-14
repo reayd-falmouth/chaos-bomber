@@ -224,6 +224,12 @@ jobs:
 
       - name: Build and upload TestFlight with fastlane
         env:
+          # fastlane match (S3) needs AWS credentials; otherwise the SDK tries EC2 IMDS (169.254.169.254) and fails on GitHub-hosted runners
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # Match Matchfile: s3_region(ENV["MATCH_S3_REGION"] || "eu-west-1"); SDK also reads AWS_DEFAULT_REGION
+          AWS_DEFAULT_REGION: ${{ secrets.MATCH_S3_REGION || 'eu-west-1' }}
+          AWS_REGION: ${{ secrets.MATCH_S3_REGION || 'eu-west-1' }}
           APPLE_CONNECT_EMAIL: ${{ secrets.APPLE_CONNECT_EMAIL }}
           APPLE_DEVELOPER_EMAIL: ${{ secrets.APPLE_DEVELOPER_EMAIL }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
