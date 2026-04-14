@@ -97,7 +97,7 @@ jobs:
             targetPlatform: StandaloneWindows64
             artifactName: Windows
             channel: windows
-            customImage: unity-ci-win-blender:local
+            customImage: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -126,7 +126,7 @@ jobs:
           sudo ln -sf /Applications/Blender.app/Contents/MacOS/Blender /usr/local/bin/blender
 
       - name: Build Unity Docker image with Blender (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.customImage != ''
         shell: powershell
         run: |
           $raw = Get-Content "ProjectSettings/ProjectVersion.txt" -Raw
@@ -159,6 +159,8 @@ jobs:
           path: |
             C:\Users\runneradmin\AppData\Local\Unity\Editor\Editor.log
             C:\Users\ContainerAdministrator\AppData\Local\Unity\Editor\Editor.log
+            D:\a\_temp\_github_workflow\**\Editor.log
+            D:\a\MasterBlaster_FPS\MasterBlaster_FPS\**\Editor.log
           if-no-files-found: warn
 
       - name: Upload Unity Editor.log (macOS)
