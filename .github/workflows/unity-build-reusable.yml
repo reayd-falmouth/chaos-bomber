@@ -93,11 +93,12 @@ jobs:
             artifactName: iOS
             channel: ""
             customImage: ""
-          - os: windows-latest
-            targetPlatform: StandaloneWindows64
-            artifactName: Windows
-            channel: windows
-            customImage: ""
+          # Windows build disabled temporarily (unity-builder / runner issues)
+          # - os: windows-latest
+          #   targetPlatform: StandaloneWindows64
+          #   artifactName: Windows
+          #   channel: windows
+          #   customImage: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
