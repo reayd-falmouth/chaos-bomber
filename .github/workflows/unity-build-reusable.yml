@@ -93,12 +93,12 @@ jobs:
             artifactName: iOS
             channel: ""
             customImage: ""
-          # Windows build disabled temporarily (unity-builder / runner issues)
-          # - os: windows-latest
-          #   targetPlatform: StandaloneWindows64
-          #   artifactName: Windows
-          #   channel: windows
-          #   customImage: ""
+          # Windows IL2CPP via game-ci Linux editor image (cross-compile; avoids windows-latest runner issues)
+          - os: ubuntu-latest
+            targetPlatform: StandaloneWindows64
+            artifactName: Windows
+            channel: windows
+            customImage: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -125,6 +125,12 @@ jobs:
         run: |
           brew install --cask blender
           sudo ln -sf /Applications/Blender.app/Contents/MacOS/Blender /usr/local/bin/blender
+
+      - name: Install Blender (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
 
       - name: Build Unity Docker image with Blender (Windows)
         if: runner.os == 'Windows' && matrix.customImage != ''
@@ -170,6 +176,16 @@ jobs:
         with:
           name: unity-editor-log-macos
           path: /Users/runner/Library/Logs/Unity/Editor.log
+          if-no-files-found: warn
+
+      - name: Upload Unity Editor.log (Linux)
+        if: failure() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-editor-log-linux
+          path: |
+            /home/runner/.config/unity3d/**/Editor.log
+            ${{ github.workspace }}/**/Editor.log
           if-no-files-found: warn
 
       - name: Upload artifact
@@ -232,9 +248,8 @@ jobs:
             channel: mac
           - artifactName: macOS-Intel
             channel: mac-intel
-          # Windows Itch upload temporarily disabled (matches Windows build above)
-          # - artifactName: Windows
-          #   channel: windows
+          - artifactName: Windows
+            channel: windows
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
