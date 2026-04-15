@@ -46,3 +46,15 @@ runs:
         mkdir -p Assets
         unzip -q -o "${DEST}" -d Assets
         echo "Third-party assets extracted under Assets/"
+
+        # URP-only gameplay: remove HDRP-only vendor trees from the zip (demo/sample asmrefs without HDRP package)
+        for p in \
+          "Assets/3rdParty/Vendor/Feel/FeelDemosHDRP" \
+          "Assets/3rdParty/Vendor/Feel/MMFeedbacks/MMFeedbacksForThirdParty/HDRP" \
+          "Assets/3rdParty/Vendor/DAVFX/Realistic 6D Lighting Explosions/HDRP"
+        do
+          if [ -e "$p" ]; then
+            echo "Removing HDRP-only path: $p"
+            rm -rf "$p"
+          fi
+        done
