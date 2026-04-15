@@ -410,7 +410,14 @@ jobs:
           MATCH_S3_BUCKET: ${{ secrets.MATCH_S3_BUCKET }}
           MATCH_S3_REGION: ${{ secrets.MATCH_S3_REGION }}
         run: |
-          sudo xcode-select --switch /Applications/Xcode_26.app
+          XCODE_APP_PATH="$(ls -1d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "${XCODE_APP_PATH}" ]; then
+            echo "No Xcode 26 installation found on runner. Installed Xcode apps:" >&2
+            ls -1d /Applications/Xcode*.app 2>/dev/null >&2 || true
+            exit 1
+          fi
+          echo "Selecting Xcode app at ${XCODE_APP_PATH}"
+          sudo xcode-select --switch "${XCODE_APP_PATH}"
           xcodebuild -version
           IOS_SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
           echo "Detected iPhoneOS SDK: ${IOS_SDK_VERSION}"
