@@ -410,7 +410,34 @@ jobs:
           MATCH_S3_BUCKET: ${{ secrets.MATCH_S3_BUCKET }}
           MATCH_S3_REGION: ${{ secrets.MATCH_S3_REGION }}
         run: |
-          sudo xcode-select --switch /Applications/Xcode_16.4.app
+          sudo xcode-select --switch /Applications/Xcode_26.app
+          xcodebuild -version
+          IOS_SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "Detected iPhoneOS SDK: ${IOS_SDK_VERSION}"
+          IOS_SDK_VERSION="${IOS_SDK_VERSION}" python3 - <<'PY'
+          import os
+          import sys
+          
+          sdk_version = os.environ.get("IOS_SDK_VERSION", "").strip()
+          min_major = 26
+          if not sdk_version:
+              print("Unable to determine iPhoneOS SDK version from xcrun.", file=sys.stderr)
+              sys.exit(1)
+          
+          try:
+              sdk_major = int(sdk_version.split(".", 1)[0])
+          except ValueError:
+              print(f"Unexpected SDK version format: {sdk_version}", file=sys.stderr)
+              sys.exit(1)
+          
+          if sdk_major < min_major:
+              print(
+                  f"iPhoneOS SDK {sdk_version} is below required iOS {min_major}.x baseline.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          print(f"SDK requirement check passed with iPhoneOS SDK {sdk_version}.")
+          PY
           bundle config set path 'vendor/bundle'
           bundle install
           bundle exec fastlane ios beta
