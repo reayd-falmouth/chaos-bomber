@@ -47,10 +47,10 @@ runs:
         unzip -q -o "${DEST}" -d Assets
         echo "Third-party assets extracted under Assets/"
 
-        # URP-only gameplay: remove HDRP-only vendor trees from the zip (demo/sample asmrefs without HDRP package)
+        # URP project: remove HDRP *demo* content from the zip only. Do not remove
+        # MMFeedbacks/MMFeedbacksForThirdParty/HDRP — Feel's MMF_*_HDRP types are required by MMFeedbacksAuthorizations.cs.
         for p in \
           "Assets/3rdParty/Vendor/Feel/FeelDemosHDRP" \
-          "Assets/3rdParty/Vendor/Feel/MMFeedbacks/MMFeedbacksForThirdParty/HDRP" \
           "Assets/3rdParty/Vendor/DAVFX/Realistic 6D Lighting Explosions/HDRP"
         do
           if [ -e "$p" ]; then
