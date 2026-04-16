@@ -18,12 +18,24 @@ rescue StandardError
   nil
 end
 
+def phase_build_files_for_iteration(phase)
+  if phase.respond_to?(:files)
+    Array(phase.files)
+  elsif phase.respond_to?(:build_files)
+    Array(phase.build_files)
+  else
+    UI.user_error!(
+      "Unsupported Xcode build phase API for '#{phase.class}': expected :files or :build_files"
+    )
+  end
+end
+
 def remove_playfab_simulator_framework_from_target!(target, simulator_suffix)
   removed_entries = []
   phases = [target.frameworks_build_phase] + target.copy_files_build_phases
 
   phases.compact.each do |phase|
-    phase.build_files.dup.each do |build_file|
+    phase_build_files_for_iteration(phase).dup.each do |build_file|
       file_ref = build_file.file_ref
       next if file_ref.nil?
 
@@ -46,7 +58,7 @@ def collect_playfab_target_entries(target, playfab_suffix)
   entries = []
 
   phases.compact.each do |phase|
-    phase.build_files.each do |build_file|
+    phase_build_files_for_iteration(phase).each do |build_file|
       file_ref = build_file.file_ref
       next if file_ref.nil?
 
