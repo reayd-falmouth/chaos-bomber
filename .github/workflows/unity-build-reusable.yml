@@ -445,6 +445,13 @@ jobs:
               sys.exit(1)
           print(f"SDK requirement check passed with iPhoneOS SDK {sdk_version}.")
           PY
+          PBXPROJ_PATH="$IOS_BUILD_PATH/iOS/Unity-iPhone.xcodeproj/project.pbxproj"
+          if [ -f "$PBXPROJ_PATH" ]; then
+            echo "PlayFabParty.framework references in project.pbxproj:"
+            rg -n "PlayFabParty\\.framework|PlayFabPartySDK/Source/DLLs/Apple/(Device|Simulator)" "$PBXPROJ_PATH" || true
+          else
+            echo "project.pbxproj not found at $PBXPROJ_PATH"
+          fi
           bundle config set path 'vendor/bundle'
           bundle install
           bundle exec fastlane ios beta

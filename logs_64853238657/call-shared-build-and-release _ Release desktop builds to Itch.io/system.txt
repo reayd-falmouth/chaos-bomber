@@ -1,0 +1,7 @@
+2026-04-16T09:54:10.7500000Z Evaluating call-shared-build-and-release.if
+2026-04-16T09:54:10.7500000Z Evaluating: success()
+2026-04-16T09:54:10.7500000Z Result: true
+2026-04-16T09:54:10.7500000Z Evaluating call-shared-build-and-release.release_itch.if
+2026-04-16T09:54:10.7500000Z Evaluating: (always() && inputs.do_release && (vars.ITCHIO_USER != '') && (vars.ITCH_PROJECT != ''))
+2026-04-16T09:54:10.7500000Z Expanded: (true && true && (null != '') && (vars.ITCH_PROJECT != ''))
+2026-04-16T09:54:10.7500000Z Result: false

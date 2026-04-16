@@ -1,4 +1,5 @@
 require "json"
+require "xcodeproj"
 
 def agent_debug_log(hypothesis_id:, message:, data: {}, run_id: "run1")
   payload = {
@@ -15,6 +16,86 @@ def agent_debug_log(hypothesis_id:, message:, data: {}, run_id: "run1")
   # endregion
 rescue StandardError
   nil
+end
+
+def remove_playfab_simulator_framework_from_target!(target, simulator_suffix)
+  removed_entries = []
+  phases = [target.frameworks_build_phase] + target.copy_files_build_phases
+
+  phases.compact.each do |phase|
+    phase.build_files.dup.each do |build_file|
+      file_ref = build_file.file_ref
+      next if file_ref.nil?
+
+      ref_path = file_ref.path.to_s
+      next unless ref_path.end_with?(simulator_suffix)
+
+      removed_entries << {
+        phase: phase.display_name,
+        path: ref_path
+      }
+      phase.remove_build_file(build_file)
+    end
+  end
+
+  removed_entries
+end
+
+def collect_playfab_target_entries(target, playfab_suffix)
+  phases = [target.frameworks_build_phase] + target.copy_files_build_phases
+  entries = []
+
+  phases.compact.each do |phase|
+    phase.build_files.each do |build_file|
+      file_ref = build_file.file_ref
+      next if file_ref.nil?
+
+      ref_path = file_ref.path.to_s
+      next unless ref_path.end_with?(playfab_suffix)
+
+      entries << {
+        phase: phase.display_name,
+        path: ref_path
+      }
+    end
+  end
+
+  entries
+end
+
+def sanitize_playfab_framework_entries!(xcodeproj_path:, target_name: "Unity-iPhone")
+  simulator_suffix = "Frameworks/Plugins/PlayFabPartySDK/Source/DLLs/Apple/Simulator/PlayFabParty.framework"
+  playfab_suffix = "PlayFabParty.framework"
+  project_file = File.join(xcodeproj_path, "project.pbxproj")
+  UI.user_error!("Missing Xcode project at #{xcodeproj_path}") unless File.directory?(xcodeproj_path)
+  UI.user_error!("Missing project file at #{project_file}") unless File.file?(project_file)
+
+  project = Xcodeproj::Project.open(xcodeproj_path)
+  target = project.targets.find { |t| t.name == target_name }
+  UI.user_error!("Target '#{target_name}' not found in #{xcodeproj_path}") if target.nil?
+
+  removed_entries = remove_playfab_simulator_framework_from_target!(target, simulator_suffix)
+  project.save if removed_entries.any?
+
+  all_playfab_entries = collect_playfab_target_entries(target, playfab_suffix)
+  simulator_entries = all_playfab_entries.select { |entry| entry[:path].end_with?(simulator_suffix) }
+
+  agent_debug_log(
+    hypothesis_id: "H4_playfab_sanitize",
+    message: "Sanitized PlayFabParty framework entries",
+    data: {
+      project: xcodeproj_path,
+      target: target_name,
+      removed_count: removed_entries.length,
+      removed_entries: removed_entries,
+      remaining_count: all_playfab_entries.length,
+      remaining_entries: all_playfab_entries
+    }
+  )
+
+  UI.user_error!(
+    "Sanitization failed: Simulator PlayFabParty.framework still referenced in #{target_name}: #{simulator_entries}"
+  ) if simulator_entries.any?
 end
 
 platform :ios do
@@ -81,6 +162,8 @@ platform :ios do
       profile_name: ENV["sigh_#{ENV['IOS_BUNDLE_ID']}_appstore_profile-name"],
       profile_uuid: ENV["sigh_#{ENV['IOS_BUNDLE_ID']}_appstore"]
     )
+
+    sanitize_playfab_framework_entries!(xcodeproj_path: project_path, target_name: "Unity-iPhone")
 
     if use_workspace
       agent_debug_log(
