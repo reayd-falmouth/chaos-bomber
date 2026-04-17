@@ -506,11 +506,28 @@ jobs:
 
   android-google-play:
     name: Publish Android to Google Play
-    if: inputs.do_release && secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' && secrets.ANDROID_PACKAGE_NAME != ''
+    if: inputs.do_release
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
     steps:
+      - name: Check Google Play publishing configuration
+        id: play_config
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}" ] || [ -z "${ANDROID_PACKAGE_NAME:-}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Google Play publish skipped: missing GOOGLE_PLAY_SERVICE_ACCOUNT_JSON and/or ANDROID_PACKAGE_NAME secret."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Google Play publish enabled."
+          fi
+
       - name: Configure AWS credentials
+        if: steps.play_config.outputs.enabled == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -518,6 +535,7 @@ jobs:
           aws-region: ${{ env.S3_ARTIFACT_REGION }}
 
       - name: Resolve source run id
+        if: steps.play_config.outputs.enabled == 'true'
         id: resolve_run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -540,6 +558,7 @@ jobs:
           echo "run_id=${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Download Android artifact from S3
+        if: steps.play_config.outputs.enabled == 'true'
         id: s3_download_android
         continue-on-error: true
         shell: bash
@@ -553,13 +572,14 @@ jobs:
           tar -xzf "${ARCHIVE}" -C Android
 
       - name: Download Android artifact (GitHub fallback)
-        if: steps.s3_download_android.outcome == 'failure'
+        if: steps.play_config.outputs.enabled == 'true' && steps.s3_download_android.outcome == 'failure'
         uses: actions/download-artifact@v4
         with:
           name: Android
           path: Android
 
       - name: Resolve AAB path
+        if: steps.play_config.outputs.enabled == 'true'
         id: resolve_aab
         shell: bash
         run: |
@@ -572,6 +592,7 @@ jobs:
           echo "aab_path=${AAB_PATH}" >> "$GITHUB_OUTPUT"
 
       - name: Upload Android AAB to Google Play
+        if: steps.play_config.outputs.enabled == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
