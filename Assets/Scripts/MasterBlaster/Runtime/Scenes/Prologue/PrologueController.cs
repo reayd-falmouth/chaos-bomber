@@ -1,6 +1,8 @@
 using System.Collections;
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using UnityEngine;
+using UnityEngine.Accessibility;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -21,7 +23,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         [Tooltip("Additional local Z rotation applied to the crawl text when presented (Star Wars-style slant).")]
         [SerializeField] private float crawlTextLocalZRotationOffsetDegrees = -12f;
 
+        [Header("Mobile & accessibility (prologue text)")]
+        [Tooltip("Extra scale on Android/iOS before system font scale is applied.")]
+        [Min(0.01f)] [SerializeField] private float mobilePrologueTextBoost = 1.28f;
+        [Tooltip("Clamp for combined scale (boost × system font scale) on handheld.")]
+        [Min(0.01f)] [SerializeField] private float mobilePrologueScaleMin = 1f;
+        [Min(0.01f)] [SerializeField] private float mobilePrologueScaleMax = 2.5f;
+
         private Quaternion _prologueTextInitialLocalRotation;
+        private Vector3 _prologueTextBaselineLocalScale = Vector3.one;
 
         [Header("Scene References")]
         [SerializeField] private GameObject prologuePanel;
@@ -35,7 +45,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         private void Awake()
         {
             if (prologueText != null)
+            {
                 _prologueTextInitialLocalRotation = prologueText.localRotation;
+                _prologueTextBaselineLocalScale = prologueText.localScale;
+            }
         }
 
         [Header("Skip")]
@@ -87,6 +100,24 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
         public static Quaternion ComputeCrawlTextLocalRotation(Quaternion initialLocalRotation, float zRotationOffsetDegrees)
         {
             return initialLocalRotation * Quaternion.Euler(0f, 0f, zRotationOffsetDegrees);
+        }
+
+        private void ApplyPrologueHandheldTextScale()
+        {
+            float combined = FlowScreenAccessibilityTextScale.GetCombinedTextScale(
+                mobilePrologueTextBoost,
+                mobilePrologueScaleMin,
+                mobilePrologueScaleMax);
+            prologueText.localScale = _prologueTextBaselineLocalScale * combined;
+
+            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile() && Mathf.Approximately(combined, 1f))
+                return;
+
+            float systemFont = FlowScreenAccessibilityTextScale.IsHandheldMobile() ? AccessibilitySettings.fontScale : 1f;
+            Debug.Log(
+                $"[MasterBlaster][FlowUI] Prologue text scale applied: platform={Application.platform}, " +
+                $"mobileBoost={mobilePrologueTextBoost}, systemFontScale={systemFont}, combined={combined}, " +
+                $"localScale={prologueText.localScale}");
         }
 
         private RectTransform GetViewportRectTransform()
@@ -157,7 +188,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
             AgentLog("pre-fix-1", "E", "PrologueController.cs:OnFlowPresented", "presented", new { hasPanel = prologuePanel != null, hasText = prologueText != null, scrollSpeedUnitsPerSecond });
 
             if (prologueText != null)
+            {
                 prologueText.localRotation = ComputeCrawlTextLocalRotation(_prologueTextInitialLocalRotation, crawlTextLocalZRotationOffsetDegrees);
+                ApplyPrologueHandheldTextScale();
+            }
 
             if (_routine != null)
                 StopCoroutine(_routine);

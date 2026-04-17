@@ -14,6 +14,7 @@ using HybridGame.MasterBlaster.Scripts.Player;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player.AI;
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Levels;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
 using Unity.FPS.Game;
 using Unity.Netcode;
@@ -835,11 +836,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             }
         }
 
-        private static bool IsMobileTouchPlatform()
-        {
-            return Application.platform == RuntimePlatform.Android
-                   || Application.platform == RuntimePlatform.IPhonePlayer;
-        }
+        private static bool IsMobileTouchPlatform() => FlowScreenAccessibilityTextScale.IsHandheldMobile();
 
         /// <summary>
         /// Hybrid FPS players often remain active in the hierarchy when dead; use <see cref="Health.IsDead"/>.

@@ -53,9 +53,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                 MobileOverlayState.ResetAll();
         }
 
-        private bool ShouldUseMobileOverlay() =>
-            Application.platform == RuntimePlatform.Android
-            || Application.platform == RuntimePlatform.IPhonePlayer;
+        private bool ShouldUseMobileOverlay() => FlowScreenAccessibilityTextScale.IsHandheldMobile();
 
         private static bool IsGameplayFlowActive()
         {

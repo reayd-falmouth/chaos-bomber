@@ -1,6 +1,8 @@
 using System.Collections;
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using UnityEngine;
+using UnityEngine.Accessibility;
 using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
@@ -12,8 +14,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
 
         [Header("Scene References")]
         [SerializeField] private GameObject quotePanel;
+        [Tooltip("Child text block; panel stays full-screen — scale this only.")]
+        [SerializeField] private RectTransform quoteText;
+
+        [Header("Mobile & accessibility (quote text)")]
+        [Tooltip("Extra scale on Android/iOS before system font scale is applied.")]
+        [Min(0.01f)] [SerializeField] private float mobileQuoteTextBoost = 1.28f;
+        [Tooltip("Clamp for combined scale (boost × system font scale) on handheld.")]
+        [Min(0.01f)] [SerializeField] private float mobileQuoteScaleMin = 1f;
+        [Min(0.01f)] [SerializeField] private float mobileQuoteScaleMax = 2.5f;
 
         private Coroutine _routine;
+        private Vector3 _quoteTextBaselineLocalScale = Vector3.one;
         private Transform _quoteOriginalParent;
         private int _quoteOriginalSiblingIndex;
 
@@ -37,6 +49,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
             catch { }
         }
         // #endregion
+
+        private void Awake()
+        {
+            if (quoteText != null)
+                _quoteTextBaselineLocalScale = quoteText.localScale;
+        }
 
         public void OnFlowPresented()
         {
@@ -154,6 +172,29 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
                     EnsureFullScreenStretch(quoteRt);
                 }
             }
+
+            ApplyQuoteHandheldTextScale();
+        }
+
+        private void ApplyQuoteHandheldTextScale()
+        {
+            if (quoteText == null)
+                return;
+
+            float combined = FlowScreenAccessibilityTextScale.GetCombinedTextScale(
+                mobileQuoteTextBoost,
+                mobileQuoteScaleMin,
+                mobileQuoteScaleMax);
+            quoteText.localScale = _quoteTextBaselineLocalScale * combined;
+
+            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile() && Mathf.Approximately(combined, 1f))
+                return;
+
+            float systemFont = FlowScreenAccessibilityTextScale.IsHandheldMobile() ? AccessibilitySettings.fontScale : 1f;
+            Debug.Log(
+                $"[MasterBlaster][FlowUI] Quote text scale applied: platform={Application.platform}, " +
+                $"mobileBoost={mobileQuoteTextBoost}, systemFontScale={systemFont}, combined={combined}, " +
+                $"localScale={quoteText.localScale}");
         }
 
         private void TearDownQuoteUi()
