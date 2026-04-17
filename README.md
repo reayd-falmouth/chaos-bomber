@@ -18,6 +18,37 @@
 
 ---
 
+## Android CI AAB builds
+
+The shared GitHub workflow now includes an Android build lane that outputs a signed `.aab` artifact using `game-ci/unity-builder`.
+
+### Required GitHub secrets
+
+- `ANDROID_KEYSTORE_BASE64`: Base64-encoded keystore file contents.
+- `ANDROID_KEYSTORE_PASS`: Keystore password.
+- `ANDROID_KEYALIAS_NAME`: Alias name inside the keystore.
+- `ANDROID_KEYALIAS_PASS`: Alias password.
+
+### Encode a keystore as base64
+
+PowerShell:
+
+`[Convert]::ToBase64String([IO.File]::ReadAllBytes("path\\to\\upload.keystore"))`
+
+### Verify Android artifact in CI
+
+1. Run the `Build` workflow (`workflow_dispatch`) from GitHub Actions.
+2. Open the Android matrix job and confirm Unity build step is `Build project (Android AAB)`.
+3. Confirm uploaded artifact `Android` contains an `.aab` under `build/`.
+
+### Common failures
+
+- `Keystore was tampered with, or password was incorrect`: check `ANDROID_KEYSTORE_PASS`.
+- `Failed to read key ... from store`: check `ANDROID_KEYALIAS_NAME` and `ANDROID_KEYALIAS_PASS`.
+- Missing `.aab` artifact: verify Android signing secrets are set and non-empty.
+
+---
+
 ## Coursework deliverables (IGO721)
 
 | Item | Link |

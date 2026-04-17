@@ -55,6 +55,16 @@ on:
         required: false
       IOS_BUNDLE_ID:
         required: false
+      ANDROID_PACKAGE_NAME:
+        required: false
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASS:
+        required: false
+      ANDROID_KEYALIAS_NAME:
+        required: false
+      ANDROID_KEYALIAS_PASS:
+        required: false
       PROJECT_NAME:
         required: false
       MATCH_S3_BUCKET:
@@ -91,6 +101,11 @@ jobs:
           - os: macos-latest
             targetPlatform: iOS
             artifactName: iOS
+            channel: ""
+            customImage: ""
+          - os: ubuntu-latest
+            targetPlatform: Android
+            artifactName: Android
             channel: ""
             customImage: ""
           # Windows IL2CPP via game-ci Linux editor image (cross-compile; avoids windows-latest runner issues)
@@ -147,7 +162,8 @@ jobs:
             -t unity-ci-win-blender:local `
             .
 
-      - name: Build project
+      - name: Build project (non-Android)
+        if: matrix.targetPlatform != 'Android'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -157,6 +173,24 @@ jobs:
           targetPlatform: ${{ matrix.targetPlatform }}
           allowDirtyBuild: true
           customImage: ${{ matrix.customImage }}
+
+      - name: Build project (Android AAB)
+        if: matrix.targetPlatform == 'Android'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: Android
+          allowDirtyBuild: true
+          customImage: ${{ matrix.customImage }}
+          androidExportType: androidAppBundle
+          androidKeystoreName: upload.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
 
       - name: Upload Unity Editor.log (Windows)
         if: failure() && runner.os == 'Windows'
