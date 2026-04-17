@@ -55,6 +55,8 @@ on:
         required: false
       IOS_BUNDLE_ID:
         required: false
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:
+        required: false
       ANDROID_PACKAGE_NAME:
         required: false
       ANDROID_KEYSTORE_BASE64:
@@ -501,3 +503,79 @@ jobs:
             ~/Library/Logs/gym
             ~/Library/Logs/scan
           if-no-files-found: warn
+
+  android-google-play:
+    name: Publish Android to Google Play
+    if: inputs.do_release && secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' && secrets.ANDROID_PACKAGE_NAME != ''
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.S3_ARTIFACT_REGION }}
+
+      - name: Resolve source run id
+        id: resolve_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.source_run_id }}" ]; then
+            echo "run_id=${{ inputs.source_run_id }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -n "${{ inputs.source_build_sha }}" ]; then
+            RID="$(gh run list --limit 50 --json databaseId,headSha,status,conclusion --jq '.[] | select(.headSha=="${{ inputs.source_build_sha }}" and .status=="completed" and .conclusion=="success") | .databaseId' | head -n1)"
+            if [ -n "${RID}" ]; then
+              echo "run_id=${RID}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Unable to resolve source run for sha ${{ inputs.source_build_sha }}" >&2
+            exit 1
+          fi
+          echo "run_id=${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Download Android artifact from S3
+        id: s3_download_android
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="${{ steps.resolve_run.outputs.run_id }}"
+          KEY="s3://${S3_ARTIFACT_BUCKET}/${S3_ARTIFACT_PREFIX}${GITHUB_REPOSITORY}/${RUN_ID}/Android/bundle.tar.gz"
+          ARCHIVE="${RUNNER_TEMP}/Android.tar.gz"
+          aws s3 cp "${KEY}" "${ARCHIVE}"
+          mkdir -p Android
+          tar -xzf "${ARCHIVE}" -C Android
+
+      - name: Download Android artifact (GitHub fallback)
+        if: steps.s3_download_android.outcome == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: Android
+          path: Android
+
+      - name: Resolve AAB path
+        id: resolve_aab
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB_PATH="$(rg --files -g '*.aab' Android | head -n1)"
+          if [ -z "${AAB_PATH}" ]; then
+            echo "No .aab found under Android artifact directory." >&2
+            exit 1
+          fi
+          echo "aab_path=${AAB_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Android AAB to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ secrets.ANDROID_PACKAGE_NAME }}
+          releaseFiles: ${{ steps.resolve_aab.outputs.aab_path }}
+          track: ${{ vars.ANDROID_PLAY_TRACK || 'internal' }}
+          status: completed

@@ -184,13 +184,9 @@ After extraction (e.g. from `3rdparty-ci.zip`), vendor content typically lives u
 | **Universal Sound FX** | Audio library |
 | **VolFx** | Volume/post-style effects pack |
 
-If you submit a **source zip** for assessment, include `Assets/3rdParty/` if your build depends on these assets, or document that tutors must run the same extraction step.
-
 ---
 
 ## Generative AI disclosure
-
-The IGO721 brief requires you to **declare** any generative AI used (text, code, images, audio, ideation, etc.): tools, purpose, and what was incorporated. Undisclosed use may be treated as academic misconduct.
 
 | Tool | Purpose | What was incorporated |
 |------|---------|------------------------|

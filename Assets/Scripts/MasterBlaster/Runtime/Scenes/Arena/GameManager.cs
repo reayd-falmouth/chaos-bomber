@@ -732,6 +732,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             var existingHuman = playerObj.GetComponent<HumanPlayerInput>();
             if (existingHuman != null)
                 Destroy(existingHuman);
+            var existingMobile = playerObj.GetComponent<MobilePlayerInput>();
+            if (existingMobile != null)
+                Destroy(existingMobile);
             var existingAI = playerObj.GetComponent<AIPlayerInput>();
             if (existingAI != null)
                 Destroy(existingAI);
@@ -767,7 +770,17 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                 $"[GameManager] AttachInputProvider playerId={id} trainingMode={TrainingMode.IsActive} " +
                 $"session={(SessionManager.Instance != null ? "ok" : "null")} assignedDevice={(device.HasValue ? device.Value.ToString() : "none")}");
 
-            if (device.HasValue)
+            bool useMobileTouchInput =
+                !TrainingMode.IsActive
+                && IsMobileTouchPlatform()
+                && id == 1;
+
+            if (useMobileTouchInput)
+            {
+                playerObj.AddComponent<MobilePlayerInput>();
+                UnityEngine.Debug.Log($"[GameManager] Player {id} -> MobilePlayerInput (touch overlay)");
+            }
+            else if (device.HasValue)
             {
                 var human = playerObj.AddComponent<HumanPlayerInput>();
                 var asset = playerInputActions != null ? playerInputActions : Resources.Load<InputActionAsset>("PlayerControls");
@@ -820,6 +833,12 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                     UnityEngine.Debug.Log($"[GameManager] Player {id} → BombermanAgent (RL training mode), TrainingMode={TrainingMode.IsActive}");
                 }
             }
+        }
+
+        private static bool IsMobileTouchPlatform()
+        {
+            return Application.platform == RuntimePlatform.Android
+                   || Application.platform == RuntimePlatform.IPhonePlayer;
         }
 
         /// <summary>
