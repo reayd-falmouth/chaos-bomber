@@ -30,9 +30,19 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             return Mathf.Clamp(b * s, minScale, maxScale);
         }
 
+        /// <summary>
+        /// True on Android/iOS, or in the Editor when <see cref="MobileOverlayBootstrap.SetPreviewOverlayState"/> simulates handheld
+        /// (<see cref="MobileOverlayPreviewController"/>). Matches <see cref="MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput"/>.
+        /// </summary>
+        public static bool ShouldApplyHandheldFlowTextScale() =>
+            MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
+
+        /// <summary>
+        /// Combined scale for Quote/Prologue (and similar) on device or editor preview. Returns 1 when neither applies.
+        /// </summary>
         public static float GetCombinedTextScale(float mobileBoost, float minScale, float maxScale)
         {
-            if (!IsHandheldMobile())
+            if (!ShouldApplyHandheldFlowTextScale())
                 return 1f;
             return ComputeCombinedTextScale(true, AccessibilitySettings.fontScale, mobileBoost, minScale, maxScale);
         }

@@ -65,7 +65,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         }
 
         /// <summary>
-        /// Overlay-only preview flags (Editor layout); does not change <see cref="FlowScreenAccessibilityTextScale.IsHandheldMobile"/>.
+        /// Editor preview: drives overlay visibility and, with <see cref="FlowScreenAccessibilityTextScale.GetCombinedTextScale"/>,
+        /// Quote/Prologue text scaling (same gate as <see cref="ShouldMergeOverlayIntoUiInput"/>). Does not change <see cref="FlowScreenAccessibilityTextScale.IsHandheldMobile"/>.
         /// </summary>
         public static void SetPreviewOverlayState(bool simulateHandheld, bool ignoreFlowStateForVisibility)
         {

@@ -187,10 +187,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Quote
                 mobileQuoteScaleMax);
             quoteText.localScale = _quoteTextBaselineLocalScale * combined;
 
-            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile() && Mathf.Approximately(combined, 1f))
+            if (!FlowScreenAccessibilityTextScale.ShouldApplyHandheldFlowTextScale() && Mathf.Approximately(combined, 1f))
                 return;
 
-            float systemFont = FlowScreenAccessibilityTextScale.IsHandheldMobile() ? AccessibilitySettings.fontScale : 1f;
+            float systemFont = FlowScreenAccessibilityTextScale.ShouldApplyHandheldFlowTextScale() ? AccessibilitySettings.fontScale : 1f;
             UnityEngine.Debug.Log(
                 $"[MasterBlaster][FlowUI] Quote text scale applied: platform={Application.platform}, " +
                 $"mobileBoost={mobileQuoteTextBoost}, systemFontScale={systemFont}, combined={combined}, " +
