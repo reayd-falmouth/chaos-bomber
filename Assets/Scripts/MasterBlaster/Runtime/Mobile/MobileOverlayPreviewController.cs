@@ -46,8 +46,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             bool simulate = isActiveAndEnabled && simulateHandheldOverlay;
             MobileOverlayBootstrap.SetPreviewOverlayState(
                 simulate,
-                simulate && ignoreFlowStateForVisibility,
-                letterboxVisibility);
+                simulate && ignoreFlowStateForVisibility);
 
             if (!simulate)
             {
