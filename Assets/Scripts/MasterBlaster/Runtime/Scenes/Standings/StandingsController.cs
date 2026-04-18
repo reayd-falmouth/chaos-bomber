@@ -9,6 +9,11 @@ using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.Standings
 {
+    /// <summary>
+    /// Post-match standings: waits <see cref="autoAdvanceDelay"/> then calls <see cref="SceneFlowManager.SignalScreenDone"/>.
+    /// Does not read mobile D-pad or bomb; flow continues automatically. For player-driven shopping, see
+    /// <see cref="HybridGame.MasterBlaster.Scripts.Scenes.Shop.ShopController"/> after the flow reaches the Shop state.
+    /// </summary>
     public class StandingsController : MonoBehaviour
     {
         [Header("UI References")]

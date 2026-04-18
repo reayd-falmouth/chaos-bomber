@@ -5,7 +5,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
     /// <summary>
     /// Editor/dev helper: add to a scene GameObject, enable <see cref="simulateHandheldOverlay"/> in Play Mode
     /// to show the runtime mobile D-pad overlay without building to Android/iOS.
-    /// Disable this component or GameObject for normal Editor play and for release builds.
+    /// Often lives on the same object as <see cref="MobileOverlayBootstrap"/> (see MasterBlaster_FPS
+    /// <c>MobileOverlayManager</c> root). Disable this component or GameObject for desktop-only Editor play.
     /// </summary>
     public class MobileOverlayPreviewController : MonoBehaviour
     {

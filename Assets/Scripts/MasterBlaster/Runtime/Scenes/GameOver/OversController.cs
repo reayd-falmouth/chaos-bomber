@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.GameOver
 {
+    /// <summary>
+    /// Match-over winner display only; advancement is handled elsewhere in flow. Not an interactive mobile menu.
+    /// </summary>
     public class WinnerController : MonoBehaviour
     {
         [Header("Winner display")]

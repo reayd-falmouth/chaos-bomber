@@ -10,6 +10,10 @@ using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Scenes.WheelOFortune
 {
+    /// <summary>
+    /// Prize wheel: runs a timed spin then <see cref="SceneFlowManager.SignalScreenDone"/>. No touch or D-pad input;
+    /// use <see cref="HybridGame.MasterBlaster.Scripts.Scenes.Shop.ShopController"/> when the flow reaches Shop for interactive mobile menus.
+    /// </summary>
     public class WheelController : MonoBehaviour
     {
         [Header("UI References")]

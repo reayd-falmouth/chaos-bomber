@@ -10,6 +10,9 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
     /// <summary>
     /// Builds and controls the mobile gameplay overlay at runtime.
     /// Optionally uses a scene-authored hierarchy under this GameObject so D-pad / bomb layout can be edited in the Inspector.
+    /// On Android/iOS, <see cref="ShouldMergeOverlayIntoUiInput"/> is true and overlay state drives gameplay and menus.
+    /// In the Unity Editor, use <see cref="MobileOverlayPreviewController"/> (simulate handheld) on a scene object or
+    /// the overlay is cleared every frame and on-screen controls will not move the player.
     /// </summary>
     public class MobileOverlayBootstrap : MonoBehaviour
     {

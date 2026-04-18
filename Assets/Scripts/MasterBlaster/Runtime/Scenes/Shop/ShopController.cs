@@ -137,31 +137,25 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
 
         private void Update()
         {
-            Vector2 moveInput = Vector2.zero;
+            Vector2 rawFromGamepad = Vector2.zero;
             bool submitDown = false;
-            bool controllerUp = false;
-            bool controllerDown = false;
 
             if (_currentGamepad != null)
             {
                 var stick = _currentGamepad.leftStick.ReadValue();
-                var dpad  = _currentGamepad.dpad.ReadValue();
-                moveInput = stick.sqrMagnitude >= dpad.sqrMagnitude ? stick : dpad;
+                var dpad = _currentGamepad.dpad.ReadValue();
+                rawFromGamepad = stick.sqrMagnitude >= dpad.sqrMagnitude ? stick : dpad;
 
                 bool bombHeld = _currentGamepad.buttonSouth.isPressed;
                 submitDown = bombHeld && !_bombHeldLastFrame;
                 _bombHeldLastFrame = bombHeld;
-
-                controllerUp = moveInput.y > 0.5f && _lastMoveInput.y <= 0.5f;
-                controllerDown = moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f;
-            }
-            else
-            {
-                // keep last move input stable when controller is disconnected
-                moveInput = Vector2.zero;
             }
 
-            moveInput = MobileMenuInputBridge.MergeMove(moveInput);
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(rawFromGamepad);
+
+            const float navThreshold = 0.5f;
+            bool mergedNavUp = MobileMenuInputBridge.TryVerticalMenuNavUp(_lastMoveInput, moveInput, navThreshold);
+            bool mergedNavDown = MobileMenuInputBridge.TryVerticalMenuNavDown(_lastMoveInput, moveInput, navThreshold);
 
             // Keyboard fallback for menu navigation (works even if a gamepad exists).
             var keyboard = Keyboard.current;
@@ -180,13 +174,13 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
                 _mobileOverlayBombHeldLastFrame = bomb;
             }
 
-            // Update pointer selection: controller has priority if it moved this frame.
-            if (controllerUp)
+            // Update pointer: merged axes (gamepad + mobile overlay) and keyboard.
+            if (mergedNavUp)
             {
                 selectedIndex = (selectedIndex - 1 + items.Length) % items.Length;
                 UpdatePointers();
             }
-            else if (controllerDown)
+            else if (mergedNavDown)
             {
                 selectedIndex = (selectedIndex + 1) % items.Length;
                 UpdatePointers();

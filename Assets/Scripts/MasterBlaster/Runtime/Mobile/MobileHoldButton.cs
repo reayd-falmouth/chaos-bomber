@@ -9,6 +9,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
     /// </summary>
     public class MobileHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
+        [Header("Diagnostics")]
+        [Tooltip("When enabled, logs pointer-down with control id (subsystem [MasterBlaster][MobileOverlay]). Off by default.")]
+        [SerializeField]
+        private bool logPointerDownToConsole;
+
         [SerializeField] private MobileControl control;
         public MobileControl Control
         {
@@ -50,6 +55,13 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private void SetPressed(bool pressed)
         {
+            if (logPointerDownToConsole && pressed)
+            {
+                UnityEngine.Debug.Log(
+                    "[MasterBlaster][MobileOverlay] MobileHoldButton pointer down control=" + control
+                    + " go=" + gameObject.name);
+            }
+
             switch (control)
             {
                 case MobileControl.Up:

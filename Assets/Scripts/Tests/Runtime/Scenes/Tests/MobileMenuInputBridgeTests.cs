@@ -42,5 +42,28 @@ namespace HybridGame.MasterBlaster.Tests
             );
             Assert.That(r, Is.EqualTo(Vector2.up));
         }
+
+        [Test]
+        public void TryVerticalMenuNavUp_CrossesThreshold_ReturnsTrue()
+        {
+            Assert.That(
+                MobileMenuInputBridge.TryVerticalMenuNavUp(Vector2.zero, new Vector2(0f, 1f), 0.5f),
+                Is.True);
+        }
+
+        [Test]
+        public void TryVerticalMenuNavDown_CrossesThreshold_ReturnsTrue()
+        {
+            Assert.That(
+                MobileMenuInputBridge.TryVerticalMenuNavDown(Vector2.zero, new Vector2(0f, -1f), 0.5f),
+                Is.True);
+        }
+
+        [Test]
+        public void TryVerticalMenuNav_NoEdgeWhileHeld_DoesNotRepeat()
+        {
+            var held = new Vector2(0f, 1f);
+            Assert.That(MobileMenuInputBridge.TryVerticalMenuNavUp(held, held, 0.5f), Is.False);
+        }
     }
 }

@@ -71,5 +71,17 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             bombHeldLastFrame = bomb;
             return edge;
         }
+
+        /// <summary>
+        /// Vertical menu highlight: moved to previous row (stick/D-pad up). Same ±threshold semantics as MainMenuController.
+        /// </summary>
+        public static bool TryVerticalMenuNavUp(Vector2 previousMerged, Vector2 currentMerged, float threshold = 0.5f) =>
+            currentMerged.y > threshold && previousMerged.y <= threshold;
+
+        /// <summary>
+        /// Vertical menu highlight: moved to next row (stick/D-pad down).
+        /// </summary>
+        public static bool TryVerticalMenuNavDown(Vector2 previousMerged, Vector2 currentMerged, float threshold = 0.5f) =>
+            currentMerged.y < -threshold && previousMerged.y >= -threshold;
     }
 }
