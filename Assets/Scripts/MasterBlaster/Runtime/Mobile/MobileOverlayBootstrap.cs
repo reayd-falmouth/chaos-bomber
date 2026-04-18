@@ -1,4 +1,3 @@
-using System;
 using HybridGame.MasterBlaster.Scripts.Core;
 using Unity.FPS.Game;
 using UnityEngine;
@@ -48,7 +47,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private Vector2 _appliedSafeAnchorMax = new Vector2(float.NaN, float.NaN);
 
-        private static readonly Func<Vector3> FpsTouchMoveWorld = GetFpsTouchMoveWorld;
+        private static readonly System.Func<Vector3> FpsTouchMoveWorld = GetFpsTouchMoveWorld;
 
         private static Vector3 GetFpsTouchMoveWorld()
         {
@@ -145,7 +144,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                 return;
 
             while (transform.childCount > 0)
-                Object.DestroyImmediate(transform.GetChild(0).gameObject);
+                UnityEngine.Object.DestroyImmediate(transform.GetChild(0).gameObject);
 
             var canvasGo = new GameObject("MobileOverlayCanvas");
             canvasGo.transform.SetParent(transform, false);
