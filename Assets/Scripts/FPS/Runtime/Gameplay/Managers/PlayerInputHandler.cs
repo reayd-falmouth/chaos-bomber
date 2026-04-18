@@ -45,6 +45,14 @@ namespace Unity.FPS.Gameplay
 
         public Vector3 GetMoveInput()
         {
+            // Master Blaster mobile overlay (registered via FpsTouchMoveBridge from HybridGame): D-pad works without locked cursor / legacy axes.
+            if (FpsTouchMoveBridge.TryGetDigitalMoveWorld != null)
+            {
+                Vector3 overlay = FpsTouchMoveBridge.TryGetDigitalMoveWorld();
+                if (overlay.sqrMagnitude > 0.0001f)
+                    return Vector3.ClampMagnitude(overlay, 1f);
+            }
+
             if (CanProcessInput())
             {
                 Vector3 move = new Vector3(Input.GetAxisRaw(GameConstants.k_AxisNameHorizontal), 0f,

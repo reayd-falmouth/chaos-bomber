@@ -1,5 +1,6 @@
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Debug;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using MoreMountains.Feedbacks;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -28,6 +29,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
         private int? _arenaOwnerPlayerIdBeforeShop;
         private Vector2 _lastMoveInput;
         private bool _bombHeldLastFrame;
+        private bool _mobileOverlayBombHeldLastFrame;
 
         private int selectedIndex = 0;
         private int playerCount;
@@ -127,6 +129,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
             }
             _lastMoveInput = Vector2.zero;
             _bombHeldLastFrame = false;
+            _mobileOverlayBombHeldLastFrame = false;
             UnityEngine.Debug.Log(
                 $"[ShopController] Player {currentPlayer} → gamepad: {(_currentGamepad != null ? _currentGamepad.displayName : "NONE")} deviceIndex: {(_currentDeviceIndex.HasValue ? _currentDeviceIndex.Value.ToString() : "NONE")}"
             );
@@ -158,6 +161,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
                 moveInput = Vector2.zero;
             }
 
+            moveInput = MobileMenuInputBridge.MergeMove(moveInput);
+
             // Keyboard fallback for menu navigation (works even if a gamepad exists).
             var keyboard = Keyboard.current;
             bool keyboardUp = keyboard != null
@@ -166,6 +171,14 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
                                  && (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame);
             bool keyboardSubmitDown = keyboard != null
                                        && (keyboard.enterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame);
+
+            bool mobileOverlaySubmitDown = false;
+            if (MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput())
+            {
+                bool bomb = MobileOverlayState.BombPressed;
+                mobileOverlaySubmitDown = bomb && !_mobileOverlayBombHeldLastFrame;
+                _mobileOverlayBombHeldLastFrame = bomb;
+            }
 
             // Update pointer selection: controller has priority if it moved this frame.
             if (controllerUp)
@@ -195,7 +208,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
                 AttemptPurchase(selectedIndex);
                 RefreshCoinsDisplay();
             }
-            else if (keyboardSubmitDown)
+            else if (keyboardSubmitDown || mobileOverlaySubmitDown)
             {
                 AttemptPurchase(selectedIndex);
                 RefreshCoinsDisplay();

@@ -1,4 +1,6 @@
+using System;
 using HybridGame.MasterBlaster.Scripts.Core;
+using Unity.FPS.Game;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -45,6 +47,18 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         private Vector2 _appliedSafeAnchorMin = new Vector2(float.NaN, float.NaN);
 
         private Vector2 _appliedSafeAnchorMax = new Vector2(float.NaN, float.NaN);
+
+        private static readonly Func<Vector3> FpsTouchMoveWorld = GetFpsTouchMoveWorld;
+
+        private static Vector3 GetFpsTouchMoveWorld()
+        {
+            if (!ShouldMergeOverlayIntoUiInput())
+                return Vector3.zero;
+            Vector2 d = MobileOverlayState.GetDigitalMove();
+            if (d.sqrMagnitude < 0.01f)
+                return Vector3.zero;
+            return new Vector3(d.x, 0f, d.y);
+        }
 
         public static void EnsurePresent()
         {
@@ -102,12 +116,17 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
             _instance = this;
             DontDestroyOnLoad(gameObject);
+            FpsTouchMoveBridge.TryGetDigitalMoveWorld = FpsTouchMoveWorld;
         }
 
         private void OnDestroy()
         {
             if (_instance == this)
+            {
                 _instance = null;
+                if (FpsTouchMoveBridge.TryGetDigitalMoveWorld == FpsTouchMoveWorld)
+                    FpsTouchMoveBridge.TryGetDigitalMoveWorld = null;
+            }
         }
 
 #if UNITY_EDITOR
