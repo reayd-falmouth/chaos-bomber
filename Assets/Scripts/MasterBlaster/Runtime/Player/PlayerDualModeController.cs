@@ -14,6 +14,7 @@ using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Bomb;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Map;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using MoreMountains.Feedbacks;
 using Unity.FPS.Game;
 using Unity.FPS.Gameplay;
@@ -529,15 +530,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 // Ensure we sit exactly on a grid cell
                 SnapToGrid();
 
-                Vector2 rawDir = Vector2.zero;
+                Vector2 moveAct = Vector2.zero;
                 if (OwnsBombermanSharedInput() && m_MoveAction != null)
-                    rawDir = m_MoveAction.ReadValue<Vector2>();
-                if (rawDir.sqrMagnitude < 0.25f)
-                {
-                    var ip = GetComponent<IPlayerInput>();
-                    if (ip != null)
-                        rawDir = ip.GetMoveDirection();
-                }
+                    moveAct = m_MoveAction.ReadValue<Vector2>();
+                var ip = GetComponent<IPlayerInput>();
+                Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
+                Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove);
 
                 if (rawDir.sqrMagnitude < 0.25f) return;
 
@@ -803,15 +801,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
             if (m_IsDead || stop) return Vector2Int.zero;
             if (!ShouldProcessBombermanMovement()) return Vector2Int.zero;
 
-            Vector2 rawDir = Vector2.zero;
+            Vector2 moveAct = Vector2.zero;
             if (OwnsBombermanSharedInput() && m_MoveAction != null)
-                rawDir = m_MoveAction.ReadValue<Vector2>();
-            if (rawDir.sqrMagnitude < 0.25f)
-            {
-                var ip = GetComponent<IPlayerInput>();
-                if (ip != null)
-                    rawDir = ip.GetMoveDirection();
-            }
+                moveAct = m_MoveAction.ReadValue<Vector2>();
+            var ip = GetComponent<IPlayerInput>();
+            Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
+            Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove);
 
             if (rawDir.sqrMagnitude < 0.25f) return Vector2Int.zero;
             return GetCardinalDirection(rawDir);
@@ -823,17 +818,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         /// </summary>
         public Vector2 GetBombermanMoveInputForRemoteBomb()
         {
-            Vector2 rawDir = Vector2.zero;
+            Vector2 moveAct = Vector2.zero;
             if (OwnsBombermanSharedInput() && m_MoveAction != null)
-                rawDir = m_MoveAction.ReadValue<Vector2>();
-            if (rawDir.sqrMagnitude < 0.25f)
-            {
-                var ip = GetComponent<IPlayerInput>();
-                if (ip != null)
-                    rawDir = ip.GetMoveDirection();
-            }
-
-            return rawDir;
+                moveAct = m_MoveAction.ReadValue<Vector2>();
+            var ip = GetComponent<IPlayerInput>();
+            Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
+            return MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove);
         }
 
         // ── Sprite direction ──────────────────────────────────────────────────────

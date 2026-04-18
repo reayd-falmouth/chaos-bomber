@@ -8,6 +8,40 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
     /// </summary>
     public static class MobileMenuInputBridge
     {
+        /// <summary>
+        /// Bomberman grid movement: when <see cref="MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput"/> is true,
+        /// on-screen D-pad (<see cref="MobileOverlayState.GetDigitalMove"/>) must win over the Input System Move action,
+        /// which can report non-zero values while the cursor is unlocked (blocking the IPlayerInput fallback).
+        /// </summary>
+        public static Vector2 MergeBombermanGridMove(Vector2 moveActionValue, Vector2 ipMoveDirection)
+        {
+            bool merge = MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
+            Vector2 overlayDigital = merge ? MobileOverlayState.GetDigitalMove() : Vector2.zero;
+            return MergeBombermanGridMoveCore(merge, overlayDigital, moveActionValue, ipMoveDirection);
+        }
+
+        /// <summary>
+        /// Pure merge logic for tests and diagnostics (no static overlay state reads).
+        /// </summary>
+        public static Vector2 MergeBombermanGridMoveCore(
+            bool mergeOverlayUi,
+            Vector2 overlayDigital,
+            Vector2 moveActionValue,
+            Vector2 ipMoveDirection)
+        {
+            Vector2 rawDir = Vector2.zero;
+            if (mergeOverlayUi && overlayDigital.sqrMagnitude >= 0.01f)
+                rawDir = overlayDigital;
+
+            if (rawDir.sqrMagnitude < 0.25f)
+                rawDir = moveActionValue;
+
+            if (rawDir.sqrMagnitude < 0.25f)
+                rawDir = ipMoveDirection;
+
+            return rawDir;
+        }
+
         public static Vector2 MergeMove(Vector2 fromActions)
         {
             if (!MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput())
