@@ -31,6 +31,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         private GameObject _root;
         private RectTransform _safeArea;
 
+        /// <summary>Last anchors applied from <see cref="Screen.safeArea"/>; used to skip redundant layout writes.</summary>
+        private Vector2 _appliedSafeAnchorMin = new Vector2(float.NaN, float.NaN);
+
+        private Vector2 _appliedSafeAnchorMax = new Vector2(float.NaN, float.NaN);
+
         public static void EnsurePresent()
         {
             if (_instance != null)
@@ -135,6 +140,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             var safeGo = new GameObject("SafeArea");
             safeGo.transform.SetParent(rootRect, false);
             _authoringSafeArea = safeGo.AddComponent<RectTransform>();
+            ApplySafeAreaToRect(_authoringSafeArea);
 
             BuildControls(_authoringSafeArea);
 
@@ -208,6 +214,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             {
                 _root = _authoringOverlayRoot.gameObject;
                 _safeArea = _authoringSafeArea;
+                ApplySafeAreaToRect(_safeArea);
                 EnsureEventSystemExists();
                 return;
             }
@@ -234,6 +241,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
             _safeArea = new GameObject("SafeArea").AddComponent<RectTransform>();
             _safeArea.SetParent(rootRect, false);
+            ApplySafeAreaToRect(_safeArea);
 
             BuildControls(_safeArea);
         }
@@ -295,24 +303,53 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             button.Control = control;
         }
 
+        /// <summary>
+        /// Keeps the overlay control roots inside the device safe area (notch, home indicator).
+        /// Runs every frame while the overlay is active so rotation and insets stay correct.
+        /// </summary>
         private void UpdateSafeArea()
         {
             if (_safeArea == null)
+                return;
+            ApplySafeAreaToRect(_safeArea);
+        }
+
+        /// <summary>
+        /// Maps <see cref="Screen.safeArea"/> to normalized anchor min/max on <paramref name="target"/>.
+        /// Skips writes when values are unchanged to avoid redundant layout and Inspector churn.
+        /// </summary>
+        private void ApplySafeAreaToRect(RectTransform target)
+        {
+            if (target == null)
+                return;
+
+            int w = Screen.width;
+            int h = Screen.height;
+            if (w <= 0 || h <= 0)
                 return;
 
             var safeArea = Screen.safeArea;
             var min = safeArea.position;
             var max = safeArea.position + safeArea.size;
 
-            min.x /= Screen.width;
-            min.y /= Screen.height;
-            max.x /= Screen.width;
-            max.y /= Screen.height;
+            min.x /= w;
+            min.y /= h;
+            max.x /= w;
+            max.y /= h;
 
-            _safeArea.anchorMin = min;
-            _safeArea.anchorMax = max;
-            _safeArea.offsetMin = Vector2.zero;
-            _safeArea.offsetMax = Vector2.zero;
+            if (VectorsApproximately(min, _appliedSafeAnchorMin) && VectorsApproximately(max, _appliedSafeAnchorMax))
+                return;
+
+            _appliedSafeAnchorMin = min;
+            _appliedSafeAnchorMax = max;
+
+            target.anchorMin = min;
+            target.anchorMax = max;
+            target.offsetMin = Vector2.zero;
+            target.offsetMax = Vector2.zero;
         }
+
+        private static bool VectorsApproximately(Vector2 a, Vector2 b) =>
+            Mathf.Approximately(a.x, b.x) && Mathf.Approximately(a.y, b.y);
     }
 }
