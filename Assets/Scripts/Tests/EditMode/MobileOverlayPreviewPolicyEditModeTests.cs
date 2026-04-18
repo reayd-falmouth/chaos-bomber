@@ -32,40 +32,5 @@ namespace HybridGame.MasterBlaster.Tests.EditMode
         {
             Assert.IsTrue(MobileOverlayPreviewPolicy.ShouldShowControlsForFlow(false, false, null));
         }
-
-        [Test]
-        public void ShouldLetterbox_FollowGame_UsesFlowFlag()
-        {
-            Assert.IsFalse(MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
-                true,
-                MobileOverlayPreviewLetterboxMode.FollowGameFlow,
-                false));
-            Assert.IsTrue(MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
-                true,
-                MobileOverlayPreviewLetterboxMode.FollowGameFlow,
-                true));
-        }
-
-        [Test]
-        public void ShouldLetterbox_ForceModes_IgnoreFlow()
-        {
-            Assert.IsFalse(MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
-                true,
-                MobileOverlayPreviewLetterboxMode.ForceHidden,
-                true));
-            Assert.IsTrue(MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
-                true,
-                MobileOverlayPreviewLetterboxMode.ForceShown,
-                false));
-        }
-
-        [Test]
-        public void ShouldLetterbox_PreviewOff_AlwaysFollowsFlow()
-        {
-            Assert.IsFalse(MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
-                false,
-                MobileOverlayPreviewLetterboxMode.ForceShown,
-                false));
-        }
     }
 }

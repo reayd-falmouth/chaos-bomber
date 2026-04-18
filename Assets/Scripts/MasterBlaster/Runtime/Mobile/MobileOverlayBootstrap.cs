@@ -8,7 +8,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 {
     /// <summary>
     /// Builds and controls the mobile gameplay overlay at runtime.
-    /// Optionally uses a scene-authored hierarchy under this GameObject so D-pad / letterbox layout can be edited in the Inspector.
+    /// Optionally uses a scene-authored hierarchy under this GameObject so D-pad / bomb layout can be edited in the Inspector.
     /// </summary>
     public class MobileOverlayBootstrap : MonoBehaviour
     {
@@ -16,7 +16,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private static bool s_previewSimulateHandheld;
         private static bool s_previewIgnoreFlowState;
-        private static MobileOverlayPreviewLetterboxMode s_previewLetterboxMode = MobileOverlayPreviewLetterboxMode.FollowGameFlow;
 
         [Header("Scene hierarchy (optional)")]
         [Tooltip("Assign after using the Inspector Generate button or authoring by hand. If any field is null, runtime falls back to code-built UI.")]
@@ -29,12 +28,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         [SerializeField]
         private RectTransform _authoringSafeArea;
 
-        [SerializeField]
-        private RectTransform _authoringLetterboxRoot;
-
         private GameObject _root;
         private RectTransform _safeArea;
-        private GameObject _letterboxRoot;
 
         public static void EnsurePresent()
         {
@@ -57,14 +52,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         /// <summary>
         /// Overlay-only preview flags (Editor layout); does not change <see cref="FlowScreenAccessibilityTextScale.IsHandheldMobile"/>.
         /// </summary>
-        public static void SetPreviewOverlayState(
-            bool simulateHandheld,
-            bool ignoreFlowStateForVisibility,
-            MobileOverlayPreviewLetterboxMode letterboxMode)
+        public static void SetPreviewOverlayState(bool simulateHandheld, bool ignoreFlowStateForVisibility)
         {
             s_previewSimulateHandheld = simulateHandheld;
             s_previewIgnoreFlowState = ignoreFlowStateForVisibility;
-            s_previewLetterboxMode = letterboxMode;
         }
 
         /// <summary>
@@ -111,7 +102,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         }
 
         /// <summary>
-        /// Editor / tooling: builds default canvas, safe area, letterbox, D-pad, and bomb under this transform and assigns authoring fields.
+        /// Editor / tooling: builds default canvas, safe area, D-pad, and bomb under this transform and assigns authoring fields.
         /// </summary>
         public void PopulateDefaultAuthoringHierarchy()
         {
@@ -145,16 +136,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             safeGo.transform.SetParent(rootRect, false);
             _authoringSafeArea = safeGo.AddComponent<RectTransform>();
 
-            var letterboxGo = new GameObject("GameplayLetterbox");
-            letterboxGo.transform.SetParent(_authoringSafeArea, false);
-            var letterboxRect = letterboxGo.AddComponent<RectTransform>();
-            letterboxRect.anchorMin = Vector2.zero;
-            letterboxRect.anchorMax = Vector2.one;
-            letterboxRect.offsetMin = Vector2.zero;
-            letterboxRect.offsetMax = Vector2.zero;
-            _authoringLetterboxRoot = letterboxRect;
-
-            BuildWindowMask(letterboxRect);
             BuildControls(_authoringSafeArea);
 
             WarnIfMissingControlRoots();
@@ -189,8 +170,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             SetOverlayActive(showControls);
             if (!showControls)
                 MobileOverlayState.ResetAll();
-            else
-                UpdateLetterboxVisibility();
         }
 
         private bool ShouldUseMobileOverlay() =>
@@ -209,19 +188,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                 state);
         }
 
-        private void UpdateLetterboxVisibility()
-        {
-            if (_letterboxRoot == null)
-                return;
-            bool flowIsGame = SceneFlowManager.I != null && SceneFlowManager.I.CurrentState == FlowState.Game;
-            bool active = MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
-                s_previewSimulateHandheld,
-                s_previewLetterboxMode,
-                flowIsGame);
-            if (_letterboxRoot.activeSelf != active)
-                _letterboxRoot.SetActive(active);
-        }
-
         private void SetOverlayActive(bool active)
         {
             if (_root != null && _root.activeSelf != active)
@@ -231,8 +197,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         private bool UseAuthoringHierarchy() =>
             _authoringCanvas != null
             && _authoringOverlayRoot != null
-            && _authoringSafeArea != null
-            && _authoringLetterboxRoot != null;
+            && _authoringSafeArea != null;
 
         private void EnsureOverlayBuilt()
         {
@@ -243,7 +208,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             {
                 _root = _authoringOverlayRoot.gameObject;
                 _safeArea = _authoringSafeArea;
-                _letterboxRoot = _authoringLetterboxRoot.gameObject;
                 EnsureEventSystemExists();
                 return;
             }
@@ -271,15 +235,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             _safeArea = new GameObject("SafeArea").AddComponent<RectTransform>();
             _safeArea.SetParent(rootRect, false);
 
-            _letterboxRoot = new GameObject("GameplayLetterbox");
-            _letterboxRoot.transform.SetParent(_safeArea, false);
-            var letterboxRect = _letterboxRoot.AddComponent<RectTransform>();
-            letterboxRect.anchorMin = Vector2.zero;
-            letterboxRect.anchorMax = Vector2.one;
-            letterboxRect.offsetMin = Vector2.zero;
-            letterboxRect.offsetMax = Vector2.zero;
-
-            BuildWindowMask(letterboxRect);
             BuildControls(_safeArea);
         }
 
@@ -292,29 +247,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             DontDestroyOnLoad(es);
             UnityEngine.Debug.Log(
                 "[MasterBlaster][MobileOverlay] Created fallback EventSystem with InputSystemUIInputModule for on-screen controls.");
-        }
-
-        private static void BuildWindowMask(RectTransform parent)
-        {
-            CreateBar(parent, "TopBar", new Vector2(0f, 0.75f), new Vector2(1f, 1f));
-            CreateBar(parent, "BottomBar", new Vector2(0f, 0f), new Vector2(1f, 0.25f));
-            CreateBar(parent, "LeftBar", new Vector2(0f, 0.25f), new Vector2(0.2f, 0.75f));
-            CreateBar(parent, "RightBar", new Vector2(0.8f, 0.25f), new Vector2(1f, 0.75f));
-        }
-
-        private static void CreateBar(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax)
-        {
-            var go = new GameObject(name, typeof(Image));
-            go.transform.SetParent(parent, false);
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            var img = go.GetComponent<Image>();
-            img.color = new Color(0f, 0f, 0f, 0.65f);
-            img.raycastTarget = false;
         }
 
         private static void BuildControls(RectTransform parent)

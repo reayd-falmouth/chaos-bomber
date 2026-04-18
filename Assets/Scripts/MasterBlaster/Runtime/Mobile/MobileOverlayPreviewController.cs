@@ -18,10 +18,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         [SerializeField]
         private bool ignoreFlowStateForVisibility;
 
-        [Tooltip("Letterbox mask while previewing: follow Game flow state, or force on/off for framing the D-pad.")]
-        [SerializeField]
-        private MobileOverlayPreviewLetterboxMode letterboxVisibility = MobileOverlayPreviewLetterboxMode.FollowGameFlow;
-
         [Header("Diagnostics")]
         [SerializeField]
         [Tooltip("Log once when preview simulation becomes active (subsystem [MasterBlaster][MobileOverlay][Preview]).")]
@@ -36,10 +32,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private void OnDisable()
         {
-            MobileOverlayBootstrap.SetPreviewOverlayState(
-                false,
-                false,
-                MobileOverlayPreviewLetterboxMode.FollowGameFlow);
+            MobileOverlayBootstrap.SetPreviewOverlayState(false, false);
             _loggedPreviewStart = false;
         }
 
@@ -69,7 +62,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                 _loggedPreviewStart = true;
                 UnityEngine.Debug.Log(
                     "[MasterBlaster][MobileOverlay][Preview] Simulation active. " +
-                    $"ignoreFlowStateForVisibility={ignoreFlowStateForVisibility}, letterboxVisibility={letterboxVisibility}. " +
+                    $"ignoreFlowStateForVisibility={ignoreFlowStateForVisibility}. " +
                     "Disable this component when finished tuning layout.");
             }
         }
