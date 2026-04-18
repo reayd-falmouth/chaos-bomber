@@ -28,6 +28,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         [SerializeField]
         private RectTransform _authoringSafeArea;
 
+        [Header("Diagnostics")]
+        [SerializeField]
+        [Tooltip("When enabled, logs whenever normalized safe-area anchors change (rotation, inset updates). Prefix [MasterBlaster][MobileOverlay][SafeArea].")]
+        private bool logSafeAreaDiagnostics;
+
         private GameObject _root;
         private RectTransform _safeArea;
 
@@ -339,6 +344,15 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
             if (VectorsApproximately(min, _appliedSafeAnchorMin) && VectorsApproximately(max, _appliedSafeAnchorMax))
                 return;
+
+            if (logSafeAreaDiagnostics)
+            {
+                UnityEngine.Debug.Log(
+                    "[MasterBlaster][MobileOverlay][SafeArea] Applying inset from Screen.safeArea. " +
+                    $"screenPixels={w}x{h} safeAreaRect=({safeArea.x:F0},{safeArea.y:F0},{safeArea.width:F0},{safeArea.height:F0}) " +
+                    $"normalizedAnchorMin=({min.x:F4},{min.y:F4}) normalizedAnchorMax=({max.x:F4},{max.y:F4}). " +
+                    "Anchors are fractions of full screen; offsets on SafeArea are zero.");
+            }
 
             _appliedSafeAnchorMin = min;
             _appliedSafeAnchorMax = max;
