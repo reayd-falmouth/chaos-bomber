@@ -28,6 +28,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         [SerializeField]
         private RectTransform _authoringSafeArea;
 
+        [Header("Safe area")]
+        [SerializeField]
+        [Tooltip("When off, SafeArea fills the full overlay (anchors 0–1); Screen.safeArea is not applied. Use while fixing layout; re-enable for notch / home-indicator insets on device.")]
+        private bool applyScreenSafeAreaInset = true;
+
         [Header("Diagnostics")]
         [SerializeField]
         [Tooltip("When enabled, logs whenever normalized safe-area anchors change (rotation, inset updates). Prefix [MasterBlaster][MobileOverlay][SafeArea].")]
@@ -328,30 +333,53 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             if (target == null)
                 return;
 
-            int w = Screen.width;
-            int h = Screen.height;
-            if (w <= 0 || h <= 0)
-                return;
+            Vector2 min;
+            Vector2 max;
 
-            var safeArea = Screen.safeArea;
-            var min = safeArea.position;
-            var max = safeArea.position + safeArea.size;
+            if (!applyScreenSafeAreaInset)
+            {
+                min = Vector2.zero;
+                max = Vector2.one;
+            }
+            else
+            {
+                int w = Screen.width;
+                int h = Screen.height;
+                if (w <= 0 || h <= 0)
+                    return;
 
-            min.x /= w;
-            min.y /= h;
-            max.x /= w;
-            max.y /= h;
+                var safeArea = Screen.safeArea;
+                min = safeArea.position;
+                max = safeArea.position + safeArea.size;
+
+                min.x /= w;
+                min.y /= h;
+                max.x /= w;
+                max.y /= h;
+            }
 
             if (VectorsApproximately(min, _appliedSafeAnchorMin) && VectorsApproximately(max, _appliedSafeAnchorMax))
                 return;
 
             if (logSafeAreaDiagnostics)
             {
-                UnityEngine.Debug.Log(
-                    "[MasterBlaster][MobileOverlay][SafeArea] Applying inset from Screen.safeArea. " +
-                    $"screenPixels={w}x{h} safeAreaRect=({safeArea.x:F0},{safeArea.y:F0},{safeArea.width:F0},{safeArea.height:F0}) " +
-                    $"normalizedAnchorMin=({min.x:F4},{min.y:F4}) normalizedAnchorMax=({max.x:F4},{max.y:F4}). " +
-                    "Anchors are fractions of full screen; offsets on SafeArea are zero.");
+                if (!applyScreenSafeAreaInset)
+                {
+                    UnityEngine.Debug.Log(
+                        "[MasterBlaster][MobileOverlay][SafeArea] applyScreenSafeAreaInset is off; SafeArea uses full overlay " +
+                        $"normalizedAnchorMin=({min.x:F4},{min.y:F4}) normalizedAnchorMax=({max.x:F4},{max.y:F4}). Offsets zero.");
+                }
+                else
+                {
+                    int w = Screen.width;
+                    int h = Screen.height;
+                    var safeArea = Screen.safeArea;
+                    UnityEngine.Debug.Log(
+                        "[MasterBlaster][MobileOverlay][SafeArea] Applying inset from Screen.safeArea. " +
+                        $"screenPixels={w}x{h} safeAreaRect=({safeArea.x:F0},{safeArea.y:F0},{safeArea.width:F0},{safeArea.height:F0}) " +
+                        $"normalizedAnchorMin=({min.x:F4},{min.y:F4}) normalizedAnchorMax=({max.x:F4},{max.y:F4}). " +
+                        "Anchors are fractions of full screen; offsets on SafeArea are zero.");
+                }
             }
 
             _appliedSafeAnchorMin = min;
