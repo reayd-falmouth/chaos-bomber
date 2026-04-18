@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Online;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -31,6 +32,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.SearchingOnline
         public InputActionAsset inputActions;
 
         private InputAction _submitAction;
+        private bool _mobileBombHeldLastFrame;
         private bool _started;
         private bool _active;
 
@@ -80,8 +82,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.SearchingOnline
             if (_submitAction == null)
                 return;
 
-            // Treat submit as "cancel" for now.
-            if (_submitAction.WasPressedThisFrame() && !GlobalPauseMenuController.IsPaused && !GlobalPauseMenuController.WasClosedThisFrame)
+            // Treat submit as "cancel" for now (includes on-screen bomb on handheld).
+            if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame)
+                && !GlobalPauseMenuController.IsPaused && !GlobalPauseMenuController.WasClosedThisFrame)
             {
                 LeaveLobbyIfPossible();
                 SceneFlowManager.I.GoTo(FlowState.LevelSelect);
