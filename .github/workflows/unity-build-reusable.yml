@@ -584,7 +584,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          AAB_PATH="$(rg --files -g '*.aab' Android | head -n1)"
+          AAB_PATH="$(find Android -type f -name '*.aab' | head -n1)"
           if [ -z "${AAB_PATH}" ]; then
             echo "No .aab found under Android artifact directory." >&2
             exit 1
