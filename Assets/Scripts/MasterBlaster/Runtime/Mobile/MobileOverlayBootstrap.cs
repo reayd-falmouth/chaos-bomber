@@ -8,6 +8,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 {
     /// <summary>
     /// Builds and controls the mobile gameplay overlay at runtime.
+    /// Optionally uses a scene-authored hierarchy under this GameObject so D-pad / letterbox layout can be edited in the Inspector.
     /// </summary>
     public class MobileOverlayBootstrap : MonoBehaviour
     {
@@ -17,6 +18,20 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         private static bool s_previewIgnoreFlowState;
         private static MobileOverlayPreviewLetterboxMode s_previewLetterboxMode = MobileOverlayPreviewLetterboxMode.FollowGameFlow;
 
+        [Header("Scene hierarchy (optional)")]
+        [Tooltip("Assign after using the Inspector Generate button or authoring by hand. If any field is null, runtime falls back to code-built UI.")]
+        [SerializeField]
+        private Canvas _authoringCanvas;
+
+        [SerializeField]
+        private RectTransform _authoringOverlayRoot;
+
+        [SerializeField]
+        private RectTransform _authoringSafeArea;
+
+        [SerializeField]
+        private RectTransform _authoringLetterboxRoot;
+
         private GameObject _root;
         private RectTransform _safeArea;
         private GameObject _letterboxRoot;
@@ -25,6 +40,14 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         {
             if (_instance != null)
                 return;
+
+            var found = FindObjectsByType<MobileOverlayBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            if (found != null && found.Length > 0)
+            {
+                _instance = found[0];
+                DontDestroyOnLoad(_instance.gameObject);
+                return;
+            }
 
             var go = new GameObject("MobileOverlayBootstrap");
             DontDestroyOnLoad(go);
@@ -64,6 +87,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         {
             if (_instance != null && _instance != this)
             {
+                UnityEngine.Debug.LogWarning(
+                    "[MasterBlaster][MobileOverlay] Duplicate MobileOverlayBootstrap destroyed on " + gameObject.name + ".");
                 Destroy(gameObject);
                 return;
             }
@@ -71,6 +96,83 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             _instance = this;
             DontDestroyOnLoad(gameObject);
         }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+                _instance = null;
+        }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (!Application.isPlaying && UseAuthoringHierarchy())
+                WarnIfMissingControlRoots();
+        }
+
+        /// <summary>
+        /// Editor / tooling: builds default canvas, safe area, letterbox, D-pad, and bomb under this transform and assigns authoring fields.
+        /// </summary>
+        public void PopulateDefaultAuthoringHierarchy()
+        {
+            if (Application.isPlaying)
+                return;
+
+            while (transform.childCount > 0)
+                Object.DestroyImmediate(transform.GetChild(0).gameObject);
+
+            var canvasGo = new GameObject("MobileOverlayCanvas");
+            canvasGo.transform.SetParent(transform, false);
+
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 3000;
+            canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            _authoringCanvas = canvas;
+
+            var rootGo = new GameObject("MobileOverlayRoot");
+            rootGo.transform.SetParent(canvasGo.transform, false);
+            var rootRect = rootGo.AddComponent<RectTransform>();
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+            _authoringOverlayRoot = rootRect;
+
+            var safeGo = new GameObject("SafeArea");
+            safeGo.transform.SetParent(rootRect, false);
+            _authoringSafeArea = safeGo.AddComponent<RectTransform>();
+
+            var letterboxGo = new GameObject("GameplayLetterbox");
+            letterboxGo.transform.SetParent(_authoringSafeArea, false);
+            var letterboxRect = letterboxGo.AddComponent<RectTransform>();
+            letterboxRect.anchorMin = Vector2.zero;
+            letterboxRect.anchorMax = Vector2.one;
+            letterboxRect.offsetMin = Vector2.zero;
+            letterboxRect.offsetMax = Vector2.zero;
+            _authoringLetterboxRoot = letterboxRect;
+
+            BuildWindowMask(letterboxRect);
+            BuildControls(_authoringSafeArea);
+
+            WarnIfMissingControlRoots();
+            UnityEngine.Debug.Log(
+                "[MasterBlaster][MobileOverlay] Populated default authoring hierarchy under " + gameObject.name + ".");
+        }
+
+        private void WarnIfMissingControlRoots()
+        {
+            if (_authoringSafeArea == null)
+                return;
+            if (_authoringSafeArea.Find("DPadRoot") == null || _authoringSafeArea.Find("BombRoot") == null)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[MasterBlaster][MobileOverlay] SafeArea should contain DPadRoot and BombRoot for touch controls.");
+            }
+        }
+#endif
 
         private void Update()
         {
@@ -126,10 +228,25 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                 _root.SetActive(active);
         }
 
+        private bool UseAuthoringHierarchy() =>
+            _authoringCanvas != null
+            && _authoringOverlayRoot != null
+            && _authoringSafeArea != null
+            && _authoringLetterboxRoot != null;
+
         private void EnsureOverlayBuilt()
         {
             if (_root != null)
                 return;
+
+            if (UseAuthoringHierarchy())
+            {
+                _root = _authoringOverlayRoot.gameObject;
+                _safeArea = _authoringSafeArea;
+                _letterboxRoot = _authoringLetterboxRoot.gameObject;
+                EnsureEventSystemExists();
+                return;
+            }
 
             var canvasGo = new GameObject("MobileOverlayCanvas");
             canvasGo.transform.SetParent(transform, false);
@@ -179,7 +296,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private static void BuildWindowMask(RectTransform parent)
         {
-            // Four bars create a centered "window" look where gameplay is visible.
             CreateBar(parent, "TopBar", new Vector2(0f, 0.75f), new Vector2(1f, 1f));
             CreateBar(parent, "BottomBar", new Vector2(0f, 0f), new Vector2(1f, 0.25f));
             CreateBar(parent, "LeftBar", new Vector2(0f, 0.25f), new Vector2(0.2f, 0.75f));
