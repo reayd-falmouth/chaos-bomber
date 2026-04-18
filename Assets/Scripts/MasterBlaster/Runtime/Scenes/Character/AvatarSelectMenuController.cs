@@ -1,4 +1,5 @@
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect;
 using UnityEngine;
 using UnityEngine.Events;
@@ -184,7 +185,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
                 UpdatePointers();
             }
 
-            if (_submitAction.WasPressedThisFrame())
+            if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame))
             {
                 if (_menuRow == 0)
                     TryConfirmSelection();

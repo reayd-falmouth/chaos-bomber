@@ -1,3 +1,4 @@
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -138,7 +139,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             if (characters == null || characters.Length == 0)
                 return;
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             if (moveInput.x < -0.5f && _lastMoveInput.x >= -0.5f)
             {

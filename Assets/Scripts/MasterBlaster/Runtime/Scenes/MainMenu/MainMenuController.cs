@@ -1,6 +1,7 @@
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
 using HybridGame.MasterBlaster.Scripts.Debug;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -27,6 +28,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
         private InputAction _moveAction;
         private InputAction _submitAction;
         private Vector2 _lastMoveInput;
+        private bool _mobileBombHeldLastFrame;
 
         private int selectedIndex;
 
@@ -107,7 +109,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
                 UpdateMenuText();
             }
 
-            if (_submitAction.WasPressedThisFrame() && !GlobalPauseMenuController.IsPaused && !GlobalPauseMenuController.WasClosedThisFrame)
+            if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame)
+                && !GlobalPauseMenuController.IsPaused
+                && !GlobalPauseMenuController.WasClosedThisFrame)
                 HandleSubmit();
 
             _lastMoveInput = moveInput;

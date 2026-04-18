@@ -1,6 +1,7 @@
 using System;
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -83,7 +84,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Title
                 UpdatePointers();
             }
 
-            if (_submitAction.WasPressedThisFrame() && !GlobalPauseMenuController.IsPaused && !GlobalPauseMenuController.WasClosedThisFrame)
+            if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame)
+                && !GlobalPauseMenuController.IsPaused
+                && !GlobalPauseMenuController.WasClosedThisFrame)
                 HandleSubmit();
 
             _lastMoveInput = moveInput;

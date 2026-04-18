@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using HybridGame.MasterBlaster.Scripts.Utilities;
 using UnityEngine;
@@ -223,6 +224,8 @@ namespace HybridGame.MasterBlaster.Scripts.Core
 
         void Start()
         {
+            MobileOverlayBootstrap.EnsurePresentIfHandheld();
+
             _singleSceneMode = TryInitSingleSceneRoots();
 
             if (_singleSceneMode)

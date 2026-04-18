@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using HybridGame.MasterBlaster.Runtime.Scenes.Character;
 using HybridGame.MasterBlaster.Scripts.Core;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Levels;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -43,6 +44,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
         private InputAction _moveAction;
         private InputAction _submitAction;
         private Vector2 _lastMoveInput;
+        private bool _mobileBombHeldLastFrame;
 
         [SerializeField, Tooltip("Optional. When set (or found in children), PlaceBomb does not start countdown while the menu highlight is on Back.")]
         AvatarSelectMenuController _selectMenu;
@@ -105,7 +107,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
             if (levels == null || levels.Length == 0)
                 return;
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             if (moveInput.x < -0.5f && _lastMoveInput.x >= -0.5f)
             {
@@ -116,7 +118,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
                 NextLevel();
             }
 
-            if (_submitAction.WasPressedThisFrame())
+            if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame))
             {
                 // Same binding as SelectMenu; when user confirms Back, only the menu must navigate — not countdown.
                 if (_selectMenu != null && _selectMenu.IsBackRowActive)

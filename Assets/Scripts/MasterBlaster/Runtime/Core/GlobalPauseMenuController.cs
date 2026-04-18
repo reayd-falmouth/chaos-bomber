@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using HybridGame.MasterBlaster.Scripts;
+using HybridGame.MasterBlaster.Scripts.Mobile;
 using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
 using MoreMountains.Feedbacks;
 using MoreMountains.Tools;
@@ -67,6 +68,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
         private bool _showingControls;
         private bool _moveWasEnabled, _submitWasEnabled;
         private Vector2 _lastMoveInput;
+        private bool _mobileBombHeldLastFrame;
         private InputAction _moveAction, _submitAction;
 
         // ── Static Helpers (Kept for Unit Test Compatibility) ───────────────
@@ -197,6 +199,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             }
             
             _selectedIndex = 0;
+            _mobileBombHeldLastFrame = false;
             UpdateMenuUI();
             
             _moveWasEnabled = _moveAction is { enabled: true };

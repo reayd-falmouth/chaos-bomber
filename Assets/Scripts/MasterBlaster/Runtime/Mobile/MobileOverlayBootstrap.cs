@@ -14,6 +14,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private GameObject _root;
         private RectTransform _safeArea;
+        private GameObject _letterboxRoot;
 
         public static void EnsurePresent()
         {
@@ -97,7 +98,15 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             _safeArea = new GameObject("SafeArea").AddComponent<RectTransform>();
             _safeArea.SetParent(rootRect, false);
 
-            BuildWindowMask(_safeArea);
+            _letterboxRoot = new GameObject("GameplayLetterbox");
+            _letterboxRoot.transform.SetParent(_safeArea, false);
+            var letterboxRect = _letterboxRoot.AddComponent<RectTransform>();
+            letterboxRect.anchorMin = Vector2.zero;
+            letterboxRect.anchorMax = Vector2.one;
+            letterboxRect.offsetMin = Vector2.zero;
+            letterboxRect.offsetMax = Vector2.zero;
+
+            BuildWindowMask(letterboxRect);
             BuildControls(_safeArea);
         }
 
