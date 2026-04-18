@@ -236,7 +236,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             // Controls overlay: submit closes it; no menu navigation while showing.
             if (_showingControls)
             {
-                if (_submitAction != null && _submitAction.WasPressedThisFrame())
+                if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame))
                 {
                     ToggleControls(false);
                     UpdatePointers();
@@ -244,7 +244,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
                 return;
             }
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             // Vertical - Up/Down
             if (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f) { MovePointer(1); }
@@ -254,7 +254,7 @@ namespace HybridGame.MasterBlaster.Scripts.Core
             if (moveInput.x < -0.5f && _lastMoveInput.x >= -0.5f) { ChangeValue(false); }
             else if (moveInput.x > 0.5f && _lastMoveInput.x <= 0.5f) { ChangeValue(true); }
 
-            if (_submitAction != null && _submitAction.WasPressedThisFrame()) HandleSubmit();
+            if (MobileMenuInputBridge.SubmitPressedThisFrame(_submitAction, ref _mobileBombHeldLastFrame)) HandleSubmit();
             
             _lastMoveInput = moveInput;
         }

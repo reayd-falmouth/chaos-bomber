@@ -69,6 +69,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         InputAction _moveAction;
         InputAction _submitAction;
         Vector2 _lastMoveInput;
+        bool _mobileBombHeldLastFrame;
         int _menuRow;
 
         /// <summary>
@@ -131,6 +132,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
         {
             _moveAction?.Enable();
             _submitAction?.Enable();
+            _mobileBombHeldLastFrame = false;
             WireSelectButton(true);
             WireBackButton(true);
             UpdatePointers();
@@ -172,7 +174,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.Character
             if (!CanProcessMenuInput())
                 return;
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             if (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f)
             {

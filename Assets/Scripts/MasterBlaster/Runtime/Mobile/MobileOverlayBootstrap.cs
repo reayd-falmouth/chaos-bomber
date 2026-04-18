@@ -26,6 +26,16 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             _instance = go.AddComponent<MobileOverlayBootstrap>();
         }
 
+        /// <summary>
+        /// Ensures overlay exists on handheld before the arena (e.g. Title) so touch controls work without visiting Game first.
+        /// </summary>
+        public static void EnsurePresentIfHandheld()
+        {
+            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile())
+                return;
+            EnsurePresent();
+        }
+
         private void Awake()
         {
             if (_instance != null && _instance != this)
@@ -49,19 +59,36 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
             EnsureOverlayBuilt();
             UpdateSafeArea();
-            SetOverlayActive(IsGameplayFlowActive());
-            if (!IsGameplayFlowActive())
+            bool showControls = ShouldShowMobileControlsForCurrentFlow();
+            SetOverlayActive(showControls);
+            if (!showControls)
                 MobileOverlayState.ResetAll();
+            else
+                UpdateLetterboxVisibility();
         }
 
         private bool ShouldUseMobileOverlay() => FlowScreenAccessibilityTextScale.IsHandheldMobile();
 
-        private static bool IsGameplayFlowActive()
+        /// <summary>
+        /// Show D-pad on handheld for every flow state except Quote and Prologue.
+        /// </summary>
+        private static bool ShouldShowMobileControlsForCurrentFlow()
         {
             var flow = SceneFlowManager.I;
             if (flow == null)
                 return true;
-            return flow.CurrentState == FlowState.Game;
+            FlowState s = flow.CurrentState;
+            return s != FlowState.Quote && s != FlowState.Prologue;
+        }
+
+        private void UpdateLetterboxVisibility()
+        {
+            if (_letterboxRoot == null)
+                return;
+            var flow = SceneFlowManager.I;
+            bool inGame = flow != null && flow.CurrentState == FlowState.Game;
+            if (_letterboxRoot.activeSelf != inGame)
+                _letterboxRoot.SetActive(inGame);
         }
 
         private void SetOverlayActive(bool active)

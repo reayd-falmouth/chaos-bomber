@@ -27,6 +27,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Title
         private InputAction _moveAction;
         private InputAction _submitAction;
         private Vector2 _lastMoveInput;
+        private bool _mobileBombHeldLastFrame;
 
         private int selectedIndex;
 
@@ -49,6 +50,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Title
             if (_submitAction != null)
                 _submitAction.Enable();
 
+            _mobileBombHeldLastFrame = false;
             UpdatePointers();
         }
 
@@ -71,7 +73,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Title
             if (options == null || options.Length == 0)
                 return;
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             if (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f)
             {

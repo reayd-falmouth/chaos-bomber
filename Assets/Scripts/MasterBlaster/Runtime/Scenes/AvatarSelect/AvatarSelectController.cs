@@ -31,6 +31,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect
         private InputAction _moveAction;
         private InputAction _submitAction;
         private Vector2 _lastMoveInput;
+        private bool _mobileBombHeldLastFrame;
         private int _selectedIndex;
 
         private void Awake()
@@ -80,7 +81,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.AvatarSelect
             if (options == null || options.Length == 0)
                 return;
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             if (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f)
             {

@@ -78,6 +78,7 @@ namespace HybridGame.MasterBlaster.Runtime.Scenes.LevelSelect
         {
             _moveAction?.Enable();
             _submitAction?.Enable();
+            _mobileBombHeldLastFrame = false;
             RefreshArenaPreview();
 
             RefreshAvatarPortraitBar();

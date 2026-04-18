@@ -64,6 +64,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
             // In single-scene mode the menu root is toggled on/off, so we must re-initialize
             // UI state every time this controller is enabled.
+            _mobileBombHeldLastFrame = false;
             LoadPrefs();
             UpdateMenuText();
             UpdatePointers();
@@ -85,7 +86,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
             if (_moveAction == null || _submitAction == null)
                 return;
 
-            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+            Vector2 moveInput = MobileMenuInputBridge.MergeMove(_moveAction.ReadValue<Vector2>());
 
             if (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f)
             {
