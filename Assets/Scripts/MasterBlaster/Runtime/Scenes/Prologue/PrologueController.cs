@@ -114,7 +114,7 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
                 return;
 
             float systemFont = FlowScreenAccessibilityTextScale.IsHandheldMobile() ? AccessibilitySettings.fontScale : 1f;
-            Debug.Log(
+            UnityEngine.Debug.Log(
                 $"[MasterBlaster][FlowUI] Prologue text scale applied: platform={Application.platform}, " +
                 $"mobileBoost={mobilePrologueTextBoost}, systemFontScale={systemFont}, combined={combined}, " +
                 $"localScale={prologueText.localScale}");
