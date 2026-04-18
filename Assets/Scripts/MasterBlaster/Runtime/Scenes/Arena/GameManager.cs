@@ -836,7 +836,11 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             }
         }
 
-        private static bool IsMobileTouchPlatform() => FlowScreenAccessibilityTextScale.IsHandheldMobile();
+        /// <summary>
+        /// True when player 1 should use <see cref="MobilePlayerInput"/> (Android/iOS or Editor overlay preview).
+        /// Aligns with <see cref="MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput"/> so arena and flow menus use the same gate.
+        /// </summary>
+        private static bool IsMobileTouchPlatform() => MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
 
         /// <summary>
         /// Hybrid FPS players often remain active in the hierarchy when dead; use <see cref="Health.IsDead"/>.
