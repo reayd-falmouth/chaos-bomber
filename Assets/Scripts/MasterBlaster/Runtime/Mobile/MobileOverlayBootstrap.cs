@@ -1,6 +1,7 @@
 using HybridGame.MasterBlaster.Scripts.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace HybridGame.MasterBlaster.Scripts.Mobile
@@ -31,9 +32,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         }
 
         /// <summary>
-        /// Ensures overlay exists on handheld before the arena (e.g. Title) so touch controls work without visiting Game first.
-        /// </summary>
-        /// <summary>
         /// Overlay-only preview flags (Editor layout); does not change <see cref="FlowScreenAccessibilityTextScale.IsHandheldMobile"/>.
         /// </summary>
         public static void SetPreviewOverlayState(
@@ -46,6 +44,15 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             s_previewLetterboxMode = letterboxMode;
         }
 
+        /// <summary>
+        /// When true, flow menus merge <see cref="MobileOverlayState"/> (Android/iOS or editor preview overlay).
+        /// </summary>
+        public static bool ShouldMergeOverlayIntoUiInput() =>
+            FlowScreenAccessibilityTextScale.IsHandheldMobile() || s_previewSimulateHandheld;
+
+        /// <summary>
+        /// Ensures overlay exists on handheld or editor preview before the arena (e.g. Title) so touch controls work without visiting Game first.
+        /// </summary>
         public static void EnsurePresentIfHandheld()
         {
             if (!FlowScreenAccessibilityTextScale.IsHandheldMobile() && !s_previewSimulateHandheld)
@@ -164,8 +171,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             if (FindAnyObjectByType<EventSystem>() != null)
                 return;
 
-            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             DontDestroyOnLoad(es);
+            UnityEngine.Debug.Log(
+                "[MasterBlaster][MobileOverlay] Created fallback EventSystem with InputSystemUIInputModule for on-screen controls.");
         }
 
         private static void BuildWindowMask(RectTransform parent)

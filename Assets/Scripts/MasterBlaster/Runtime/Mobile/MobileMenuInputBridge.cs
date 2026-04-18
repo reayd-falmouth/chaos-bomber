@@ -4,13 +4,13 @@ using UnityEngine.InputSystem;
 namespace HybridGame.MasterBlaster.Scripts.Mobile
 {
     /// <summary>
-    /// Merges New Input System UI actions with on-screen D-pad / bomb for handheld builds.
+    /// Merges New Input System UI actions with on-screen D-pad / bomb for handheld and editor overlay preview.
     /// </summary>
     public static class MobileMenuInputBridge
     {
         public static Vector2 MergeMove(Vector2 fromActions)
         {
-            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile())
+            if (!MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput())
                 return fromActions;
 
             Vector2 d = MobileOverlayState.GetDigitalMove();
@@ -24,12 +24,12 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         {
             if (submitAction != null && submitAction.WasPressedThisFrame())
             {
-                if (FlowScreenAccessibilityTextScale.IsHandheldMobile())
+                if (MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput())
                     bombHeldLastFrame = MobileOverlayState.BombPressed;
                 return true;
             }
 
-            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile())
+            if (!MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput())
                 return false;
 
             bool bomb = MobileOverlayState.BombPressed;
