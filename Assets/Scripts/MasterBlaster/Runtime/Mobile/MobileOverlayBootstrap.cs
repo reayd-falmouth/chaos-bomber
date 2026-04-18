@@ -12,6 +12,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
     {
         private static MobileOverlayBootstrap _instance;
 
+        private static bool s_previewSimulateHandheld;
+        private static bool s_previewIgnoreFlowState;
+        private static MobileOverlayPreviewLetterboxMode s_previewLetterboxMode = MobileOverlayPreviewLetterboxMode.FollowGameFlow;
+
         private GameObject _root;
         private RectTransform _safeArea;
         private GameObject _letterboxRoot;
@@ -29,9 +33,22 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         /// <summary>
         /// Ensures overlay exists on handheld before the arena (e.g. Title) so touch controls work without visiting Game first.
         /// </summary>
+        /// <summary>
+        /// Overlay-only preview flags (Editor layout); does not change <see cref="FlowScreenAccessibilityTextScale.IsHandheldMobile"/>.
+        /// </summary>
+        public static void SetPreviewOverlayState(
+            bool simulateHandheld,
+            bool ignoreFlowStateForVisibility,
+            MobileOverlayPreviewLetterboxMode letterboxMode)
+        {
+            s_previewSimulateHandheld = simulateHandheld;
+            s_previewIgnoreFlowState = ignoreFlowStateForVisibility;
+            s_previewLetterboxMode = letterboxMode;
+        }
+
         public static void EnsurePresentIfHandheld()
         {
-            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile())
+            if (!FlowScreenAccessibilityTextScale.IsHandheldMobile() && !s_previewSimulateHandheld)
                 return;
             EnsurePresent();
         }
@@ -67,28 +84,33 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                 UpdateLetterboxVisibility();
         }
 
-        private bool ShouldUseMobileOverlay() => FlowScreenAccessibilityTextScale.IsHandheldMobile();
+        private bool ShouldUseMobileOverlay() =>
+            FlowScreenAccessibilityTextScale.IsHandheldMobile() || s_previewSimulateHandheld;
 
         /// <summary>
-        /// Show D-pad on handheld for every flow state except Quote and Prologue.
+        /// Show D-pad on handheld for every flow state except Quote and Prologue (unless preview ignores flow).
         /// </summary>
         private static bool ShouldShowMobileControlsForCurrentFlow()
         {
             var flow = SceneFlowManager.I;
-            if (flow == null)
-                return true;
-            FlowState s = flow.CurrentState;
-            return s != FlowState.Quote && s != FlowState.Prologue;
+            FlowState? state = flow != null ? flow.CurrentState : (FlowState?)null;
+            return MobileOverlayPreviewPolicy.ShouldShowControlsForFlow(
+                s_previewSimulateHandheld,
+                s_previewIgnoreFlowState,
+                state);
         }
 
         private void UpdateLetterboxVisibility()
         {
             if (_letterboxRoot == null)
                 return;
-            var flow = SceneFlowManager.I;
-            bool inGame = flow != null && flow.CurrentState == FlowState.Game;
-            if (_letterboxRoot.activeSelf != inGame)
-                _letterboxRoot.SetActive(inGame);
+            bool flowIsGame = SceneFlowManager.I != null && SceneFlowManager.I.CurrentState == FlowState.Game;
+            bool active = MobileOverlayPreviewPolicy.ShouldLetterboxBeActive(
+                s_previewSimulateHandheld,
+                s_previewLetterboxMode,
+                flowIsGame);
+            if (_letterboxRoot.activeSelf != active)
+                _letterboxRoot.SetActive(active);
         }
 
         private void SetOverlayActive(bool active)
