@@ -305,6 +305,18 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Prologue
                     return true;
             }
 
+            var touch = Touchscreen.current;
+            if (touch != null)
+            {
+                if (touch.primaryTouch.press.wasPressedThisFrame)
+                    return true;
+                foreach (var t in touch.touches)
+                {
+                    if (t.press.wasPressedThisFrame)
+                        return true;
+                }
+            }
+
             return false;
         }
     }
