@@ -48,6 +48,9 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
         public MobileHandheldRectSnapshot overlaySafeAreaRect;
 
+        [Tooltip("Optional; typically the fullscreen Background Image under MobileOverlayRoot.")]
+        public MobileHandheldRectSnapshot overlayBackgroundRect;
+
         public float AspectRatio =>
             screenHeight > 0 ? screenWidth / (float)screenHeight : 1f;
     }

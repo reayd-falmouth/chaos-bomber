@@ -63,6 +63,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [SerializeField]
         private RectTransform mobileOverlaySafeArea;
 
+        [SerializeField]
+        [Tooltip("Optional; when assigned, capture/apply RectTransform layout for this object (e.g. Background Image under MobileOverlayRoot).")]
+        private RectTransform mobileOverlayBackground;
+
         [Tooltip(
             "Assign the scene MobileOverlayBootstrap when presets include overlay SafeArea — otherwise automatic Screen.safeArea layout overwrites your snapshot.")]
         [SerializeField]
@@ -183,6 +187,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 e.overlayRootRect = MobileHandheldRectSnapshot.Capture(mobileOverlayRoot);
             if (mobileOverlaySafeArea != null)
                 e.overlaySafeAreaRect = MobileHandheldRectSnapshot.Capture(mobileOverlaySafeArea);
+            if (mobileOverlayBackground != null)
+                e.overlayBackgroundRect = MobileHandheldRectSnapshot.Capture(mobileOverlayBackground);
 
             return e;
         }
@@ -321,6 +327,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                     MobileHandheldRectSnapshot.Apply(mobileOverlayRoot, e.overlayRootRect);
                 if (mobileOverlaySafeArea != null)
                     MobileHandheldRectSnapshot.Apply(mobileOverlaySafeArea, e.overlaySafeAreaRect);
+                if (mobileOverlayBackground != null)
+                    MobileHandheldRectSnapshot.Apply(mobileOverlayBackground, e.overlayBackgroundRect);
             }
             else
             {

@@ -145,6 +145,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 overlayCanvasScaler = MobileHandheldCanvasScalerSnapshot.Lerp(lower.overlayCanvasScaler, upper.overlayCanvasScaler, t),
                 overlayRootRect = MobileHandheldRectSnapshot.Lerp(lower.overlayRootRect, upper.overlayRootRect, t),
                 overlaySafeAreaRect = MobileHandheldRectSnapshot.Lerp(lower.overlaySafeAreaRect, upper.overlaySafeAreaRect, t),
+                overlayBackgroundRect = MobileHandheldRectSnapshot.Lerp(lower.overlayBackgroundRect, upper.overlayBackgroundRect, t),
             };
             return true;
         }
@@ -245,6 +246,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 overlayCanvasScaler = source.overlayCanvasScaler,
                 overlayRootRect = source.overlayRootRect,
                 overlaySafeAreaRect = source.overlaySafeAreaRect,
+                overlayBackgroundRect = source.overlayBackgroundRect,
             };
         }
     }

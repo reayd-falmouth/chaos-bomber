@@ -63,5 +63,29 @@ namespace HybridGame.MasterBlaster.Tests.EditMode
             Assert.Greater(mid.cinemachineBrainOutputCamera.orthographicSize, low.cinemachineBrainOutputCamera.orthographicSize);
             Assert.Less(mid.cinemachineBrainOutputCamera.orthographicSize, high.cinemachineBrainOutputCamera.orthographicSize);
         }
+
+        [Test]
+        public void TryBuildInterpolatedEntry_LerpsOverlayBackgroundRect()
+        {
+            var low = new MobileHandheldLayoutPresetEntry
+            {
+                screenWidth = 1000,
+                screenHeight = 1000,
+                label = "1:1",
+                overlayBackgroundRect = new MobileHandheldRectSnapshot { anchoredPosition = new Vector2(0f, 0f) },
+            };
+            var high = new MobileHandheldLayoutPresetEntry
+            {
+                screenWidth = 2000,
+                screenHeight = 1000,
+                label = "2:1",
+                overlayBackgroundRect = new MobileHandheldRectSnapshot { anchoredPosition = new Vector2(100f, 0f) },
+            };
+            var list = new List<MobileHandheldLayoutPresetEntry> { low, high };
+
+            Assert.IsTrue(MobileHandheldLayoutPresetSelector.TryBuildInterpolatedEntry(list, 1500, 1000, out var mid));
+            Assert.NotNull(mid);
+            Assert.AreEqual(50f, mid.overlayBackgroundRect.anchoredPosition.x, 1e-5f);
+        }
     }
 }
