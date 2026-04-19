@@ -39,23 +39,29 @@ namespace HybridGame.MasterBlaster.Tests.EditMode
                 screenWidth = 1000,
                 screenHeight = 1000,
                 label = "1:1",
-                letterboxDesignWidth = 400,
-                letterboxDesignHeight = 400,
+                cinemachineBrainOutputCamera = new MobileHandheldUnityCameraSnapshot
+                {
+                    captureEnabled = true,
+                    orthographicSize = 5f,
+                },
             };
             var high = new MobileHandheldLayoutPresetEntry
             {
                 screenWidth = 2000,
                 screenHeight = 1000,
                 label = "2:1",
-                letterboxDesignWidth = 800,
-                letterboxDesignHeight = 400,
+                cinemachineBrainOutputCamera = new MobileHandheldUnityCameraSnapshot
+                {
+                    captureEnabled = true,
+                    orthographicSize = 10f,
+                },
             };
             var list = new List<MobileHandheldLayoutPresetEntry> { low, high };
 
             Assert.IsTrue(MobileHandheldLayoutPresetSelector.TryBuildInterpolatedEntry(list, 1500, 1000, out var mid));
             Assert.NotNull(mid);
-            Assert.Greater(mid.letterboxDesignWidth, low.letterboxDesignWidth);
-            Assert.Less(mid.letterboxDesignWidth, high.letterboxDesignWidth);
+            Assert.Greater(mid.cinemachineBrainOutputCamera.orthographicSize, low.cinemachineBrainOutputCamera.orthographicSize);
+            Assert.Less(mid.cinemachineBrainOutputCamera.orthographicSize, high.cinemachineBrainOutputCamera.orthographicSize);
         }
     }
 }

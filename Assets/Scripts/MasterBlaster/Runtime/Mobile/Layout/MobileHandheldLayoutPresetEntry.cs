@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 {
-    /// <summary>One screen-size key plus captured layout for letterbox, flow UI, and mobile overlay.</summary>
+    /// <summary>One screen-size key plus captured layout for gameplay cameras, flow UI, and mobile overlay.</summary>
     [Serializable]
     public sealed class MobileHandheldLayoutPresetEntry
     {
@@ -16,14 +16,24 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [Tooltip("Optional label for the Inspector / debugging.")]
         public string label = string.Empty;
 
-        [Header("Letterbox (AmigaLetterboxCamera)")]
-        public bool applyLetterbox = true;
+        [Header("Gameplay cameras (Cinemachine / Hybrid)")]
+        [Tooltip("When true, applies brain output + Hybrid cameras + registered Cinemachine vcams below.")]
+        public bool applyGameplayCameras = true;
 
-        [Tooltip("Design aspect numerator; passed to AmigaLetterboxCamera.SetDesignResolution.")]
-        public int letterboxDesignWidth = 640;
+        [Tooltip("Unity Camera on the same GameObject as CinemachineBrain (viewport rect, ortho size, etc.).")]
+        public MobileHandheldUnityCameraSnapshot cinemachineBrainOutputCamera;
 
-        [Tooltip("Design aspect denominator.")]
-        public int letterboxDesignHeight = 512;
+        [Tooltip("HybridCameraManager.fpsCamera snapshot when assigned on the layout controller.")]
+        public MobileHandheldUnityCameraSnapshot hybridFpsCamera;
+
+        [Tooltip("HybridCameraManager.bombermanCamera (e.g. orthographic arena view).")]
+        public MobileHandheldUnityCameraSnapshot hybridBombermanCamera;
+
+        [Tooltip("HybridCameraManager.arenaPerspectiveCamera.")]
+        public MobileHandheldUnityCameraSnapshot hybridArenaPerspectiveCamera;
+
+        [Tooltip("Per-CinemachineCamera state; matched by GameObject.name to CinemachineModeSwitcher.registeredCameras.")]
+        public MobileHandheldCinemachineVcamSnapshotEntry[] cinemachineVcams = Array.Empty<MobileHandheldCinemachineVcamSnapshotEntry>();
 
         [Header("Flow UI canvas")]
         public bool applyUiCanvas = true;

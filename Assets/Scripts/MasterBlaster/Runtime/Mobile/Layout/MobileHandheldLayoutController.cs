@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using HybridGame.MasterBlaster.Scripts.Arena;
+using HybridGame.MasterBlaster.Scripts.Camera;
 using HybridGame.MasterBlaster.Scripts.Mobile;
-using HybridGame.MasterBlaster.Scripts.Scenes.Arena;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,8 +10,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 {
     /// <summary>
     /// Applies <see cref="MobileHandheldLayoutPresetEntry"/> rows when the screen size changes (handheld),
-    /// coordinating letterbox, flow UI, and mobile overlay rects. When overlay safe-area is driven by presets,
-    /// sets <see cref="MobileOverlayBootstrap"/> defer so automatic safe-area does not overwrite.
+    /// coordinating Cinemachine / Hybrid gameplay cameras, flow UI, and mobile overlay rects.
+    /// When overlay safe-area is driven by presets, sets <see cref="MobileOverlayBootstrap"/> defer so automatic safe-area does not overwrite.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MobileHandheldLayoutController : MonoBehaviour
@@ -33,10 +34,20 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [SerializeField]
         private MobileHandheldPresetMatchMode matchMode = MobileHandheldPresetMatchMode.NearestAspectRatio;
 
-        [Header("Targets (assign scene refs)")]
+        [Header("Gameplay cameras (assign scene refs)")]
+        [Tooltip("Brain output: Unity Camera on the same GameObject (viewport rect, ortho/FoV).")]
         [SerializeField]
-        private AmigaLetterboxCamera letterboxCamera;
+        private CinemachineBrain cinemachineBrain;
 
+        [Tooltip("Optional; used to snapshot/apply fps / Bomberman / arena Unity cameras.")]
+        [SerializeField]
+        private HybridCameraManager hybridCameraManager;
+
+        [Tooltip("Optional; captures Priority + Lens for each registered CinemachineCamera.")]
+        [SerializeField]
+        private CinemachineModeSwitcher cinemachineModeSwitcher;
+
+        [Header("UI / overlay targets")]
         [SerializeField]
         private RectTransform uiCanvasRoot;
 
@@ -123,13 +134,33 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 screenWidth = screenW,
                 screenHeight = screenH,
                 label = label ?? string.Empty,
+                applyGameplayCameras = true,
             };
 
-            if (letterboxCamera != null)
+            if (cinemachineBrain != null && cinemachineBrain.TryGetComponent<Camera>(out var brainCam))
+                e.cinemachineBrainOutputCamera = MobileHandheldUnityCameraSnapshot.Capture(brainCam);
+            else
+                e.cinemachineBrainOutputCamera = default;
+
+            if (hybridCameraManager != null)
             {
-                e.applyLetterbox = true;
-                e.letterboxDesignWidth = letterboxCamera.GetDesignWidth();
-                e.letterboxDesignHeight = letterboxCamera.GetDesignHeight();
+                e.hybridFpsCamera = MobileHandheldUnityCameraSnapshot.Capture(hybridCameraManager.fpsCamera);
+                e.hybridBombermanCamera = MobileHandheldUnityCameraSnapshot.Capture(hybridCameraManager.bombermanCamera);
+                e.hybridArenaPerspectiveCamera = MobileHandheldUnityCameraSnapshot.Capture(hybridCameraManager.arenaPerspectiveCamera);
+            }
+
+            if (cinemachineModeSwitcher != null && cinemachineModeSwitcher.registeredCameras != null
+                                                && cinemachineModeSwitcher.registeredCameras.Count > 0)
+            {
+                var regs = cinemachineModeSwitcher.registeredCameras;
+                var arr = new MobileHandheldCinemachineVcamSnapshotEntry[regs.Count];
+                for (int i = 0; i < regs.Count; i++)
+                    arr[i] = MobileHandheldCinemachineVcamSnapshotEntry.Capture(regs[i]);
+                e.cinemachineVcams = arr;
+            }
+            else
+            {
+                e.cinemachineVcams = System.Array.Empty<MobileHandheldCinemachineVcamSnapshotEntry>();
             }
 
             if (uiCanvasRoot != null)
@@ -261,8 +292,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         {
             bool drivesOverlaySafeArea = e.applyMobileOverlay && mobileOverlaySafeArea != null;
 
-            if (e.applyLetterbox && letterboxCamera != null && e.letterboxDesignWidth > 0 && e.letterboxDesignHeight > 0)
-                letterboxCamera.SetDesignResolution(e.letterboxDesignWidth, e.letterboxDesignHeight);
+            if (e.applyGameplayCameras)
+                ApplyGameplaySnapshots(e);
 
             if (e.applyUiCanvas)
             {
@@ -294,6 +325,38 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
             {
                 UnityEngine.Debug.Log(
                     LogPrefix + " Applied preset label=\"" + e.label + "\" mode=" + matchMode + " screen=" + w + "x" + h + ".");
+            }
+        }
+
+        private void ApplyGameplaySnapshots(MobileHandheldLayoutPresetEntry e)
+        {
+            if (cinemachineBrain != null && cinemachineBrain.TryGetComponent<Camera>(out var brainCam))
+                MobileHandheldUnityCameraSnapshot.Apply(brainCam, e.cinemachineBrainOutputCamera);
+
+            if (hybridCameraManager != null)
+            {
+                MobileHandheldUnityCameraSnapshot.Apply(hybridCameraManager.fpsCamera, e.hybridFpsCamera);
+                MobileHandheldUnityCameraSnapshot.Apply(hybridCameraManager.bombermanCamera, e.hybridBombermanCamera);
+                MobileHandheldUnityCameraSnapshot.Apply(hybridCameraManager.arenaPerspectiveCamera, e.hybridArenaPerspectiveCamera);
+            }
+
+            if (cinemachineModeSwitcher == null || e.cinemachineVcams == null)
+                return;
+
+            for (int i = 0; i < e.cinemachineVcams.Length; i++)
+            {
+                var snap = e.cinemachineVcams[i];
+                if (snap == null || string.IsNullOrEmpty(snap.gameObjectName))
+                    continue;
+                for (int j = 0; j < cinemachineModeSwitcher.registeredCameras.Count; j++)
+                {
+                    var v = cinemachineModeSwitcher.registeredCameras[j];
+                    if (v != null && v.gameObject.name == snap.gameObjectName)
+                    {
+                        MobileHandheldCinemachineVcamSnapshotEntry.Apply(v, snap);
+                        break;
+                    }
+                }
             }
         }
 

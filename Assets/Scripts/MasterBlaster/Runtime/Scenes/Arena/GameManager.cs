@@ -351,10 +351,6 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             else
                 mapSelector?.DisableBothRoots();
 
-            // Recentre letterbox camera on active arena tilemaps (single-scene flow does not reload scene).
-            var letterbox = FindFirstObjectByType<AmigaLetterboxCamera>();
-            letterbox?.RefreshAndApply();
-
             // Start money only on first game from menu, not when returning from shop for another round
             if (startMoney && PlayerPrefs.GetInt("GiveStartMoneyNextArena", 0) == 1)
             {

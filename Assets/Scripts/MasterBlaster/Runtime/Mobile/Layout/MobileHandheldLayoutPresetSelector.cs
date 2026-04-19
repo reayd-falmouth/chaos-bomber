@@ -74,7 +74,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
         /// <summary>
         /// Interpolates rect snapshots between the two nearest aspect presets (by aspect ratio).
-        /// Letterbox integers are lerped; scaler snapshots are lerped when both capture scalers.
+        /// Gameplay camera snapshots are lerped where both sides capture; vcam rows match by name when possible.
         /// </summary>
         public static bool TryBuildInterpolatedEntry(
             IReadOnlyList<MobileHandheldLayoutPresetEntry> entries,
@@ -130,9 +130,21 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 screenWidth = screenWidth,
                 screenHeight = screenHeight,
                 label = $"interpolated({lower.label},{upper.label})",
-                applyLetterbox = lower.applyLetterbox && upper.applyLetterbox,
-                letterboxDesignWidth = Mathf.RoundToInt(Mathf.Lerp(lower.letterboxDesignWidth, upper.letterboxDesignWidth, t)),
-                letterboxDesignHeight = Mathf.RoundToInt(Mathf.Lerp(lower.letterboxDesignHeight, upper.letterboxDesignHeight, t)),
+                applyGameplayCameras = lower.applyGameplayCameras && upper.applyGameplayCameras,
+                cinemachineBrainOutputCamera = MobileHandheldUnityCameraSnapshot.Lerp(
+                    lower.cinemachineBrainOutputCamera,
+                    upper.cinemachineBrainOutputCamera,
+                    t),
+                hybridFpsCamera = MobileHandheldUnityCameraSnapshot.Lerp(lower.hybridFpsCamera, upper.hybridFpsCamera, t),
+                hybridBombermanCamera = MobileHandheldUnityCameraSnapshot.Lerp(
+                    lower.hybridBombermanCamera,
+                    upper.hybridBombermanCamera,
+                    t),
+                hybridArenaPerspectiveCamera = MobileHandheldUnityCameraSnapshot.Lerp(
+                    lower.hybridArenaPerspectiveCamera,
+                    upper.hybridArenaPerspectiveCamera,
+                    t),
+                cinemachineVcams = InterpolateVcams(lower.cinemachineVcams, upper.cinemachineVcams, t),
                 applyUiCanvas = lower.applyUiCanvas && upper.applyUiCanvas,
                 uiCanvasRootRect = MobileHandheldRectSnapshot.Lerp(lower.uiCanvasRootRect, upper.uiCanvasRootRect, t),
                 uiCanvasScaler = MobileHandheldCanvasScalerSnapshot.Lerp(lower.uiCanvasScaler, upper.uiCanvasScaler, t),
@@ -143,6 +155,77 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 overlaySafeAreaRect = MobileHandheldRectSnapshot.Lerp(lower.overlaySafeAreaRect, upper.overlaySafeAreaRect, t),
             };
             return true;
+        }
+
+        private static MobileHandheldCinemachineVcamSnapshotEntry[] InterpolateVcams(
+            MobileHandheldCinemachineVcamSnapshotEntry[] a,
+            MobileHandheldCinemachineVcamSnapshotEntry[] b,
+            float t)
+        {
+            if (a == null || a.Length == 0)
+                return b ?? System.Array.Empty<MobileHandheldCinemachineVcamSnapshotEntry>();
+            if (b == null || b.Length == 0)
+                return a;
+
+            var result = new List<MobileHandheldCinemachineVcamSnapshotEntry>(a.Length);
+            for (int i = 0; i < a.Length; i++)
+            {
+                var ea = a[i];
+                if (ea == null)
+                    continue;
+                MobileHandheldCinemachineVcamSnapshotEntry eb = null;
+                for (int j = 0; j < b.Length; j++)
+                {
+                    if (b[j] != null && b[j].gameObjectName == ea.gameObjectName)
+                    {
+                        eb = b[j];
+                        break;
+                    }
+                }
+
+                if (eb == null)
+                {
+                    result.Add(CloneVcamEntry(ea));
+                    continue;
+                }
+
+                result.Add(LerpVcamEntry(ea, eb, t));
+            }
+
+            return result.ToArray();
+        }
+
+        private static MobileHandheldCinemachineVcamSnapshotEntry CloneVcamEntry(MobileHandheldCinemachineVcamSnapshotEntry s)
+        {
+            return new MobileHandheldCinemachineVcamSnapshotEntry
+            {
+                gameObjectName = s.gameObjectName,
+                priority = s.priority,
+                lensModeOverride = s.lensModeOverride,
+                fieldOfView = s.fieldOfView,
+                orthographicSize = s.orthographicSize,
+                nearClipPlane = s.nearClipPlane,
+                farClipPlane = s.farClipPlane,
+                dutch = s.dutch,
+            };
+        }
+
+        private static MobileHandheldCinemachineVcamSnapshotEntry LerpVcamEntry(
+            MobileHandheldCinemachineVcamSnapshotEntry a,
+            MobileHandheldCinemachineVcamSnapshotEntry b,
+            float t)
+        {
+            return new MobileHandheldCinemachineVcamSnapshotEntry
+            {
+                gameObjectName = a.gameObjectName,
+                priority = Mathf.RoundToInt(Mathf.Lerp(a.priority, b.priority, t)),
+                lensModeOverride = t < 0.5f ? a.lensModeOverride : b.lensModeOverride,
+                fieldOfView = Mathf.Lerp(a.fieldOfView, b.fieldOfView, t),
+                orthographicSize = Mathf.Lerp(a.orthographicSize, b.orthographicSize, t),
+                nearClipPlane = Mathf.Lerp(a.nearClipPlane, b.nearClipPlane, t),
+                farClipPlane = Mathf.Lerp(a.farClipPlane, b.farClipPlane, t),
+                dutch = Mathf.Lerp(a.dutch, b.dutch, t),
+            };
         }
 
         private static MobileHandheldLayoutPresetEntry CloneEntryShallow(
@@ -158,9 +241,12 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 screenWidth = w,
                 screenHeight = h,
                 label = string.IsNullOrEmpty(source.label) ? labelSuffix : source.label + "_" + labelSuffix,
-                applyLetterbox = source.applyLetterbox,
-                letterboxDesignWidth = source.letterboxDesignWidth,
-                letterboxDesignHeight = source.letterboxDesignHeight,
+                applyGameplayCameras = source.applyGameplayCameras,
+                cinemachineBrainOutputCamera = source.cinemachineBrainOutputCamera,
+                hybridFpsCamera = source.hybridFpsCamera,
+                hybridBombermanCamera = source.hybridBombermanCamera,
+                hybridArenaPerspectiveCamera = source.hybridArenaPerspectiveCamera,
+                cinemachineVcams = source.cinemachineVcams,
                 applyUiCanvas = source.applyUiCanvas,
                 uiCanvasRootRect = source.uiCanvasRootRect,
                 uiCanvasScaler = source.uiCanvasScaler,
