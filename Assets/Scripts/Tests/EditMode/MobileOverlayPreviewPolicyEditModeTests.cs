@@ -40,5 +40,28 @@ namespace HybridGame.MasterBlaster.Tests.EditMode
             Assert.IsFalse(MobileOverlayBootstrap.PreviewSimulateHandheldActive);
             Assert.IsFalse(MobileOverlayBootstrap.PreviewIgnoreFlowStateActive);
         }
+
+        [Test]
+        public void SetPreviewOverlayState_FalseToTrue_FiresHandheldPreviewBecameActive()
+        {
+            MobileOverlayBootstrap.SetPreviewOverlayState(false, false);
+            bool fired = false;
+            void Handler()
+            {
+                fired = true;
+            }
+
+            MobileOverlayBootstrap.HandheldPreviewBecameActive += Handler;
+            try
+            {
+                MobileOverlayBootstrap.SetPreviewOverlayState(true, false);
+                Assert.IsTrue(fired, "GameManager subscribes to re-attach MobilePlayerInput when preview turns on after load.");
+            }
+            finally
+            {
+                MobileOverlayBootstrap.HandheldPreviewBecameActive -= Handler;
+                MobileOverlayBootstrap.SetPreviewOverlayState(false, false);
+            }
+        }
     }
 }

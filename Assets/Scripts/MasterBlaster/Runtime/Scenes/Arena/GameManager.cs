@@ -199,7 +199,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         {
             // Soft singleton: first arena wins. Multi-arena training scenes use local references instead.
             if (Instance == null)
+            {
                 Instance = this;
+                MobileOverlayBootstrap.HandheldPreviewBecameActive += OnHandheldPreviewBecameActive;
+            }
         }
 
         /// <summary>
@@ -216,6 +219,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
 
         private void OnDisable()
         {
+            if (Instance == this)
+                MobileOverlayBootstrap.HandheldPreviewBecameActive -= OnHandheldPreviewBecameActive;
             CancelInvoke(); // Cancel pending round-end transitions (e.g. Standings after 3s delay).
         }
 
@@ -223,7 +228,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
         {
             base.OnDestroy();
             if (Instance == this)
+            {
+                MobileOverlayBootstrap.HandheldPreviewBecameActive -= OnHandheldPreviewBecameActive;
                 Instance = null;
+            }
         }
 
         private void OnEnable()
@@ -706,13 +714,43 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             }
         }
 
-        private void EnablePlayer(GameObject playerObj, int id)
+        /// <summary>
+        /// Re-runs <see cref="AttachInputProvider"/> for active player slots (e.g. editor handheld preview turned on after first wire-up).
+        /// </summary>
+        private void RefreshArenaPlayersAttachInput(int playerCount)
         {
-            var dualMode = playerObj.GetComponent<PlayerDualModeController>();
+            if (players == null)
+                return;
+            for (int id = 1; id <= playerCount; id++)
+            {
+                if (id - 1 >= players.Length)
+                    break;
+                var playerObj = players[id - 1];
+                if (playerObj == null || !playerObj.activeSelf)
+                    continue;
+                var movement = playerObj.GetComponent<PlayerController>();
+                AttachInputProvider(playerObj, id, movement);
+            }
+        }
+
+        private void OnHandheldPreviewBecameActive()
+        {
+            if (Instance != this || players == null)
+                return;
+            int raw = PlayerPrefs.GetInt("Players", 2);
+            int playerCount = MobileSessionPlayerCount.GetEffectivePlayerCount(raw);
+            RefreshArenaPlayersAttachInput(playerCount);
+            UnityEngine.Debug.Log(
+                "[GameManager][MasterBlaster][Mobile] Re-attached input after handheld preview became active (player 1 may now use MobilePlayerInput).");
+        }
+
+        private void EnablePlayer(GameObject playerObject, int id)
+        {
+            var dualMode = playerObject.GetComponent<PlayerDualModeController>();
             if (dualMode != null)
                 dualMode.playerId = id;
 
-            var movement = playerObj.GetComponent<PlayerController>();
+            var movement = playerObject.GetComponent<PlayerController>();
             if (movement != null)
             {
                 movement.playerId = id;
@@ -720,15 +758,15 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
                     SessionManager.Instance != null ? SessionManager.Instance.GetWins(id) : 0;
             }
 
-            AttachInputProvider(playerObj, id, movement);
+            AttachInputProvider(playerObject, id, movement);
 
             // Ensure any scene/prefab offsets don't lift the player off the arena plane.
-            var lp = playerObj.transform.localPosition;
+            var lp = playerObject.transform.localPosition;
             lp.y = ArenaGrid3D.GridOrigin.y;
-            playerObj.transform.localPosition = lp;
+            playerObject.transform.localPosition = lp;
 
-            playerObj.SetActive(true);
-            StartCoroutine(ClampPlayerFeetToFloorNextFrame(playerObj));
+            playerObject.SetActive(true);
+            StartCoroutine(ClampPlayerFeetToFloorNextFrame(playerObject));
         }
 
         private void AttachInputProvider(GameObject playerObj, int id, PlayerController movement)

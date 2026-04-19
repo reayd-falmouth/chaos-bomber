@@ -8,6 +8,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
     /// Often lives on the same object as <see cref="MobileOverlayBootstrap"/> (see MasterBlaster_FPS
     /// <c>MobileOverlayManager</c> root). Disable this component or GameObject for desktop-only Editor play.
     /// </summary>
+    /// <remarks>
+    /// Execution order must run before <see cref="HybridGame.MasterBlaster.Scripts.Scenes.Arena.GameManager"/> (default order -1) so
+    /// <see cref="MobileOverlayBootstrap.SetPreviewOverlayState"/> is applied before arena <c>AttachInputProvider</c>.
+    /// </remarks>
+    [DefaultExecutionOrder(-50)]
     public class MobileOverlayPreviewController : MonoBehaviour
     {
         [Header("Preview")]
@@ -25,6 +30,12 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         private bool logWhenPreviewStarts = true;
 
         private bool _loggedPreviewStart;
+
+        private void Awake()
+        {
+            // Set preview flags before GameManager.OnEnable/SetupPlayers (GameManager order -1; this type -50).
+            SyncPreviewState();
+        }
 
         private void OnEnable()
         {

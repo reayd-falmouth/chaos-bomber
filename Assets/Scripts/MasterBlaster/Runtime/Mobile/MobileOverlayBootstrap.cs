@@ -105,10 +105,19 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         /// Editor preview: drives overlay visibility and, with <see cref="FlowScreenAccessibilityTextScale.GetCombinedTextScale"/>,
         /// Quote/Prologue text scaling (same gate as <see cref="ShouldMergeOverlayIntoUiInput"/>). Does not change <see cref="FlowScreenAccessibilityTextScale.IsHandheldMobile"/>.
         /// </summary>
+        /// <summary>
+        /// Fired when editor handheld simulation goes from off to on so <see cref="GameManager"/> can re-run
+        /// <c>AttachInputProvider</c> (player 1 may have been wired before the preview flag was set).
+        /// </summary>
+        public static event System.Action HandheldPreviewBecameActive;
+
         public static void SetPreviewOverlayState(bool simulateHandheld, bool ignoreFlowStateForVisibility)
         {
+            bool was = s_previewSimulateHandheld;
             s_previewSimulateHandheld = simulateHandheld;
             s_previewIgnoreFlowState = ignoreFlowStateForVisibility;
+            if (simulateHandheld && !was)
+                HandheldPreviewBecameActive?.Invoke();
         }
 
         /// <summary>
