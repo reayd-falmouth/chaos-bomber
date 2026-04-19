@@ -43,6 +43,28 @@ namespace HybridGame.MasterBlaster.Tests
             Assert.That(r, Is.EqualTo(Vector2.up));
         }
 
+        /// <summary>
+        /// MergeBombermanGridMove(arenaPlayerId != 1) zeros overlay before Core; same result as merge with zero overlay.
+        /// </summary>
+        [Test]
+        public void MergeBombermanGridMoveCore_NonPlayer1OverlaySuppressed_MatchesZeroOverlayUnderMerge()
+        {
+            Vector2 move = new Vector2(0.7f, 0f);
+            Vector2 withP1Overlay = MobileMenuInputBridge.MergeBombermanGridMoveCore(
+                mergeOverlayUi: true,
+                overlayDigital: Vector2.right,
+                moveActionValue: move,
+                ipMoveDirection: Vector2.zero);
+            Assert.That(withP1Overlay, Is.EqualTo(Vector2.right));
+
+            Vector2 nonP1Equivalent = MobileMenuInputBridge.MergeBombermanGridMoveCore(
+                mergeOverlayUi: true,
+                overlayDigital: Vector2.zero,
+                moveActionValue: move,
+                ipMoveDirection: Vector2.zero);
+            Assert.That(nonP1Equivalent, Is.EqualTo(move));
+        }
+
         [Test]
         public void TryVerticalMenuNavUp_CrossesThreshold_ReturnsTrue()
         {

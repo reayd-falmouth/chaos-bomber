@@ -12,11 +12,17 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         /// Bomberman grid movement: when <see cref="MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput"/> is true,
         /// on-screen D-pad (<see cref="MobileOverlayState.GetDigitalMove"/>) must win over the Input System Move action,
         /// which can report non-zero values while the cursor is unlocked (blocking the IPlayerInput fallback).
+        /// Only <paramref name="arenaPlayerId"/> 1 receives the shared overlay; other players use move/IP only.
         /// </summary>
-        public static Vector2 MergeBombermanGridMove(Vector2 moveActionValue, Vector2 ipMoveDirection)
+        public static Vector2 MergeBombermanGridMove(
+            Vector2 moveActionValue,
+            Vector2 ipMoveDirection,
+            int arenaPlayerId)
         {
             bool merge = MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
-            Vector2 overlayDigital = merge ? MobileOverlayState.GetDigitalMove() : Vector2.zero;
+            Vector2 overlayDigital = Vector2.zero;
+            if (merge && arenaPlayerId == 1)
+                overlayDigital = MobileOverlayState.GetDigitalMove();
             return MergeBombermanGridMoveCore(merge, overlayDigital, moveActionValue, ipMoveDirection);
         }
 

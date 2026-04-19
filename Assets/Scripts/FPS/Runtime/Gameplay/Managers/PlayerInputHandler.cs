@@ -21,6 +21,7 @@ namespace Unity.FPS.Gameplay
         public bool InvertXAxis = false;
 
         PlayerCharacterController m_PlayerCharacterController;
+        IMobileOverlayMoveGate m_MobileOverlayMoveGate;
         bool m_FireInputWasHeld;
 
         void Start()
@@ -28,6 +29,8 @@ namespace Unity.FPS.Gameplay
             m_PlayerCharacterController = GetComponent<PlayerCharacterController>();
             DebugUtility.HandleErrorIfNullGetComponent<PlayerCharacterController, PlayerInputHandler>(
                 m_PlayerCharacterController, this, gameObject);
+
+            m_MobileOverlayMoveGate = GetComponent<IMobileOverlayMoveGate>();
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -46,7 +49,8 @@ namespace Unity.FPS.Gameplay
         public Vector3 GetMoveInput()
         {
             // Master Blaster mobile overlay (registered via FpsTouchMoveBridge from HybridGame): D-pad works without locked cursor / legacy axes.
-            if (FpsTouchMoveBridge.TryGetDigitalMoveWorld != null)
+            if (FpsTouchMoveBridge.TryGetDigitalMoveWorld != null &&
+                (m_MobileOverlayMoveGate == null || m_MobileOverlayMoveGate.AllowTouchOverlayMove))
             {
                 Vector3 overlay = FpsTouchMoveBridge.TryGetDigitalMoveWorld();
                 if (overlay.sqrMagnitude > 0.0001f)

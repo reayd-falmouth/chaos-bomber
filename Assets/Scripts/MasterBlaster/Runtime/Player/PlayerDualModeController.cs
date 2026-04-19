@@ -32,7 +32,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
     /// </summary>
     [DefaultExecutionOrder(-100)]
     [RequireComponent(typeof(CharacterController))]
-    public class PlayerDualModeController : MonoBehaviour, IFpsArenaMovementLock
+    public class PlayerDualModeController : MonoBehaviour, IFpsArenaMovementLock, IMobileOverlayMoveGate
     {
         [Header("Bomberman Movement")]
         public float bombermanSpeed = 5f;
@@ -42,6 +42,9 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         /// <inheritdoc />
         public bool IsArenaStopActive => stop;
+
+        /// <inheritdoc cref="IMobileOverlayMoveGate" />
+        public bool AllowTouchOverlayMove => playerId == 1;
 
         [Header("Session")]
         [Tooltip("Synced from PlayerController (Awake/Start). Used for coins and shared-input ownership.")]
@@ -535,7 +538,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                     moveAct = m_MoveAction.ReadValue<Vector2>();
                 var ip = GetComponent<IPlayerInput>();
                 Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
-                Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove);
+                Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove, playerId);
 
                 if (rawDir.sqrMagnitude < 0.25f) return;
 
@@ -806,7 +809,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 moveAct = m_MoveAction.ReadValue<Vector2>();
             var ip = GetComponent<IPlayerInput>();
             Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
-            Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove);
+            Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove, playerId);
 
             if (rawDir.sqrMagnitude < 0.25f) return Vector2Int.zero;
             return GetCardinalDirection(rawDir);
@@ -823,7 +826,7 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 moveAct = m_MoveAction.ReadValue<Vector2>();
             var ip = GetComponent<IPlayerInput>();
             Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
-            return MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove);
+            return MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove, playerId);
         }
 
         // ── Sprite direction ──────────────────────────────────────────────────────
