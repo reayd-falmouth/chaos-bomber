@@ -2,7 +2,6 @@ using System.IO;
 using HybridGame.MasterBlaster.Scripts.Mobile.Layout;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Device;
 
 namespace HybridGame.MasterBlaster.Editor
 {
@@ -12,13 +11,13 @@ namespace HybridGame.MasterBlaster.Editor
     public static class MobileHandheldSimulatorDeviceLabel
     {
         /// <summary>
-        /// Uses <see cref="SystemInfo.deviceModel"/> (simulated in Device Simulator) and installed
+        /// Uses <see cref="UnityEngine.Device.SystemInfo.deviceModel"/> (simulated in Device Simulator) and installed
         /// <c>com.unity.device-simulator.devices</c> <c>.device</c> files to find <c>friendlyName</c>.
-        /// Falls back to <see cref="SystemInfo.deviceModel"/> when no file matches.
+        /// Falls back to <see cref="UnityEngine.Device.SystemInfo.deviceModel"/> when no file matches.
         /// </summary>
         public static string ResolveFriendlyNameOrDeviceModel()
         {
-            string model = SystemInfo.deviceModel;
+            string model = UnityEngine.Device.SystemInfo.deviceModel;
             if (string.IsNullOrEmpty(model))
                 return string.Empty;
 
@@ -82,7 +81,7 @@ namespace HybridGame.MasterBlaster.Editor
 
         private static string TryGetDeviceDefinitionsDirectoryFromPackageCache()
         {
-            var projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
+            var projectRoot = Directory.GetParent(UnityEngine.Application.dataPath)?.FullName;
             if (string.IsNullOrEmpty(projectRoot))
                 return null;
 
