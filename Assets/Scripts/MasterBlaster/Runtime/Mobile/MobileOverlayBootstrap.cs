@@ -37,6 +37,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         [Tooltip("When off, SafeArea fills the full overlay (anchors 0–1); Screen.safeArea is not applied. Use while fixing layout; re-enable for notch / home-indicator insets on device.")]
         private bool applyScreenSafeAreaInset = true;
 
+        [Header("Handheld layout presets")]
+        [SerializeField]
+        [Tooltip("When true, SafeArea rect is not driven by Screen.safeArea — use MobileHandheldLayoutController snapshots instead.")]
+        private bool deferSafeAreaLayout;
+
         [Header("Diagnostics")]
         [SerializeField]
         [Tooltip("When enabled, logs whenever normalized safe-area anchors change (rotation, inset updates). Prefix [MasterBlaster][MobileOverlay][SafeArea].")]
@@ -120,6 +125,18 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             DontDestroyOnLoad(gameObject);
             FpsTouchMoveBridge.TryGetDigitalMoveWorld = FpsTouchMoveWorld;
         }
+
+        /// <summary>Scene refs for handheld layout capture (optional).</summary>
+        public Canvas AuthoringCanvas => _authoringCanvas;
+
+        /// <summary>Scene refs for handheld layout capture (optional).</summary>
+        public RectTransform AuthoringOverlayRootRect => _authoringOverlayRoot;
+
+        /// <summary>Scene refs for handheld layout capture (optional).</summary>
+        public RectTransform AuthoringSafeAreaRect => _authoringSafeArea;
+
+        /// <summary>When true, automatic safe-area layout is skipped so presets can own the SafeArea rect.</summary>
+        public void SetDeferSafeAreaLayout(bool defer) => deferSafeAreaLayout = defer;
 
         private void OnDestroy()
         {
@@ -353,6 +370,9 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         private void ApplySafeAreaToRect(RectTransform target)
         {
             if (target == null)
+                return;
+
+            if (deferSafeAreaLayout)
                 return;
 
             Vector2 min;

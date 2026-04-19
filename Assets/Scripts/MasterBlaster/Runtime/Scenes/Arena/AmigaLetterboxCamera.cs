@@ -92,6 +92,26 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             ApplyLetterbox();
         }
 
+        /// <summary>Sets design aspect (handheld layout presets) and reapplies letterbox.</summary>
+        public void SetDesignResolution(int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                UnityEngine.Debug.LogWarning(
+                    "[MasterBlaster][AmigaLetterbox] SetDesignResolution ignored invalid size " + width + "x" + height + ".");
+                return;
+            }
+
+            designWidth = width;
+            designHeight = height;
+            _designAspect = designWidth / (float)designHeight;
+            RefreshAndApply();
+        }
+
+        public int GetDesignWidth() => designWidth;
+
+        public int GetDesignHeight() => designHeight;
+
         /// <summary>
         /// Centers the camera on the arena and sets the viewport rect to the design aspect ratio,
         /// adding letterbox / pillarbox bars as needed.

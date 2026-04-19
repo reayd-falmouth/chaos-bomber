@@ -242,7 +242,25 @@ namespace HybridGame.MasterBlaster.Scripts.Arena
             // The hybrid arena gameplay uses a fixed XZ grid and expects "floor" to be world Y=0.
             // Keep GridOrigin.y at 0 so SnapToCell / movement do not lift characters vertically.
             ArenaGrid3D.GridOrigin = new Vector3(worldOrigin.x, 0f, worldOrigin.z);
-            UnityEngine.Debug.Log($"[HybridArenaGrid] GridOrigin set to {ArenaGrid3D.GridOrigin}");
+            PublishCellSizeFromDestructibleParent();
+            UnityEngine.Debug.Log($"[HybridArenaGrid] GridOrigin set to {ArenaGrid3D.GridOrigin}, CellSize={ArenaGrid3D.CellSize}");
+        }
+
+        /// <summary>
+        /// World-space extent of one grid step along logical +X must match <see cref="ArenaGrid3D.CellSize"/> or
+        /// shrink blocks / <see cref="ArenaGrid3D.CellToWorld"/> drift when the arena parent is scaled.
+        /// </summary>
+        private void PublishCellSizeFromDestructibleParent()
+        {
+            if (destructibleWallsParent == null)
+            {
+                ArenaGrid3D.CellSize = 1f;
+                return;
+            }
+
+            Vector3 vx = destructibleWallsParent.TransformVector(new Vector3(1f, 0f, 0f));
+            float step = new Vector2(vx.x, vx.z).magnitude;
+            ArenaGrid3D.CellSize = step > 1e-5f ? step : 1f;
         }
 
         /// <summary>
