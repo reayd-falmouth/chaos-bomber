@@ -40,5 +40,30 @@ namespace fps.Tests.EditMode
                 Object.DestroyImmediate(canvasGo);
             }
         }
+
+        [Test]
+        public void MobileHoldButton_RefreshRaycastTarget_DisablesDecorativeDPadRootRaycast()
+        {
+            var canvasGo = new GameObject("Canvas", typeof(Canvas));
+            var dpadRoot = new GameObject("DPadRoot");
+            dpadRoot.transform.SetParent(canvasGo.transform, false);
+            dpadRoot.AddComponent<RectTransform>();
+            var rootImage = dpadRoot.AddComponent<Image>();
+            rootImage.raycastTarget = true;
+
+            var go = new GameObject("Up");
+            go.transform.SetParent(dpadRoot.transform, false);
+            go.AddComponent<RectTransform>();
+            var image = go.AddComponent<Image>();
+            image.color = Color.white;
+            image.raycastTarget = true;
+
+            var hold = go.AddComponent<MobileHoldButton>();
+            hold.RefreshRaycastTarget();
+
+            Assert.IsFalse(
+                rootImage.raycastTarget,
+                "Opaque DPadRoot decoration must not steal raycasts from child MobileHoldButton tiles.");
+        }
     }
 }

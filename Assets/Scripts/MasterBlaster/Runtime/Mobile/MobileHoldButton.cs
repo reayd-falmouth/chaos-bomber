@@ -41,23 +41,29 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         public event Action<bool> OnPressedChanged;
 
         /// <summary>
-        /// Re-applies raycast fixes for fully transparent graphics. Idempotent; used at runtime from Awake/OnEnable
-        /// and callable from tests (Edit Mode tests may not invoke Unity event methods on ad-hoc GameObjects).
+        /// Re-applies raycast fixes for fully transparent graphics and decorative parents. Idempotent; used at runtime
+        /// from Awake/OnEnable and callable from tests (Edit Mode tests may not invoke Unity event methods on ad-hoc GameObjects).
         /// </summary>
         public void RefreshRaycastTarget()
         {
-            EnsureRaycastableGraphic();
+            ApplyMobileOverlayRaycastFixes();
         }
 
         private void Awake()
         {
-            EnsureRaycastableGraphic();
+            ApplyMobileOverlayRaycastFixes();
         }
 
         private void OnEnable()
         {
             // Run after Awake so we still correct CanvasRenderer after Graphic/Image setup (and any graphic rebuild).
+            ApplyMobileOverlayRaycastFixes();
+        }
+
+        private void ApplyMobileOverlayRaycastFixes()
+        {
             EnsureRaycastableGraphic();
+            TryDisableDecorativeParentImageRaycast();
         }
 
         /// <summary>
@@ -88,6 +94,35 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
                     + " control=" + control
                     + " hadCullTransparentMesh=" + hadCull
                     + " minAlphaApplied=" + bumpedAlpha);
+            }
+        }
+
+        /// <summary>
+        /// Scene-authored layouts often use a large decorative <see cref="Image"/> on <c>DPadRoot</c> / <c>BombRoot</c>
+        /// with raycasting enabled. That graphic can win the raycast over child tiles (which carry this component),
+        /// but it has no <see cref="MobileHoldButton"/> — so pointers never update <see cref="MobileOverlayState"/>.
+        /// </summary>
+        private void TryDisableDecorativeParentImageRaycast()
+        {
+            var parent = transform.parent;
+            if (parent == null)
+                return;
+            if (parent.name != "DPadRoot" && parent.name != "BombRoot")
+                return;
+            if (parent.GetComponent<MobileHoldButton>() != null)
+                return;
+
+            var parentImage = parent.GetComponent<Image>();
+            if (parentImage == null || !parentImage.raycastTarget)
+                return;
+
+            parentImage.raycastTarget = false;
+
+            if (logRaycastFixToConsole)
+            {
+                UnityEngine.Debug.Log(
+                    "[MasterBlaster][MobileOverlay] Disabled decorative Image.raycastTarget on parent="
+                    + parent.name + " so child=" + gameObject.name + " control=" + control + " receives pointers.");
             }
         }
 
