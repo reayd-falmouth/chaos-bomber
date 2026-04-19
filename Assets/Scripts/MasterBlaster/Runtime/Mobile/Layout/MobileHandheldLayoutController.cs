@@ -25,6 +25,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [SerializeField]
         private MobileHandheldLayoutPresetEntry[] inlinePresets = System.Array.Empty<MobileHandheldLayoutPresetEntry>();
 
+        [Header("Last capture (Inspector)")]
+        [Tooltip("Filled by the Inspector Capture button; saved with the scene. Does not auto-apply at runtime unless also listed under Preset Library or Inline Presets.")]
+        [SerializeField]
+        private MobileHandheldLayoutPresetEntry lastCapturedPreset;
+
         [SerializeField]
         private MobileHandheldPresetMatchMode matchMode = MobileHandheldPresetMatchMode.NearestAspectRatio;
 
@@ -66,6 +71,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
         [SerializeField]
         private bool logWhenSkipped;
+
+        [SerializeField]
+        [Tooltip("When enabled, CaptureCurrentLayoutToScratch logs to the Console. Prefix [MasterBlaster][MobileHandheldLayout].")]
+        private bool logWhenCaptureStored;
 
         private int _lastScreenWidth = -1;
         private int _lastScreenHeight = -1;
@@ -136,6 +145,36 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 e.overlaySafeAreaRect = MobileHandheldRectSnapshot.Capture(mobileOverlaySafeArea);
 
             return e;
+        }
+
+        /// <summary>
+        /// Stores a snapshot on this component (<see cref="lastCapturedPreset"/>), editable in the Inspector and saved with the scene.
+        /// </summary>
+        public void CaptureCurrentLayoutToScratch(int screenW, int screenH, string label)
+        {
+            lastCapturedPreset = BuildCaptureFromSceneRefs(screenW, screenH, label);
+            if (logWhenCaptureStored)
+            {
+                UnityEngine.Debug.Log(
+                    LogPrefix + " Stored lastCapturedPreset label=\"" + (label ?? string.Empty) + "\" key=" + screenW + "x" + screenH + ".");
+            }
+        }
+
+        /// <summary>Appends a fresh snapshot to <see cref="inlinePresets"/> (scene-local list).</summary>
+        public void AppendCaptureToInlinePresets(int screenW, int screenH, string label)
+        {
+            var entry = BuildCaptureFromSceneRefs(screenW, screenH, label);
+            int n = inlinePresets != null ? inlinePresets.Length : 0;
+            var newArr = new MobileHandheldLayoutPresetEntry[n + 1];
+            for (int i = 0; i < n; i++)
+                newArr[i] = inlinePresets[i];
+            newArr[n] = entry;
+            inlinePresets = newArr;
+            if (logWhenCaptureStored)
+            {
+                UnityEngine.Debug.Log(
+                    LogPrefix + " Appended inline preset index=" + n + " label=\"" + (label ?? string.Empty) + "\" key=" + screenW + "x" + screenH + ".");
+            }
         }
 
         private bool ShouldRunOnThisPlatform()
