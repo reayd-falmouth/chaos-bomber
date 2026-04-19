@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbb417267b276f644a4c0c1161008dba, type: 3}
+  m_Name: MobileHandheldLayoutPresetLibrary
+  m_EditorClassIdentifier: HybridGame::HybridGame.MasterBlaster.Scripts.Mobile.Layout.MobileHandheldLayoutPresetLibrary
+  entries: []
