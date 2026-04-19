@@ -204,6 +204,23 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
             if (mobileOverlayBackground != null)
                 e.overlayBackgroundRect = MobileHandheldRectSnapshot.Capture(mobileOverlayBackground);
 
+            if (captureOverlayDescendantRects && mobileOverlayRoot != null)
+            {
+                var exclude = new List<RectTransform>(2);
+                if (mobileOverlaySafeArea != null)
+                    exclude.Add(mobileOverlaySafeArea);
+                if (mobileOverlayBackground != null)
+                    exclude.Add(mobileOverlayBackground);
+                e.overlayDescendantRects = MobileHandheldOverlayRectPathUtility.CaptureDescendants(
+                    mobileOverlayRoot,
+                    includeInactiveOverlayDescendants,
+                    exclude);
+            }
+            else
+            {
+                e.overlayDescendantRects = System.Array.Empty<MobileHandheldOverlayRectPathEntry>();
+            }
+
             return e;
         }
 
