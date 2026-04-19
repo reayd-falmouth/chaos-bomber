@@ -16,6 +16,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [Tooltip("Optional label for the Inspector / debugging.")]
         public string label = string.Empty;
 
+        [Tooltip(
+            "Set when capturing in the Editor (especially Device Simulator); matches UnityEngine.Device.SystemInfo.deviceModel so presets stay associated with a device.")]
+        public string simulatedDeviceModel = string.Empty;
+
         [Header("Gameplay cameras (Cinemachine)")]
         [Tooltip("When true, applies brain output Unity Camera + registered Cinemachine vcams below.")]
         public bool applyGameplayCameras = true;

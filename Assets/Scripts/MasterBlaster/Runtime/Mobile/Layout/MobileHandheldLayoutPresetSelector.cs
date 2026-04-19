@@ -130,6 +130,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 screenWidth = screenWidth,
                 screenHeight = screenHeight,
                 label = $"interpolated({lower.label},{upper.label})",
+                simulatedDeviceModel = string.Empty,
                 applyGameplayCameras = lower.applyGameplayCameras && upper.applyGameplayCameras,
                 cinemachineBrainOutputCamera = MobileHandheldUnityCameraSnapshot.Lerp(
                     lower.cinemachineBrainOutputCamera,
@@ -232,6 +233,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 screenWidth = w,
                 screenHeight = h,
                 label = string.IsNullOrEmpty(source.label) ? labelSuffix : source.label + "_" + labelSuffix,
+                simulatedDeviceModel = source.simulatedDeviceModel,
                 applyGameplayCameras = source.applyGameplayCameras,
                 cinemachineBrainOutputCamera = source.cinemachineBrainOutputCamera,
                 cinemachineVcams = source.cinemachineVcams,

@@ -3,6 +3,7 @@ using HybridGame.MasterBlaster.Scripts.Arena;
 using HybridGame.MasterBlaster.Scripts.Camera;
 using HybridGame.MasterBlaster.Scripts.Mobile;
 using Unity.Cinemachine;
+using Screen = UnityEngine.Device.Screen;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -83,6 +84,11 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [Tooltip("When enabled, CaptureCurrentLayoutToScratch logs to the Console. Prefix [MasterBlaster][MobileHandheldLayout].")]
         private bool logWhenCaptureStored;
 
+        [SerializeField]
+        [Tooltip(
+            "When enabled, logs once whenever UnityEngine.Device.Screen width/height changes (Device Simulator / rotation). Prefix [MasterBlaster][MobileHandheldLayout].")]
+        private bool logWhenScreenKeyChanges;
+
         private int _lastScreenWidth = -1;
         private int _lastScreenHeight = -1;
         private bool _deferSafeAreaActive;
@@ -104,6 +110,19 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
             if (_lastScreenWidth == w && _lastScreenHeight == h)
                 return;
+
+            if (logWhenScreenKeyChanges)
+            {
+                UnityEngine.Debug.Log(
+                    LogPrefix + " Screen key "
+                    + (_lastScreenWidth < 0
+                        ? "set to "
+                        : "changed from " + _lastScreenWidth + "x" + _lastScreenHeight + " to ")
+                    + w
+                    + "x"
+                    + h
+                    + " (UnityEngine.Device.Screen).");
+            }
 
             _lastScreenWidth = w;
             _lastScreenHeight = h;
@@ -130,6 +149,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 screenWidth = screenW,
                 screenHeight = screenH,
                 label = label ?? string.Empty,
+                simulatedDeviceModel = UnityEngine.Device.SystemInfo.deviceModel ?? string.Empty,
                 applyGameplayCameras = true,
             };
 

@@ -1,5 +1,6 @@
 using HybridGame.MasterBlaster.Scripts.Mobile.Layout;
 using UnityEditor;
+using Screen = UnityEngine.Device.Screen;
 using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Editor
@@ -10,13 +11,15 @@ namespace HybridGame.MasterBlaster.Editor
         private SerializedProperty _presetLibrary;
         private int _captureScreenW = 1920;
         private int _captureScreenH = 1080;
-        private string _captureLabel = "captured";
+        private string _captureLabel = string.Empty;
         private bool _useScreenSizeAsKey = true;
         private Vector2 _scroll;
+        private bool _didAutoFillLabelThisInspectorSession;
 
         private void OnEnable()
         {
             _presetLibrary = serializedObject.FindProperty("presetLibrary");
+            _didAutoFillLabelThisInspectorSession = false;
         }
 
         public override void OnInspectorGUI()
@@ -35,7 +38,7 @@ namespace HybridGame.MasterBlaster.Editor
                 MessageType.Info);
 
             _useScreenSizeAsKey = EditorGUILayout.ToggleLeft(
-                "Use current Screen.width / Screen.height as key (recommended in Play Mode)",
+                "Use current UnityEngine.Device.Screen width/height as key (Device Simulator / Play Mode)",
                 _useScreenSizeAsKey);
 
             if (!_useScreenSizeAsKey)
@@ -46,7 +49,30 @@ namespace HybridGame.MasterBlaster.Editor
                 EditorGUILayout.EndScrollView();
             }
 
+            if (Application.isPlaying && !_didAutoFillLabelThisInspectorSession)
+            {
+                _didAutoFillLabelThisInspectorSession = true;
+                if (string.IsNullOrEmpty(_captureLabel))
+                    _captureLabel = MobileHandheldSimulatorDeviceLabel.ResolveFriendlyNameOrDeviceModel();
+            }
+
             _captureLabel = EditorGUILayout.TextField("Label", _captureLabel);
+
+            if (Application.isPlaying)
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Refresh label from simulator", GUILayout.Width(200f)))
+                {
+                    _captureLabel = MobileHandheldSimulatorDeviceLabel.ResolveFriendlyNameOrDeviceModel();
+                }
+
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.HelpBox(
+                    "Label defaults to the Device Simulator package friendly name for the current "
+                    + UnityEngine.Device.SystemInfo.deviceModel
+                    + " when empty; use Refresh to update after switching devices.",
+                    MessageType.None);
+            }
 
             if (!Application.isPlaying && _useScreenSizeAsKey)
             {
@@ -108,7 +134,7 @@ namespace HybridGame.MasterBlaster.Editor
                 EditorGUILayout.HelpBox("Optional: assign a Preset Library asset to also append rows into that .asset file.", MessageType.Info);
 
             EditorGUILayout.Space(4f);
-            if (GUILayout.Button("Apply matching preset now (uses Screen.width/height)"))
+            if (GUILayout.Button("Apply matching preset now (uses UnityEngine.Device.Screen)"))
             {
                 Undo.RecordObject(ctrl, "Apply handheld layout preset");
                 ctrl.ApplyNowForCurrentScreen();

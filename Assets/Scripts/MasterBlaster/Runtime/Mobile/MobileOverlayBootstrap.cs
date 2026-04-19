@@ -1,5 +1,6 @@
 using HybridGame.MasterBlaster.Scripts.Core;
 using Unity.FPS.Game;
+using Screen = UnityEngine.Device.Screen;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
