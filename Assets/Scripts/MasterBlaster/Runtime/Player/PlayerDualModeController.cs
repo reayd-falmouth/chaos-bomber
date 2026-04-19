@@ -90,6 +90,12 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [Tooltip("When enabled, one log per mode change on the next frame (after cameras update): player Billbox, BillboardSprites on the player, and each bomb you placed (BillBox reorientation vs mode).")]
         [SerializeField] private bool debugLogBillboxOnModeChange;
 
+        [Tooltip(
+            "When enabled, throttled logs for Bomberman touch overlay merge: playerId, merge gate, overlay digital move, raw direction. " +
+            "Prefix [MasterBlaster][MobileHandheld][BombermanMerge]. Touch overlay applies to playerId 1 only.")]
+        [SerializeField]
+        private bool logBombermanTouchOverlayMerge;
+
         // ── private state ──────────────────────────────────────────────────────────
         private Transform m_BillboxRoot;
         private CharacterController m_CC;
@@ -110,6 +116,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private bool m_BombermanMoving;
         private Vector2Int m_LastDir = Vector2Int.down;
         private float m_BombermanMoveElapsed;
+
+        private float m_NextBombermanMergeDiagLogTime;
 
         private Superman m_Superman;
         // We use reflection here to avoid hard compile-time dependency issues between asmdef boundaries.
@@ -539,6 +547,29 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 var ip = GetComponent<IPlayerInput>();
                 Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
                 Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove, playerId);
+
+                if (logBombermanTouchOverlayMerge && Time.unscaledTime >= m_NextBombermanMergeDiagLogTime)
+                {
+                    m_NextBombermanMergeDiagLogTime = Time.unscaledTime + 2f;
+                    bool merge = MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
+                    Vector2 overlayOnly = merge && playerId == 1 ? MobileOverlayState.GetDigitalMove() : Vector2.zero;
+                    UnityEngine.Debug.Log(
+                        "[MasterBlaster][MobileHandheld][BombermanMerge] playerId="
+                        + playerId
+                        + " mergeOverlayUi="
+                        + merge
+                        + " overlayDigitalSqr="
+                        + overlayOnly.sqrMagnitude.ToString("F4")
+                        + " moveActionSqr="
+                        + moveAct.sqrMagnitude.ToString("F4")
+                        + " ipMoveSqr="
+                        + ipMove.sqrMagnitude.ToString("F4")
+                        + " rawDirSqr="
+                        + rawDir.sqrMagnitude.ToString("F4")
+                        + " ownsSharedInput="
+                        + OwnsBombermanSharedInput()
+                        + ".");
+                }
 
                 if (rawDir.sqrMagnitude < 0.25f) return;
 

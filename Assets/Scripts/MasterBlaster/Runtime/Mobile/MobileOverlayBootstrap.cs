@@ -47,6 +47,12 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
         [Tooltip("When enabled, logs whenever normalized safe-area anchors change (rotation, inset updates). Prefix [MasterBlaster][MobileOverlay][SafeArea].")]
         private bool logSafeAreaDiagnostics;
 
+        [SerializeField]
+        [Tooltip(
+            "When enabled, logs platform/preview gates and overlay visibility every few seconds (throttled). " +
+            "Prefix [MasterBlaster][MobileOverlay][InputDiag]. Use to verify Editor vs device and MobileOverlayPreviewController.")]
+        private bool logOverlayInputDiagnostics;
+
         private GameObject _root;
         private RectTransform _safeArea;
 
@@ -55,7 +61,17 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
 
         private Vector2 _appliedSafeAnchorMax = new Vector2(float.NaN, float.NaN);
 
+        private float _nextOverlayInputDiagLogTime;
+
+        private const float OverlayInputDiagIntervalSeconds = 2f;
+
         private static readonly System.Func<Vector3> FpsTouchMoveWorld = GetFpsTouchMoveWorld;
+
+        /// <summary>Editor preview: <see cref="SetPreviewOverlayState"/> (e.g. <see cref="MobileOverlayPreviewController"/>).</summary>
+        public static bool PreviewSimulateHandheldActive => s_previewSimulateHandheld;
+
+        /// <summary>Editor preview: ignore Quote/Prologue control suppression when combined with <see cref="PreviewSimulateHandheldActive"/>.</summary>
+        public static bool PreviewIgnoreFlowStateActive => s_previewIgnoreFlowState;
 
         private static Vector3 GetFpsTouchMoveWorld()
         {
@@ -124,6 +140,9 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             _instance = this;
             DontDestroyOnLoad(gameObject);
             FpsTouchMoveBridge.TryGetDigitalMoveWorld = FpsTouchMoveWorld;
+
+            if (logOverlayInputDiagnostics)
+                LogOverlayInputEnvironmentSnapshot();
         }
 
         /// <summary>Scene refs for handheld layout capture (optional).</summary>
@@ -216,6 +235,24 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             {
                 SetOverlayActive(false);
                 MobileOverlayState.ResetAll();
+                if (logOverlayInputDiagnostics && Time.unscaledTime >= _nextOverlayInputDiagLogTime)
+                {
+                    _nextOverlayInputDiagLogTime = Time.unscaledTime + OverlayInputDiagIntervalSeconds;
+                    UnityEngine.Debug.LogWarning(
+                        "[MasterBlaster][MobileOverlay][InputDiag] Overlay disabled: platform is not Android/iPhone and editor preview "
+                        + "simulate handheld is off (see MobileOverlayPreviewController). MobileOverlayState is cleared every frame; "
+                        + "on-screen D-pad will not drive gameplay. "
+                        + "Snapshot: isEditor="
+                        + Application.isEditor
+                        + " platform="
+                        + Application.platform
+                        + " previewSimulateHandheld="
+                        + s_previewSimulateHandheld
+                        + " mergeUi="
+                        + ShouldMergeOverlayIntoUiInput()
+                        + ".");
+                }
+
                 return;
             }
 
@@ -225,6 +262,50 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile
             SetOverlayActive(showControls);
             if (!showControls)
                 MobileOverlayState.ResetAll();
+
+            if (logOverlayInputDiagnostics && Time.unscaledTime >= _nextOverlayInputDiagLogTime)
+            {
+                _nextOverlayInputDiagLogTime = Time.unscaledTime + OverlayInputDiagIntervalSeconds;
+                var flow = SceneFlowManager.I;
+                FlowState? flowState = flow != null ? flow.CurrentState : (FlowState?)null;
+                Vector2 d = MobileOverlayState.GetDigitalMove();
+                UnityEngine.Debug.Log(
+                    "[MasterBlaster][MobileOverlay][InputDiag] useMobileOverlay=true showControls="
+                    + showControls
+                    + " flowState="
+                    + (flowState.HasValue ? flowState.Value.ToString() : "null")
+                    + " digitalMoveSqr="
+                    + d.sqrMagnitude.ToString("F4")
+                    + " eventSystem="
+                    + (FindAnyObjectByType<EventSystem>() != null ? "ok" : "MISSING")
+                    + " overlayRootActive="
+                    + (_root != null && _root.activeSelf)
+                    + ".");
+            }
+        }
+
+        /// <summary>
+        /// One-shot environment log for D-pad / touch overlay debugging. Called from Awake when <see cref="logOverlayInputDiagnostics"/> is enabled.
+        /// </summary>
+        private void LogOverlayInputEnvironmentSnapshot()
+        {
+            bool handheld = FlowScreenAccessibilityTextScale.IsHandheldMobile();
+            UnityEngine.Debug.Log(
+                "[MasterBlaster][MobileOverlay][InputDiag] Environment snapshot: platform="
+                + Application.platform
+                + " isEditor="
+                + Application.isEditor
+                + " IsHandheldMobile="
+                + handheld
+                + " previewSimulateHandheld="
+                + s_previewSimulateHandheld
+                + " previewIgnoreFlowState="
+                + s_previewIgnoreFlowState
+                + " ShouldMergeOverlayIntoUiInput="
+                + ShouldMergeOverlayIntoUiInput()
+                + " ShouldUseMobileOverlay="
+                + ShouldUseMobileOverlay()
+                + ". Touch D-pad is merged for Bomberman playerId 1 only (see MobileMenuInputBridge.MergeBombermanGridMove).");
         }
 
         private bool ShouldUseMobileOverlay() =>

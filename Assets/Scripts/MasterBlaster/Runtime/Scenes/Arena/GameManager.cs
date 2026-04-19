@@ -783,7 +783,10 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             if (useMobileTouchInput)
             {
                 playerObj.AddComponent<MobilePlayerInput>();
-                UnityEngine.Debug.Log($"[GameManager] Player {id} -> MobilePlayerInput (touch overlay)");
+                UnityEngine.Debug.Log(
+                    "[GameManager] Player "
+                    + id
+                    + " -> MobilePlayerInput (touch overlay; on-screen D-pad is player 1 only per MobileMenuInputBridge / AttachInputProvider).");
             }
             else if (device.HasValue)
             {

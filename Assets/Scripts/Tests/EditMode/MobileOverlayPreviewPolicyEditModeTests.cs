@@ -32,5 +32,13 @@ namespace HybridGame.MasterBlaster.Tests.EditMode
         {
             Assert.IsTrue(MobileOverlayPreviewPolicy.ShouldShowControlsForFlow(false, false, null));
         }
+
+        [Test]
+        public void MobileOverlayBootstrap_PreviewFlags_DefaultFalseWithoutEditorPreview()
+        {
+            MobileOverlayBootstrap.SetPreviewOverlayState(false, false);
+            Assert.IsFalse(MobileOverlayBootstrap.PreviewSimulateHandheldActive);
+            Assert.IsFalse(MobileOverlayBootstrap.PreviewIgnoreFlowStateActive);
+        }
     }
 }
