@@ -16,21 +16,12 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [Tooltip("Optional label for the Inspector / debugging.")]
         public string label = string.Empty;
 
-        [Header("Gameplay cameras (Cinemachine / Hybrid)")]
-        [Tooltip("When true, applies brain output + Hybrid cameras + registered Cinemachine vcams below.")]
+        [Header("Gameplay cameras (Cinemachine)")]
+        [Tooltip("When true, applies brain output Unity Camera + registered Cinemachine vcams below.")]
         public bool applyGameplayCameras = true;
 
         [Tooltip("Unity Camera on the same GameObject as CinemachineBrain (viewport rect, ortho size, etc.).")]
         public MobileHandheldUnityCameraSnapshot cinemachineBrainOutputCamera;
-
-        [Tooltip("HybridCameraManager.fpsCamera snapshot when assigned on the layout controller.")]
-        public MobileHandheldUnityCameraSnapshot hybridFpsCamera;
-
-        [Tooltip("HybridCameraManager.bombermanCamera (e.g. orthographic arena view).")]
-        public MobileHandheldUnityCameraSnapshot hybridBombermanCamera;
-
-        [Tooltip("HybridCameraManager.arenaPerspectiveCamera.")]
-        public MobileHandheldUnityCameraSnapshot hybridArenaPerspectiveCamera;
 
         [Tooltip("Per-CinemachineCamera state; matched by GameObject.name to CinemachineModeSwitcher.registeredCameras.")]
         public MobileHandheldCinemachineVcamSnapshotEntry[] cinemachineVcams = Array.Empty<MobileHandheldCinemachineVcamSnapshotEntry>();

@@ -10,7 +10,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 {
     /// <summary>
     /// Applies <see cref="MobileHandheldLayoutPresetEntry"/> rows when the screen size changes (handheld),
-    /// coordinating Cinemachine / Hybrid gameplay cameras, flow UI, and mobile overlay rects.
+    /// coordinating Cinemachine brain output + registered vcams, flow UI, and mobile overlay rects.
     /// When overlay safe-area is driven by presets, sets <see cref="MobileOverlayBootstrap"/> defer so automatic safe-area does not overwrite.
     /// </summary>
     [DisallowMultipleComponent]
@@ -38,10 +38,6 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [Tooltip("Brain output: Unity Camera on the same GameObject (viewport rect, ortho/FoV).")]
         [SerializeField]
         private CinemachineBrain cinemachineBrain;
-
-        [Tooltip("Optional; used to snapshot/apply fps / Bomberman / arena Unity cameras.")]
-        [SerializeField]
-        private HybridCameraManager hybridCameraManager;
 
         [Tooltip("Optional; captures Priority + Lens for each registered CinemachineCamera.")]
         [SerializeField]
@@ -137,17 +133,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 applyGameplayCameras = true,
             };
 
-            if (cinemachineBrain != null && cinemachineBrain.TryGetComponent<Camera>(out var brainCam))
+            if (cinemachineBrain != null && cinemachineBrain.TryGetComponent<UnityEngine.Camera>(out var brainCam))
                 e.cinemachineBrainOutputCamera = MobileHandheldUnityCameraSnapshot.Capture(brainCam);
             else
                 e.cinemachineBrainOutputCamera = default;
-
-            if (hybridCameraManager != null)
-            {
-                e.hybridFpsCamera = MobileHandheldUnityCameraSnapshot.Capture(hybridCameraManager.fpsCamera);
-                e.hybridBombermanCamera = MobileHandheldUnityCameraSnapshot.Capture(hybridCameraManager.bombermanCamera);
-                e.hybridArenaPerspectiveCamera = MobileHandheldUnityCameraSnapshot.Capture(hybridCameraManager.arenaPerspectiveCamera);
-            }
 
             if (cinemachineModeSwitcher != null && cinemachineModeSwitcher.registeredCameras != null
                                                 && cinemachineModeSwitcher.registeredCameras.Count > 0)
@@ -324,21 +313,29 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
             if (logWhenPresetApplied)
             {
                 UnityEngine.Debug.Log(
-                    LogPrefix + " Applied preset label=\"" + e.label + "\" mode=" + matchMode + " screen=" + w + "x" + h + ".");
+                    LogPrefix
+                    + " Applied preset label=\""
+                    + e.label
+                    + "\" mode="
+                    + matchMode
+                    + " screen="
+                    + w
+                    + "x"
+                    + h
+                    + " gameplayCameras="
+                    + e.applyGameplayCameras
+                    + " ui="
+                    + e.applyUiCanvas
+                    + " overlay="
+                    + e.applyMobileOverlay
+                    + ".");
             }
         }
 
         private void ApplyGameplaySnapshots(MobileHandheldLayoutPresetEntry e)
         {
-            if (cinemachineBrain != null && cinemachineBrain.TryGetComponent<Camera>(out var brainCam))
+            if (cinemachineBrain != null && cinemachineBrain.TryGetComponent<UnityEngine.Camera>(out var brainCam))
                 MobileHandheldUnityCameraSnapshot.Apply(brainCam, e.cinemachineBrainOutputCamera);
-
-            if (hybridCameraManager != null)
-            {
-                MobileHandheldUnityCameraSnapshot.Apply(hybridCameraManager.fpsCamera, e.hybridFpsCamera);
-                MobileHandheldUnityCameraSnapshot.Apply(hybridCameraManager.bombermanCamera, e.hybridBombermanCamera);
-                MobileHandheldUnityCameraSnapshot.Apply(hybridCameraManager.arenaPerspectiveCamera, e.hybridArenaPerspectiveCamera);
-            }
 
             if (cinemachineModeSwitcher == null || e.cinemachineVcams == null)
                 return;

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 {
-    /// <summary>Viewport and lens values for a Unity <see cref="Camera"/> (e.g. Cinemachine brain output or HybridCameraManager slots).</summary>
+    /// <summary>Viewport and lens values for a Unity <see cref="UnityEngine.Camera"/> (e.g. CinemachineBrain output).</summary>
     [Serializable]
     public struct MobileHandheldUnityCameraSnapshot
     {
@@ -21,7 +21,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
         public float farClipPlane;
 
-        public static MobileHandheldUnityCameraSnapshot Capture(Camera c)
+        public static MobileHandheldUnityCameraSnapshot Capture(UnityEngine.Camera c)
         {
             if (c == null)
                 return new MobileHandheldUnityCameraSnapshot { captureEnabled = false };
@@ -37,7 +37,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
             };
         }
 
-        public static void Apply(Camera c, MobileHandheldUnityCameraSnapshot s)
+        public static void Apply(UnityEngine.Camera c, MobileHandheldUnityCameraSnapshot s)
         {
             if (c == null || !s.captureEnabled)
                 return;

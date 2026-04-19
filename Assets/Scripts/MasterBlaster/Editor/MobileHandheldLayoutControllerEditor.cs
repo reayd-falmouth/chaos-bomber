@@ -28,6 +28,11 @@ namespace HybridGame.MasterBlaster.Editor
 
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Capture layout", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Capture calls BuildCaptureFromSceneRefs on the controller (not defined in this Editor). "
+                + "Gameplay: Unity Camera on CinemachineBrain (rect, ortho/FoV, clip planes); each CinemachineCamera in CinemachineModeSwitcher (priority, lens override, FoV/ortho size, clip planes, Dutch). "
+                + "UI/overlay: RectTransforms and CanvasScaler settings for the assigned roots.",
+                MessageType.Info);
 
             _useScreenSizeAsKey = EditorGUILayout.ToggleLeft(
                 "Use current Screen.width / Screen.height as key (recommended in Play Mode)",
