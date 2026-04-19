@@ -146,6 +146,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 overlayRootRect = MobileHandheldRectSnapshot.Lerp(lower.overlayRootRect, upper.overlayRootRect, t),
                 overlaySafeAreaRect = MobileHandheldRectSnapshot.Lerp(lower.overlaySafeAreaRect, upper.overlaySafeAreaRect, t),
                 overlayBackgroundRect = MobileHandheldRectSnapshot.Lerp(lower.overlayBackgroundRect, upper.overlayBackgroundRect, t),
+                overlayDescendantRects = MobileHandheldOverlayRectPathUtility.InterpolateDescendantRows(
+                    lower.overlayDescendantRects,
+                    upper.overlayDescendantRects,
+                    t),
             };
             return true;
         }
@@ -247,6 +251,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 overlayRootRect = source.overlayRootRect,
                 overlaySafeAreaRect = source.overlaySafeAreaRect,
                 overlayBackgroundRect = source.overlayBackgroundRect,
+                overlayDescendantRects = source.overlayDescendantRects,
             };
         }
     }

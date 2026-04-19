@@ -51,6 +51,9 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [Tooltip("Optional; typically the fullscreen Background Image under MobileOverlayRoot.")]
         public MobileHandheldRectSnapshot overlayBackgroundRect;
 
+        [Tooltip("All descendant RectTransforms under mobileOverlayRoot (excluding root and dedicated refs), keyed by indexed paths.")]
+        public MobileHandheldOverlayRectPathEntry[] overlayDescendantRects = Array.Empty<MobileHandheldOverlayRectPathEntry>();
+
         public float AspectRatio =>
             screenHeight > 0 ? screenWidth / (float)screenHeight : 1f;
     }

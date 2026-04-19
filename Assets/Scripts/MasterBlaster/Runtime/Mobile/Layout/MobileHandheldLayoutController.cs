@@ -72,6 +72,20 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
         [SerializeField]
         private MobileOverlayBootstrap mobileOverlayBootstrap;
 
+        [Header("Mobile overlay — full hierarchy")]
+        [SerializeField]
+        [Tooltip(
+            "When true, capture every RectTransform under mobileOverlayRoot (except root, mobileOverlaySafeArea, and mobileOverlayBackground) into overlayDescendantRects.")]
+        private bool captureOverlayDescendantRects;
+
+        [SerializeField]
+        [Tooltip("Passed to GetComponentsInChildren when capturing overlay descendants.")]
+        private bool includeInactiveOverlayDescendants = true;
+
+        [SerializeField]
+        [Tooltip("When true, logs a warning if a preset path cannot be resolved under mobileOverlayRoot.")]
+        private bool logWhenOverlayPathMissing;
+
         [Header("Arena grid (optional)")]
         [Tooltip("When assigned, calls RepublishGridOrigin after layout so ArenaGrid3D.CellSize tracks parent scale.")]
         [SerializeField]
@@ -329,6 +343,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                     MobileHandheldRectSnapshot.Apply(mobileOverlaySafeArea, e.overlaySafeAreaRect);
                 if (mobileOverlayBackground != null)
                     MobileHandheldRectSnapshot.Apply(mobileOverlayBackground, e.overlayBackgroundRect);
+                ApplyOverlayDescendantRects(e, w, h);
             }
             else
             {
@@ -357,6 +372,48 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                     + " overlay="
                     + e.applyMobileOverlay
                     + ".");
+            }
+        }
+
+        private void ApplyOverlayDescendantRects(MobileHandheldLayoutPresetEntry e, int w, int h)
+        {
+            if (mobileOverlayRoot == null || e.overlayDescendantRects == null || e.overlayDescendantRects.Length == 0)
+                return;
+
+            var rows = e.overlayDescendantRects;
+            var sorted = new List<MobileHandheldOverlayRectPathEntry>(rows.Length);
+            for (int i = 0; i < rows.Length; i++)
+            {
+                if (rows[i] != null)
+                    sorted.Add(rows[i]);
+            }
+
+            sorted.Sort((a, b) => string.CompareOrdinal(a.relativePath, b.relativePath));
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                var row = sorted[i];
+                if (string.IsNullOrEmpty(row.relativePath))
+                    continue;
+                var rt = MobileHandheldOverlayRectPathUtility.TryResolvePath(mobileOverlayRoot, row.relativePath);
+                if (rt == null)
+                {
+                    if (logWhenOverlayPathMissing)
+                    {
+                        UnityEngine.Debug.LogWarning(
+                            LogPrefix
+                            + " Could not resolve overlay descendant path \""
+                            + row.relativePath
+                            + "\" screen="
+                            + w
+                            + "x"
+                            + h
+                            + ".");
+                    }
+
+                    continue;
+                }
+
+                MobileHandheldRectSnapshot.Apply(rt, row.rect);
             }
         }
 
