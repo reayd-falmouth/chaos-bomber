@@ -234,20 +234,28 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena
             if (TrainingMode.IsActive)
                 UnityEngine.Debug.Log("[GameManager] ML-Agents training: this scene (Game/Train) must be the one that loads when you press Play, or the Python trainer will timeout. Open the Game (or Train) scene, then press Play.");
 
-            int playerCount = PlayerPrefs.GetInt("Players", 2);
-            if (playerCount <= 0)
+            int rawPlayers = PlayerPrefs.GetInt("Players", 2);
+            int playerCount = MobileSessionPlayerCount.GetEffectivePlayerCount(rawPlayers);
+            if (playerCount != rawPlayers)
             {
-                UnityEngine.Debug.LogWarning($"[GameManager] PlayerPrefs Players was {playerCount}; clamping to 2.");
-                playerCount = 2;
                 PlayerPrefs.SetInt("Players", playerCount);
                 PlayerPrefs.Save();
-            }
-            else if (playerCount > 5)
-            {
-                UnityEngine.Debug.LogWarning($"[GameManager] PlayerPrefs Players was {playerCount}; clamping to 5.");
-                playerCount = 5;
-                PlayerPrefs.SetInt("Players", playerCount);
-                PlayerPrefs.Save();
+                if (MobileSessionPlayerCount.IsHandheldSingleHumanSession())
+                {
+                    UnityEngine.Debug.Log(
+                        "[GameManager][MasterBlaster][Mobile] Handheld single-human session: Players pref set from "
+                        + rawPlayers + " to " + playerCount + ".");
+                }
+                else if (rawPlayers <= 0)
+                {
+                    UnityEngine.Debug.LogWarning(
+                        $"[GameManager] PlayerPrefs Players was {rawPlayers}; clamping to {playerCount}.");
+                }
+                else if (rawPlayers > 5)
+                {
+                    UnityEngine.Debug.LogWarning(
+                        $"[GameManager] PlayerPrefs Players was {rawPlayers}; clamping to {playerCount}.");
+                }
             }
 
             // #region agent log

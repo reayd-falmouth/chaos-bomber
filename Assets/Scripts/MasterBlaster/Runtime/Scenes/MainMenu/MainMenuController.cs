@@ -208,6 +208,9 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
 
         private void SavePrefs()
         {
+            if (MobileSessionPlayerCount.IsHandheldSingleHumanSession())
+                players = 1;
+
             PlayerPrefs.SetInt("WinsNeeded", winsNeeded);
             PlayerPrefs.SetInt("Players", players);
             PlayerPrefs.SetInt("Shop", shop ? 1 : 0);
@@ -247,6 +250,8 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.MainMenu
         {
             winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
             players = PlayerPrefs.GetInt("Players", 2);
+            if (MobileSessionPlayerCount.IsHandheldSingleHumanSession())
+                players = 1;
             shop = PlayerPrefs.GetInt("Shop", 1) == 1;
             shrinking = PlayerPrefs.GetInt("Shrinking", 1) == 1;
             fastIgnition = PlayerPrefs.GetInt("FastIgnition", 1) == 1;

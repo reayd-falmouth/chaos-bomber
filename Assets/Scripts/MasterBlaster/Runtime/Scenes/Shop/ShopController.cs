@@ -69,8 +69,20 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Shop
 
         private void OnEnable()
         {
-            playerCount = PlayerPrefs.GetInt("Players", 2);
-            currentPlayer = 1; // start with Player 1
+            int rawPlayers = PlayerPrefs.GetInt("Players", 2);
+            playerCount = MobileSessionPlayerCount.GetEffectivePlayerCount(rawPlayers);
+            currentPlayer = 1; // start with Player 1 (only human on handheld)
+            if (playerCount != rawPlayers)
+            {
+                PlayerPrefs.SetInt("Players", playerCount);
+                PlayerPrefs.Save();
+                if (MobileSessionPlayerCount.IsHandheldSingleHumanSession())
+                {
+                    UnityEngine.Debug.Log(
+                        "[ShopController][MasterBlaster][Mobile] Handheld: Players pref set from "
+                        + rawPlayers + " to " + playerCount + " (single shop turn).");
+                }
+            }
             // Only initialize SessionManager if not yet set (e.g. first time); do not wipe state between rounds
             if (
                 SessionManager.Instance != null
