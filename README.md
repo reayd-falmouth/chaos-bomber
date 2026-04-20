@@ -116,6 +116,12 @@ The **GameUI** map (same asset) includes **Pause** on Esc, P, and Start.
 
 - **Load time after countdown** — The game takes too long to load or transition into play after the countdown.
 
+- **Music** — The original music could not be replaced as intended; the shipped audio would currently break copyright if released commercially.
+
+- **Mobile (handheld)** — Several issues remain on the mobile build, including the **touch overlay** layout/behaviour and the on-screen **D-pad**; these are **not** fully resolved in this submission.
+
+- **Machine learning / arena AI** — ML-Agents and related training paths are **implemented** in the project, but behaviour is **very basic**: opponent AI quality is poor and would need substantial further training, tuning, or heuristic work to be satisfying.
+
 - **Optional tooling** — Packages such as **Netcode**, **ML-Agents**, **Multiplayer Services**, and **Unity MCP** (editor tooling) are present for development or experiments; they are **not** required for a local single-player prototype build.
 
 ---
@@ -188,14 +194,94 @@ After extraction (e.g. from `3rdparty-ci.zip`), vendor content typically lives u
 
 ## Generative AI disclosure
 
+### Tools used
+
 | Tool | Purpose | What was incorporated |
 |------|---------|------------------------|
 | **Cursor** | Coding assistance in the editor | AI-assisted suggestions for C#/Unity code (generation, edits, refactors, debugging); outputs were reviewed and integrated where appropriate. |
 | **Google Gemini** | Concept art | Generative concept imagery for visual development; selected or adapted pieces used as reference or basis for project art direction. |
+| **Clipchamp** | Pitch video script and narration | Generative AI features in [Clipchamp](https://clipchamp.com/en/) were used to help draft the script for the module pitch video. Text-to-speech voice **Ryan** was used for voiceover. This workflow was adopted after earlier problems with recorded audio; AI-assisted scripting made it easier to iterate on the narration. |
+| **Unity MCP** ([MCPForUnity](https://github.com/CoplayDev/unity-mcp)) | Editor integration from the IDE | Console/compile feedback, running tests, and other editor actions while iterating on features; used as a development aid, not shipped gameplay. |
+
+### Workflow (Plan → build → debug)
+
+Feature work often followed a **plan-first** loop in Cursor: agree a short implementation plan, then build, then clear compiler/console issues and run tests before committing. A project **Cursor skill** ([`.cursor/skills/unity-skill/SKILL.md`](.cursor/skills/unity-skill/SKILL.md)) encodes that habit: **tests first** where appropriate, **fix MCP-reported errors** before relying on playmode, **run tests via MCP**, and **commit with Conventional Commits** when a milestone is green.
+
+```mermaid
+flowchart LR
+  cursorPlan[Cursor_plan] --> implement[Implement]
+  implement --> mcpCheck[MCP_console_compile]
+  mcpCheck --> runTests[Run_tests]
+  runTests --> gitCommit[Git_commit]
+```
+
+### Example: Cursor plan (mobile touch UI)
+
+This is a **shortened** example of the kind of plan Cursor produced before implementation (real session work on on-screen controls; excerpt only):
+
+- **Plan name:** Fix mobile D-pad raycast  
+- **Overview:** The on-screen D-pad could stop responding when scene-authored `MobileHoldButton` hit targets were fully transparent (`alpha: 0`). With default transparent-mesh culling, those graphics often did not receive raycasts, so touches hit parent `Image` objects that had no `MobileHoldButton`, and `MobileOverlayState` never updated. The full plan called for guaranteeing a raycastable graphic on `MobileHoldButton`, adding a small **Edit Mode** test, verifying in **Play Mode**, and committing when tests passed.
+
+### Example prompts (Google Gemini — concept art)
+
+These are the **actual prompts** used during concept artwork development and Unity sprite creation:
+
+1. A retro pixel art scene. Inside a colossal Dyson Sphere. Massive cracks web across the inner shell, spilling out light from the central star. Small satellite-sized dots are shown crashing and exploding as they breach the fracture from the outside. The inner surface is a mesh of futuristic geometric panels. Below, small pixel figures stare upwards in awe and terror. Orange and red explosions dot the dark, crumbling ceiling. 16-bit color palette. Nostalgic, blocky, vibrant pixel art.
+
+2. Can you make an iPhone mock up. It should contain the 4:3 aspect ratio game in the middle of a landscape game like the Nintendo game and watch, with a d pad on the left, a button on the right for placing a bomb and a metallic plaque above it with Laster blaster.
 
 ---
-
 
 ## In-editor documentation
 
 [`Assets/Documentation/ReadMe.asset`](Assets/Documentation/ReadMe.asset) uses **com.rmc.rmc-readme**; extended architecture notes are on [`Assets/Documentation/ProjectArchitectureReadme.asset`](Assets/Documentation/ProjectArchitectureReadme.asset). Open via **Window → MasterBlaster → Documentation → Open ReadMe** or **Tools → MasterBlaster → Open Project Readme (Documentation)**.
+
+The coursework bibliography is authored in [`REFERENCES.md`](REFERENCES.md) and merged into this file between the `REFERENCES_START` / `REFERENCES_END` markers (the **References** section at the end of this file).
+
+---
+
+## References
+
+<!-- REFERENCES_START -->
+Alpha Brothers (1994) *Master Blaster* v1.0 [computer software, Amiga]. neXus Software (distributor). Available at: https://archive.org/details/Master_Blaster_v1.0_1994_Alpha_Brothers_FW (Accessed: 20 April 2026).
+
+Banks, I. M. (1987) *Consider Phlebas*. London: Macmillan. *(Science fiction novel; the “Damage” sequence (notably Chapter 7) informs the epigraph and doomed-arena framing in the design documents.)*
+
+Falmouth University (2026a) *Game Design Principles* [module lecture transcript]. *Indie Game Development* (IGO721). Penryn: Falmouth University.
+
+Falmouth University (2026b) *Game Design Principles (1)* [PDF slides/handout]. *Indie Game Development* (IGO721). Penryn: Falmouth University.
+
+Falmouth University (2026c) *Art Direction for Indie Games* [module lecture materials]. *Indie Game Development* (IGO721). Penryn: Falmouth University.
+
+Falmouth University (2026e) *Level Design Principles and Techniques* [module lecture materials]. *Indie Game Development* (IGO721). Penryn: Falmouth University.
+
+Hunicke, R., LeBlanc, M. and Zubek, R. (2004) ‘MDA: A formal approach to game design and game research’, in *Proceedings of the Challenges in Game AI Workshop, AAAI*. San Jose, CA. Available at: https://users.cs.northwestern.edu/~hunicke/MDA.pdf (Accessed: 20 April 2026).
+
+Juul, J. (2005) *Half-Real: Video Games between Real Rules and Fictional Worlds*. Cambridge, MA: MIT Press.
+
+Leila K (1992) *Open Sesame* [recorded music]. Sweden: Mega Records. https://www.youtube.com/watch?v=KagBFUocYbA&list=RDKagBFUocYbA&start_radio=1 (Accessed: 20 April 2026).
+
+McEntee, C. (2012) ‘Rational design: The core of *Rayman Origins*’, *Game Developer*, 27 March. Available at: https://www.gamedeveloper.com/design/rational-design-the-core-of-i-rayman-origins-i- (Accessed: 20 April 2026).
+
+Microsoft Corporation (2026) *Azure PlayFab documentation* [online]. Redmond, WA: Microsoft. Available at: https://learn.microsoft.com/en-us/gaming/playfab/ (Accessed: 20 April 2026).
+
+Reay, D. (2026a) *Master Blaster Reboot: Game outline document* (IGO721) [unpublished module submission]. Penryn: Falmouth University.
+
+Reay, D. (2026b) *Master Blaster Reboot: Narrative design document* (IGO721) [unpublished module submission]. Penryn: Falmouth University.
+
+Reay, D. (2026c) *Master Blaster Reboot: Pitch deck – game design slide* (IGO721) [unpublished module submission]. Penryn: Falmouth University.
+
+Reay, D. (2026d) *Master Blaster Reboot: Art Direction document* (IGO721) [unpublished module submission]. Penryn: Falmouth University. 
+
+Remarkable Games (n.d.) *unity-fps-microgame* [online repository]. GitHub. Available at: https://github.com/remarkablegames/unity-fps-microgame (Accessed: 20 April 2026). 
+
+Salen, K. and Zimmerman, E. (2004) *Rules of Play: Game Design Fundamentals*. Cambridge, MA: MIT Press.
+
+Swink, S. (2009) *Game Feel: A Game Designer’s Guide to Virtual Sensation*. Boca Raton, FL: CRC Press.
+
+Unity Technologies (2026) *Unity user manual* [online]. San Francisco, CA: Unity Technologies. Available at: https://docs.unity3d.com/Manual/index.html (Accessed: 20 April 2026).
+
+von Neumann, J. and Morgenstern, O. (1944) *Theory of Games and Economic Behavior*. Princeton, NJ: Princeton University Press.
+
+Zigurous (n.d.) *unity-bomberman-tutorial* [online repository]. GitHub. Available at: https://github.com/zigurous/unity-bomberman-tutorial (Accessed: 20 April 2026).
+<!-- REFERENCES_END -->

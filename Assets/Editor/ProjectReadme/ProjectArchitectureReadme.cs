@@ -32,6 +32,13 @@ namespace HybridGame.MasterBlaster.EditorDocs
         [TextArea(10, 30)]
         public string thirdPartySummary;
 
+        [Header("Generative AI & references (coursework)")]
+        [TextArea(8, 24)]
+        public string generativeAiDisclosureNotes;
+
+        [TextArea(8, 24)]
+        public string referencesNotes;
+
         [Header("Architecture")]
         [TextArea(10, 60)]
         public string architectureOverview;

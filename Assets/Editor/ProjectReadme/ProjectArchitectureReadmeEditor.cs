@@ -139,6 +139,22 @@ namespace HybridGame.MasterBlaster.EditorDocs
             DrawEditableCourseworkText("Known bugs / issues", readme, r => r.knownIssuesNotes, (r, v) => r.knownIssuesNotes = v, 88);
             EditorGUILayout.Space(4);
             DrawEditableCourseworkText("Third-party assets (summary)", readme, r => r.thirdPartySummary, (r, v) => r.thirdPartySummary = v, 120);
+            EditorGUILayout.Space(4);
+            DrawEditableCourseworkText(
+                "Generative AI disclosure (summary)",
+                readme,
+                r => r.generativeAiDisclosureNotes,
+                (r, v) => r.generativeAiDisclosureNotes = v,
+                100
+            );
+            EditorGUILayout.Space(4);
+            DrawEditableCourseworkText(
+                "References",
+                readme,
+                r => r.referencesNotes,
+                (r, v) => r.referencesNotes = v,
+                88
+            );
         }
 
         private void DrawEditableCourseworkText(

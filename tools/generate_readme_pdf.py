@@ -8,6 +8,11 @@ Dependencies:
 Usage (from project root):
   python tools/generate_readme_pdf.py
 
+Before rendering, injects REFERENCES.md into README.md between
+<!-- REFERENCES_START --> and <!-- REFERENCES_END --> (see tools/readme_reference_sync.py).
+
+The PDF omits the "## Android CI AAB builds" section (coursework PDF only; README.md is unchanged).
+
 Output: DavidReay_IGO721_README.pdf next to README.md
 """
 
@@ -67,6 +72,16 @@ def _inject_table_colwidths(html: str) -> str:
 def _strip_remote_images(md: str) -> str:
     """Remote badge/images break offline PDF generation; replace with alt text."""
     return re.sub(r"!\[([^\]]*)\]\([^)]+\)", r"*\1*", md)
+
+
+def _strip_pdf_only_sections(md: str) -> str:
+    """Remove README blocks that should not appear in the coursework PDF."""
+    md = md.replace("\r\n", "\n")
+    pattern = re.compile(
+        r"\n## Android CI AAB builds\n.*?\n---\s*\n+(?=## Coursework deliverables)",
+        re.DOTALL,
+    )
+    return pattern.sub("\n", md, count=1)
 
 
 def _build_html_document(body_html: str) -> str:
@@ -143,7 +158,23 @@ def main() -> int:
         print(f"Missing {readme}", file=sys.stderr)
         return 1
 
+    tools_dir = Path(__file__).resolve().parent
+    if str(tools_dir) not in sys.path:
+        sys.path.insert(0, str(tools_dir))
+    try:
+        from readme_reference_sync import sync_readme_references
+    except ImportError as e:
+        print(f"Could not import readme_reference_sync: {e}", file=sys.stderr)
+        return 1
+    try:
+        if sync_readme_references(root):
+            print("Synced REFERENCES.md into README.md")
+    except Exception as e:
+        print(f"Reference sync failed: {e}", file=sys.stderr)
+        return 1
+
     raw = readme.read_text(encoding="utf-8")
+    raw = _strip_pdf_only_sections(raw)
     raw = _strip_remote_images(raw)
 
     # nl2br can confuse xhtml2pdf table layout; keep hard line breaks out of tables

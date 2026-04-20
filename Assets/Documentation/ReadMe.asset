@@ -53,7 +53,7 @@ MonoBehaviour:
     MenuItemPath: 
   - TextHeading: Known issues
     TextSubheading: 
-    TextBody: Alternate level settings stub in GameManager; possible double-advance if multiple ContinueOnAnyInput run. Optional dev packages (Netcode, ML-Agents, MCP) are not required for a local build.
+    TextBody: Alternate level stub in GameManager; ContinueOnAnyInput double-advance; music not replaced as intended (commercial release would risk copyright); mobile overlay and D-pad issues unresolved; ML/arena AI implemented but weak. Optional dev packages (Netcode, ML-Agents, MCP) not required for a local build. See README.md for full list.
     LinkName: 
     LinkUrl: 
     PingObjectName: 
@@ -63,6 +63,24 @@ MonoBehaviour:
   - TextHeading: Third-party assets
     TextSubheading: 
     TextBody: Full package table and embedded assets are listed in README.md at the project root. This project also uses the com.rmc.rmc-readme package for this in-editor Read Me.
+    LinkName: 
+    LinkUrl: 
+    PingObjectName: 
+    PingObjectGuid: 
+    MenuItemName: 
+    MenuItemPath: 
+  - TextHeading: Generative AI
+    TextSubheading: 
+    TextBody: "Cursor, Google Gemini (concept art), Clipchamp (AI-assisted pitch script + Ryan TTS voiceover), and Unity MCP (development only). See README.md — Generative AI disclosure — for full tools table, workflow, Cursor plan excerpt, and Gemini prompts. Coding habits: .cursor/skills/unity-skill/SKILL.md."
+    LinkName: 
+    LinkUrl: 
+    PingObjectName: 
+    PingObjectGuid: 
+    MenuItemName: 
+    MenuItemPath: 
+  - TextHeading: References
+    TextSubheading: 
+    TextBody: "Edit REFERENCES.md at the repo root. Sync into README.md with python tools/sync_readme_references.py or when building the PDF (python tools/generate_readme_pdf.py)."
     LinkName: 
     LinkUrl: 
     PingObjectName: 
