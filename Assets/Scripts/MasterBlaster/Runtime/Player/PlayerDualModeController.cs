@@ -96,6 +96,18 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         [SerializeField]
         private bool logBombermanTouchOverlayMerge;
 
+        [Tooltip(
+            "When enabled, throttled logs when Bomberman grid movement is skipped because this slot does not pass the drive gate " +
+            "(shared keyboard owner, session device, or handheld touch path), plus merge anomalies (overlay reports a direction but merged raw is still below threshold). " +
+            "Prefix [MasterBlaster][MobileHandheld][BombermanDriveGate]. Enable on device when D-pad appears dead.")]
+        [SerializeField]
+        private bool logBombermanMobileDriveDiagnostics;
+
+        [Tooltip(
+            "When enabled, logs each Bomberman grid step attempt ([BombermanMove]). Off by default — very noisy.")]
+        [SerializeField]
+        private bool logBombermanGridStepToConsole;
+
         // ── private state ──────────────────────────────────────────────────────────
         private Transform m_BillboxRoot;
         private CharacterController m_CC;
@@ -118,6 +130,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private float m_BombermanMoveElapsed;
 
         private float m_NextBombermanMergeDiagLogTime;
+        private float m_NextBombermanDriveGateDiagLogTime;
+        private float m_NextBombermanMergeAnomalyLogTime;
 
         private Superman m_Superman;
         // We use reflection here to avoid hard compile-time dependency issues between asmdef boundaries.
@@ -534,7 +548,11 @@ namespace HybridGame.MasterBlaster.Scripts.Player
         private void UpdateBombermanMovement()
         {
             if (m_IsDead || stop) return;
-            if (!ShouldProcessBombermanMovement()) return;
+            if (!ShouldProcessBombermanMovement())
+            {
+                LogBombermanDriveGateBlockedIfDiagnostics();
+                return;
+            }
 
             if (!m_BombermanMoving)
             {
@@ -547,6 +565,8 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 var ip = GetComponent<IPlayerInput>();
                 Vector2 ipMove = ip != null ? ip.GetMoveDirection() : Vector2.zero;
                 Vector2 rawDir = MobileMenuInputBridge.MergeBombermanGridMove(moveAct, ipMove, playerId);
+
+                LogBombermanMergeAnomalyIfDiagnostics(moveAct, ipMove, rawDir);
 
                 if (logBombermanTouchOverlayMerge && Time.unscaledTime >= m_NextBombermanMergeDiagLogTime)
                 {
@@ -585,7 +605,25 @@ namespace HybridGame.MasterBlaster.Scripts.Player
                 // The grid still marks those cells as non-walkable, so we must override the intent gate.
                 bool canMove = isWalkable || (m_GhostVisualActive && hasDestructible);
 
-                UnityEngine.Debug.Log($"[BombermanMove] rawDir={rawDir}  dir4={dir4}  cell={currentCell}→{nextCell}  canMove={canMove}  actionEnabled={m_MoveAction?.enabled}");
+                if (logBombermanGridStepToConsole)
+                {
+                    UnityEngine.Debug.Log(
+                        "[MasterBlaster][MobileHandheld][BombermanMove] rawDir="
+                        + rawDir
+                        + " dir4="
+                        + dir4
+                        + " cell="
+                        + currentCell
+                        + "→"
+                        + nextCell
+                        + " canMove="
+                        + canMove
+                        + " moveActionEnabled="
+                        + (m_MoveAction != null && m_MoveAction.enabled)
+                        + " go="
+                        + gameObject.name,
+                        this);
+                }
 
                 // #region agent log
                 LogGhostCanMoveDecisionPreFix(nextCell, isWalkable, hasDestructible, canMove);
@@ -1100,7 +1138,82 @@ namespace HybridGame.MasterBlaster.Scripts.Player
 
         /// <summary>Human keyboard owner OR the human with a controller slot from SessionManager.</summary>
         public bool CanDriveBombermanLocally() =>
-            OwnsBombermanSharedInput() || HasSessionAssignedDevice();
+            OwnsBombermanSharedInput()
+            || HasSessionAssignedDevice()
+            || DrivesBombermanViaHandheldTouch();
+
+        /// <summary>
+        /// Player 1 on Android/iOS (or editor handheld preview) uses <see cref="MobilePlayerInput"/> without SessionManager
+        /// device assignment — must still process grid movement when the prefab disables shared keyboard flags.
+        /// </summary>
+        private bool DrivesBombermanViaHandheldTouch() =>
+            playerId == 1
+            && GetComponent<MobilePlayerInput>() != null
+            && MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
+
+        /// <summary>
+        /// Throttled when <see cref="logBombermanMobileDriveDiagnostics"/> is on and the drive gate blocks Bomberman movement
+        /// (typical cause: wrong prefab flags, wrong playerId, or missing MobilePlayerInput on handheld).
+        /// </summary>
+        private void LogBombermanDriveGateBlockedIfDiagnostics()
+        {
+            if (!logBombermanMobileDriveDiagnostics)
+                return;
+            if (Time.unscaledTime < m_NextBombermanDriveGateDiagLogTime)
+                return;
+            m_NextBombermanDriveGateDiagLogTime = Time.unscaledTime + 2f;
+
+            bool mergeUi = MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
+            Vector2 overlayDigital = mergeUi && playerId == 1 ? MobileOverlayState.GetDigitalMove() : Vector2.zero;
+
+            UnityEngine.Debug.LogWarning(
+                "[MasterBlaster][MobileHandheld][BombermanDriveGate] Skipping grid movement — drive gate closed for this slot. "
+                + "playerId=" + playerId
+                + " receiveSharedKeyboardInput=" + receiveSharedKeyboardInput
+                + " bombermanKeyboardOwnerPlayerId=" + bombermanKeyboardOwnerPlayerId
+                + " ownsSharedKeyboard=" + OwnsBombermanSharedInput()
+                + " hasSessionDevice=" + HasSessionAssignedDevice()
+                + " hasMobilePlayerInput=" + (GetComponent<MobilePlayerInput>() != null)
+                + " drivesHandheldTouch=" + DrivesBombermanViaHandheldTouch()
+                + " mergeOverlayUi=" + mergeUi
+                + " overlayDigital=" + overlayDigital
+                + " canDriveLocally=" + CanDriveBombermanLocally()
+                + " hasAiInput=" + (GetComponent<AIPlayerInput>() != null)
+                + " bombermanMode=" + m_CurrentMode
+                + " go=" + gameObject.name,
+                this);
+        }
+
+        /// <summary>
+        /// Non-zero <see cref="MobileOverlayState"/> for player 1 but merged vector still below move threshold — should be rare; log for merge bugs.
+        /// </summary>
+        private void LogBombermanMergeAnomalyIfDiagnostics(Vector2 moveAct, Vector2 ipMove, Vector2 rawDir)
+        {
+            if (!logBombermanMobileDriveDiagnostics)
+                return;
+            if (rawDir.sqrMagnitude >= 0.25f)
+                return;
+
+            bool mergeUi = MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput();
+            Vector2 overlayDigital = mergeUi && playerId == 1 ? MobileOverlayState.GetDigitalMove() : Vector2.zero;
+            bool touchHeld = overlayDigital.sqrMagnitude >= 0.01f;
+            if (!touchHeld)
+                return;
+            if (Time.unscaledTime < m_NextBombermanMergeAnomalyLogTime)
+                return;
+            m_NextBombermanMergeAnomalyLogTime = Time.unscaledTime + 2f;
+
+            UnityEngine.Debug.LogWarning(
+                "[MasterBlaster][MobileHandheld][BombermanDriveGate] Merged Bomberman direction below threshold while overlay reports a digital direction — check MergeBombermanGridMove / playerId. "
+                + "playerId=" + playerId
+                + " rawDir=" + rawDir
+                + " moveAct=" + moveAct
+                + " ipMove=" + ipMove
+                + " overlayDigital=" + overlayDigital
+                + " mergeOverlayUi=" + mergeUi
+                + " go=" + gameObject.name,
+                this);
+        }
 
         private bool ShouldProcessBombermanMovement() =>
             CanDriveBombermanLocally() || GetComponent<AIPlayerInput>() != null;

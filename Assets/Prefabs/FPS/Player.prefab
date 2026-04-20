@@ -1395,9 +1395,9 @@ MonoBehaviour:
   snapThreshold: 0.05
   coins: 0
   stop: 0
-  playerId: 5
-  bombermanKeyboardOwnerPlayerId: 2
-  receiveSharedKeyboardInput: 0
+  playerId: 1
+  bombermanKeyboardOwnerPlayerId: 1
+  receiveSharedKeyboardInput: 1
   inputActions: {fileID: -944628639613478452, guid: f9986570ee3d35a489b220b393cbf2e7,
     type: 3}
   randomItemFeedbacks: {fileID: 50369046992126857}

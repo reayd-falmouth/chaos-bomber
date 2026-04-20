@@ -8,11 +8,27 @@ namespace HybridGame.MasterBlaster.Scripts.Scenes.Arena.Player
     /// </summary>
     public class MobilePlayerInput : MonoBehaviour, IPlayerInput
     {
+        private const string LogPrefix = "[MasterBlaster][MobileHandheld][MobilePlayerInput]";
+
+        [Tooltip(
+            "When enabled, logs once from Awake that this component is present and overlay bootstrap was requested. Prefix [MasterBlaster][MobileHandheld][MobilePlayerInput].")]
+        [SerializeField]
+        private bool logLifecycleToConsole;
+
         private bool _bombHeldLastFrame;
 
         private void Awake()
         {
             MobileOverlayBootstrap.EnsurePresent();
+            if (logLifecycleToConsole)
+            {
+                UnityEngine.Debug.Log(
+                    LogPrefix + " Awake go=" + gameObject.name
+                    + " ensureOverlayBootstrap=ok mergeUiWouldBe="
+                    + MobileOverlayBootstrap.ShouldMergeOverlayIntoUiInput()
+                    + " (Android/iOS or editor handheld preview).",
+                    this);
+            }
         }
 
         private void LateUpdate()
