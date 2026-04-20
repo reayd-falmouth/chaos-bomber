@@ -372,6 +372,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
             if (logWhenPresetApplied)
             {
+                var gameplayTransformNote = DescribeGameplayTransformApply(e);
                 UnityEngine.Debug.Log(
                     LogPrefix
                     + " Applied preset label=\""
@@ -388,6 +389,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                     + e.applyUiCanvas
                     + " overlay="
                     + e.applyMobileOverlay
+                    + gameplayTransformNote
                     + ".");
             }
         }
@@ -432,6 +434,27 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
                 MobileHandheldRectSnapshot.Apply(rt, row.rect);
             }
+        }
+
+        private static string DescribeGameplayTransformApply(MobileHandheldLayoutPresetEntry e)
+        {
+            if (!e.applyGameplayCameras)
+                return " gameplayTransforms=skipped";
+            bool brain =
+                e.cinemachineBrainOutputCamera.captureEnabled
+                && e.cinemachineBrainOutputCamera.outputCameraTransform.captureTransform;
+            int vcamCount = 0;
+            if (e.cinemachineVcams != null)
+            {
+                for (int i = 0; i < e.cinemachineVcams.Length; i++)
+                {
+                    var s = e.cinemachineVcams[i];
+                    if (s != null && s.vcamTransform.captureTransform)
+                        vcamCount++;
+                }
+            }
+
+            return " gameplayTransforms brain=" + brain + " vcamsWithTransform=" + vcamCount;
         }
 
         private void ApplyGameplaySnapshots(MobileHandheldLayoutPresetEntry e)

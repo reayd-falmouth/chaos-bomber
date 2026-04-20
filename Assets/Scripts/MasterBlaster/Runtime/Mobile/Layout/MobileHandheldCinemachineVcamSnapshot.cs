@@ -25,6 +25,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
         public float dutch;
 
+        public MobileHandheldTransformSnapshot vcamTransform;
+
         public static MobileHandheldCinemachineVcamSnapshotEntry Capture(CinemachineCamera vcam)
         {
             if (vcam == null)
@@ -40,6 +42,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 nearClipPlane = lens.NearClipPlane,
                 farClipPlane = lens.FarClipPlane,
                 dutch = lens.Dutch,
+                vcamTransform = MobileHandheldTransformSnapshot.Capture(vcam.transform),
             };
         }
 
@@ -56,6 +59,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
             lens.FarClipPlane = s.farClipPlane;
             lens.Dutch = s.dutch;
             vcam.Lens = lens;
+            MobileHandheldTransformSnapshot.Apply(vcam.transform, s.vcamTransform);
         }
     }
 }

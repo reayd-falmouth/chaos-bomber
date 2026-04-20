@@ -21,6 +21,8 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
 
         public float farClipPlane;
 
+        public MobileHandheldTransformSnapshot outputCameraTransform;
+
         public static MobileHandheldUnityCameraSnapshot Capture(global::UnityEngine.Camera c)
         {
             if (c == null)
@@ -34,6 +36,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 fieldOfView = c.fieldOfView,
                 nearClipPlane = c.nearClipPlane,
                 farClipPlane = c.farClipPlane,
+                outputCameraTransform = MobileHandheldTransformSnapshot.Capture(c.transform),
             };
         }
 
@@ -47,6 +50,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
             c.fieldOfView = s.fieldOfView;
             c.nearClipPlane = s.nearClipPlane;
             c.farClipPlane = s.farClipPlane;
+            MobileHandheldTransformSnapshot.Apply(c.transform, s.outputCameraTransform);
         }
 
         public static MobileHandheldUnityCameraSnapshot Lerp(MobileHandheldUnityCameraSnapshot a, MobileHandheldUnityCameraSnapshot b, float t)
@@ -69,6 +73,10 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 fieldOfView = Mathf.Lerp(a.fieldOfView, b.fieldOfView, t),
                 nearClipPlane = Mathf.Lerp(a.nearClipPlane, b.nearClipPlane, t),
                 farClipPlane = Mathf.Lerp(a.farClipPlane, b.farClipPlane, t),
+                outputCameraTransform = MobileHandheldTransformSnapshot.Lerp(
+                    a.outputCameraTransform,
+                    b.outputCameraTransform,
+                    t),
             };
         }
     }

@@ -204,6 +204,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 nearClipPlane = s.nearClipPlane,
                 farClipPlane = s.farClipPlane,
                 dutch = s.dutch,
+                vcamTransform = s.vcamTransform,
             };
         }
 
@@ -222,6 +223,7 @@ namespace HybridGame.MasterBlaster.Scripts.Mobile.Layout
                 nearClipPlane = Mathf.Lerp(a.nearClipPlane, b.nearClipPlane, t),
                 farClipPlane = Mathf.Lerp(a.farClipPlane, b.farClipPlane, t),
                 dutch = Mathf.Lerp(a.dutch, b.dutch, t),
+                vcamTransform = MobileHandheldTransformSnapshot.Lerp(a.vcamTransform, b.vcamTransform, t),
             };
         }
 
