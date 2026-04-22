@@ -31,6 +31,11 @@ MonoBehaviour:
       fieldOfView: 40
       nearClipPlane: -1
       farClipPlane: 5000
+      outputCameraTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     cinemachineVcams:
     - gameObjectName: WeaponCamera
       priority: 20
@@ -40,6 +45,11 @@ MonoBehaviour:
       nearClipPlane: 0.01
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     - gameObjectName: CM_TopDown
       priority: 20
       lensModeOverride: 1
@@ -48,6 +58,11 @@ MonoBehaviour:
       nearClipPlane: -1
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     - gameObjectName: WeaponCamera
       priority: 10
       lensModeOverride: 2
@@ -56,6 +71,11 @@ MonoBehaviour:
       nearClipPlane: 0.01
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     - gameObjectName: CM_Perspective
       priority: 10
       lensModeOverride: 2
@@ -64,6 +84,11 @@ MonoBehaviour:
       nearClipPlane: 0.01
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     - gameObjectName: WeaponCamera
       priority: 20
       lensModeOverride: 2
@@ -72,6 +97,11 @@ MonoBehaviour:
       nearClipPlane: 0.01
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     - gameObjectName: WeaponCamera
       priority: 20
       lensModeOverride: 2
@@ -80,6 +110,11 @@ MonoBehaviour:
       nearClipPlane: 0.01
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     - gameObjectName: WeaponCamera
       priority: 20
       lensModeOverride: 2
@@ -88,6 +123,11 @@ MonoBehaviour:
       nearClipPlane: 0.01
       farClipPlane: 5000
       dutch: 0
+      vcamTransform:
+        captureTransform: 0
+        localPosition: {x: 0, y: 0, z: 0}
+        localRotation: {x: 0, y: 0, z: 0, w: 0}
+        localScale: {x: 0, y: 0, z: 0}
     applyUiCanvas: 1
     uiCanvasRootRect:
       anchorMin: {x: 0, y: 0}
@@ -145,6 +185,233 @@ MonoBehaviour:
       sizeDelta: {x: 1344, y: 768}
       pivot: {x: 0.5, y: 0.5}
       localScale: {x: 1.26, y: 1.26, z: 1.26}
+      localRotation: {x: -0, y: -0, z: -0, w: 1}
+    overlayDescendantRects:
+    - relativePath: 1-Screws
+      rect:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 1, y: 1}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: -0, y: -0, z: -0, w: 1}
+    - relativePath: 1-Screws/0-Screw_TopRight
+      rect:
+        anchorMin: {x: 1, y: 1}
+        anchorMax: {x: 1, y: 1}
+        anchoredPosition: {x: -30, y: -19}
+        sizeDelta: {x: 38, y: 38}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 0.5, y: 0.5, z: 0.5}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 1-Screws/1-Screw_BottomRight
+      rect:
+        anchorMin: {x: 1, y: 0}
+        anchorMax: {x: 1, y: 0}
+        anchoredPosition: {x: -30, y: 19}
+        sizeDelta: {x: 38, y: 38}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 0.5, y: 0.5, z: 0.5}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 1-Screws/2-Screw_TopLeft
+      rect:
+        anchorMin: {x: 0, y: 1}
+        anchorMax: {x: 0, y: 1}
+        anchoredPosition: {x: 30, y: -19}
+        sizeDelta: {x: 38, y: 38}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 0.5, y: 0.5, z: 0.5}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 1-Screws/3-Screw_BottomLeft
+      rect:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 0, y: 0}
+        anchoredPosition: {x: 30, y: 19}
+        sizeDelta: {x: 38, y: 38}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 0.5, y: 0.5, z: 0.5}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 2-GameObject
+      rect:
+        anchorMin: {x: 0, y: 1}
+        anchorMax: {x: 1, y: 1}
+        anchoredPosition: {x: 0, y: -108.47999}
+        sizeDelta: {x: 0, y: 216.96}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 2-GameObject/0-Grill
+      rect:
+        anchorMin: {x: 0, y: 0.5}
+        anchorMax: {x: 0, y: 0.5}
+        anchoredPosition: {x: 76.28, y: 0}
+        sizeDelta: {x: 151, y: 110}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 0.49999997, y: 0.49999997, z: 0.49999997}
+        localRotation: {x: -0, y: -0, z: -0, w: 1}
+    - relativePath: 2-GameObject/1-Plate
+      rect:
+        anchorMin: {x: 1, y: 0.5}
+        anchorMax: {x: 1, y: 0.5}
+        anchoredPosition: {x: -69.5, y: 0}
+        sizeDelta: {x: 2744.67, y: 1567.9999}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 0.05, y: 0.05, z: 0.05}
+        localRotation: {x: -0, y: -0, z: -0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls
+      rect:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 1, y: 0}
+        anchoredPosition: {x: -6, y: 41}
+        sizeDelta: {x: -209.7776, y: 69.5999}
+        pivot: {x: 0.5, y: 0}
+        localScale: {x: 1.21, y: 1.21, z: 1.21}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/0-DPadRoot
+      rect:
+        anchorMin: {x: 0, y: 0.5}
+        anchorMax: {x: 0, y: 0.5}
+        anchoredPosition: {x: -12.799988, y: 0}
+        sizeDelta: {x: 100, y: 100}
+        pivot: {x: 0, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: -0, y: -0, z: -0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/0-DPadRoot/0-Up
+      rect:
+        anchorMin: {x: 0.33, y: 0.66}
+        anchorMax: {x: 0.66, y: 1}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/0-DPadRoot/1-Down
+      rect:
+        anchorMin: {x: 0.33, y: 0}
+        anchorMax: {x: 0.66, y: 0.33}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/0-DPadRoot/2-Left
+      rect:
+        anchorMin: {x: 0, y: 0.33}
+        anchorMax: {x: 0.33, y: 0.66}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/0-DPadRoot/3-Right
+      rect:
+        anchorMin: {x: 0.66, y: 0.33}
+        anchorMax: {x: 1, y: 0.66}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/1-BombRoot
+      rect:
+        anchorMin: {x: 1, y: 0.5}
+        anchorMax: {x: 1, y: 0.5}
+        anchoredPosition: {x: -21.44, y: 0}
+        sizeDelta: {x: 100, y: 100}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: -0, y: -0, z: -0, w: 1}
+    - relativePath: 3-SafeArea/0-Controls/1-BombRoot/0-Bomb
+      rect:
+        anchorMin: {x: 0, y: 0}
+        anchorMax: {x: 1, y: 1}
+        anchoredPosition: {x: 0, y: 0}
+        sizeDelta: {x: 0, y: 0}
+        pivot: {x: 0.5, y: 0.5}
+        localScale: {x: 1, y: 1, z: 1}
+        localRotation: {x: 0, y: 0, z: 0, w: 1}
+  - screenWidth: 2778
+    screenHeight: 1284
+    label: 
+    simulatedDeviceModel: iPhone14,3
+    applyGameplayCameras: 1
+    cinemachineBrainOutputCamera:
+      captureEnabled: 1
+      normalizedViewportRect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 1
+        height: 1
+      orthographic: 1
+      orthographicSize: 9.53
+      fieldOfView: 40
+      nearClipPlane: -1
+      farClipPlane: 5000
+      outputCameraTransform:
+        captureTransform: 1
+        localPosition: {x: -0.07, y: 0, z: 0}
+        localRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+        localScale: {x: 1, y: 1, z: 1}
+    cinemachineVcams: []
+    applyUiCanvas: 1
+    uiCanvasRootRect:
+      anchorMin: {x: 0, y: 0}
+      anchorMax: {x: 0, y: 0}
+      anchoredPosition: {x: -0.07, y: -98.000015}
+      sizeDelta: {x: 2118.0981, y: 978.99146}
+      pivot: {x: 0.5, y: 0.5}
+      localScale: {x: 0.019469015, y: 0.019469015, z: 0.019469015}
+      localRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+    uiCanvasScaler:
+      captureScaler: 1
+      uiScaleMode: 1
+      scaleFactor: 1
+      screenMatchMode: 0
+      referenceResolution: {x: 1920, y: 1080}
+      matchWidthOrHeight: 0.5
+      referencePixelsPerUnit: 100
+    applyMobileOverlay: 1
+    overlayCanvasRect:
+      anchorMin: {x: 0, y: 0}
+      anchorMax: {x: 0, y: 0}
+      anchoredPosition: {x: 1389, y: 642}
+      sizeDelta: {x: 800, y: 369.76242}
+      pivot: {x: 0.5, y: 0.5}
+      localScale: {x: 3.4725, y: 3.4725, z: 3.4725}
+      localRotation: {x: -0, y: -0, z: -0, w: 1}
+    overlayCanvasScaler:
+      captureScaler: 1
+      uiScaleMode: 1
+      scaleFactor: 1
+      screenMatchMode: 0
+      referenceResolution: {x: 800, y: 600}
+      matchWidthOrHeight: 0
+      referencePixelsPerUnit: 100
+    overlayRootRect:
+      anchorMin: {x: 0, y: 0}
+      anchorMax: {x: 1, y: 1}
+      anchoredPosition: {x: 0, y: 0}
+      sizeDelta: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
+      localScale: {x: 1, y: 1, z: 1}
+      localRotation: {x: 0, y: 0, z: 0, w: 1}
+    overlaySafeAreaRect:
+      anchorMin: {x: 0, y: 0}
+      anchorMax: {x: 1, y: 1}
+      anchoredPosition: {x: 0, y: 0}
+      sizeDelta: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
+      localScale: {x: 1, y: 1, z: 1}
+      localRotation: {x: 0, y: 0, z: 0, w: 1}
+    overlayBackgroundRect:
+      anchorMin: {x: 0.5, y: 0.5}
+      anchorMax: {x: 0.5, y: 0.5}
+      anchoredPosition: {x: 0, y: -10}
+      sizeDelta: {x: 1344, y: 768}
+      pivot: {x: 0.5, y: 0.5}
+      localScale: {x: 1.04, y: 1.04, z: 1.04}
       localRotation: {x: -0, y: -0, z: -0, w: 1}
     overlayDescendantRects:
     - relativePath: 1-Screws
